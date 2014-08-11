@@ -43,8 +43,8 @@ add_definitions(-DQT_USE_FAST_CONCATENATION -DQT_USE_FAST_OPERATOR_PLUS)
 include_directories (
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
-    ${KDE4_INCLUDES}
     ${KDEPIMLIBS_INCLUDE_DIRS}
+    ${KDE4_INCLUDES}
     ${Boost_INCLUDE_DIR}
 )
 
