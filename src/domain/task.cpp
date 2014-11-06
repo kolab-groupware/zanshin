@@ -27,8 +27,7 @@
 using namespace Domain;
 
 Task::Task(QObject *parent)
-    : Artifact(parent),
-      m_done(false)
+    : Artifact(parent)
 {
 }
 
@@ -38,16 +37,16 @@ Task::~Task()
 
 bool Task::isDone() const
 {
-    return m_done;
+    return (status() == Complete);
 }
 
 void Task::setDone(bool done)
 {
-    if (m_done == done)
-        return;
-
-    m_done = done;
-    emit doneChanged(done);
+    if (done) {
+        setStatus(Complete);
+    } else {
+        setStatus(None);
+    }
 }
 
 QDateTime Task::startDate() const
@@ -90,6 +89,34 @@ void Task::setDelegate(const Task::Delegate &delegate)
 
     m_delegate = delegate;
     emit delegateChanged(delegate);
+}
+
+int Task::progress() const
+{
+    return m_progress;
+}
+
+void Task::setProgress(int progress)
+{
+    if (m_progress == progress)
+        return;
+
+    m_progress = progress;
+    emit progressChanged(progress);
+}
+
+Task::Status Task::status() const
+{
+    return m_status;
+}
+
+void Task::setStatus(int status)
+{
+    if (m_status == static_cast<Status>(status))
+        return;
+
+    m_status = static_cast<Status>(status);
+    emit statusChanged(status);
 }
 
 

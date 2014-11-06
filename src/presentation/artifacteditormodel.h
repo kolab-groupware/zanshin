@@ -45,11 +45,12 @@ class ArtifactEditorModel : public QObject
     Q_PROPERTY(Domain::Artifact::Ptr artifact READ artifact WRITE setArtifact NOTIFY artifactChanged)
     Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
-    Q_PROPERTY(bool done READ isDone WRITE setDone NOTIFY doneChanged)
     Q_PROPERTY(QDateTime startDate READ startDate WRITE setStartDate NOTIFY startDateChanged)
     Q_PROPERTY(QDateTime dueDate READ dueDate WRITE setDueDate NOTIFY dueDateChanged)
     Q_PROPERTY(QString delegateText READ delegateText NOTIFY delegateTextChanged)
     Q_PROPERTY(bool hasTaskProperties READ hasTaskProperties NOTIFY hasTaskPropertiesChanged)
+    Q_PROPERTY(int progress READ progress WRITE setProgress NOTIFY progressChanged)
+    Q_PROPERTY(int status READ status WRITE setStatus NOTIFY statusChanged)
 public:
     explicit ArtifactEditorModel(Domain::TaskRepository *taskRepository,
                                  Domain::NoteRepository *noteRepository,
@@ -63,39 +64,43 @@ public:
 
     QString text() const;
     QString title() const;
-    bool isDone() const;
     QDateTime startDate() const;
     QDateTime dueDate() const;
     QString delegateText() const;
+    int progress() const;
+    int status() const;
 
     static int autoSaveDelay();
 
 public slots:
     void setText(const QString &text);
     void setTitle(const QString &title);
-    void setDone(bool done);
     void setStartDate(const QDateTime &start);
     void setDueDate(const QDateTime &due);
     void setDelegate(const QString &name, const QString &email);
     void delegate(const QString &name, const QString &email);
+    void setProgress(int progress);
+    void setStatus(int status);
 
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);
     void hasTaskPropertiesChanged(bool hasTaskProperties);
     void textChanged(const QString &text);
     void titleChanged(const QString &title);
-    void doneChanged(bool done);
     void startDateChanged(const QDateTime &date);
     void dueDateChanged(const QDateTime &due);
     void delegateTextChanged(const QString &delegateText);
+    void progressChanged(int progress);
+    void statusChanged(int status);
 
 private slots:
     void onTextChanged(const QString &text);
     void onTitleChanged(const QString &title);
-    void onDoneChanged(bool done);
     void onStartDateChanged(const QDateTime &start);
     void onDueDateChanged(const QDateTime &due);
     void onDelegateChanged(const Domain::Task::Delegate &delegate);
+    void onProgressChanged(int status);
+    void onStatusChanged(int status);
 
     void save();
 
@@ -110,10 +115,11 @@ private:
 
     QString m_text;
     QString m_title;
-    bool m_done;
     QDateTime m_start;
     QDateTime m_due;
     Domain::Task::Delegate m_delegate;
+    int m_progress;
+    Domain::Task::Status m_status;
 
     QTimer *m_saveTimer;
     bool m_saveNeeded;

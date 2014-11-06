@@ -55,7 +55,6 @@ private slots:
         QVERIFY(!model.hasTaskProperties());
         QVERIFY(model.text().isEmpty());
         QVERIFY(model.title().isEmpty());
-        QVERIFY(!model.isDone());
         QVERIFY(model.startDate().isNull());
         QVERIFY(model.dueDate().isNull());
         QVERIFY(model.delegateText().isNull());
@@ -67,7 +66,6 @@ private slots:
         Presentation::ArtifactEditorModel model(0, 0);
         QSignalSpy textSpy(&model, SIGNAL(textChanged(QString)));
         QSignalSpy titleSpy(&model, SIGNAL(titleChanged(QString)));
-        QSignalSpy doneSpy(&model, SIGNAL(doneChanged(bool)));
         QSignalSpy startSpy(&model, SIGNAL(startDateChanged(QDateTime)));
         QSignalSpy dueSpy(&model, SIGNAL(dueDateChanged(QDateTime)));
         QSignalSpy delegateSpy(&model, SIGNAL(delegateTextChanged(QString)));
@@ -75,7 +73,6 @@ private slots:
         auto task = Domain::Task::Ptr::create();
         task->setText("description");
         task->setTitle("title");
-        task->setDone(true);
         task->setStartDate(QDateTime::currentDateTime());
         task->setDueDate(QDateTime::currentDateTime().addDays(2));
         task->setDelegate(Domain::Task::Delegate("John Doe", "john@doe.com"));
@@ -85,7 +82,6 @@ private slots:
         // To make sure we don't signal too much
         model.setText(task->text());
         model.setTitle(task->title());
-        model.setDone(task->isDone());
         model.setStartDate(task->startDate());
         model.setDueDate(task->dueDate());
 
@@ -99,10 +95,6 @@ private slots:
         QCOMPARE(titleSpy.size(), 1);
         QCOMPARE(titleSpy.takeFirst().takeFirst().toString(), task->title());
         QCOMPARE(model.property("title").toString(), task->title());
-
-        QCOMPARE(doneSpy.size(), 1);
-        QCOMPARE(doneSpy.takeFirst().takeFirst().toBool(), task->isDone());
-        QCOMPARE(model.property("done").toBool(), task->isDone());
 
         QCOMPARE(startSpy.size(), 1);
         QCOMPARE(startSpy.takeFirst().takeFirst().toDateTime(), task->startDate());
@@ -123,7 +115,6 @@ private slots:
         Presentation::ArtifactEditorModel model(0, 0);
         QSignalSpy textSpy(&model, SIGNAL(textChanged(QString)));
         QSignalSpy titleSpy(&model, SIGNAL(titleChanged(QString)));
-        QSignalSpy doneSpy(&model, SIGNAL(doneChanged(bool)));
         QSignalSpy startSpy(&model, SIGNAL(startDateChanged(QDateTime)));
         QSignalSpy dueSpy(&model, SIGNAL(dueDateChanged(QDateTime)));
         QSignalSpy delegateSpy(&model, SIGNAL(delegateTextChanged(QString)));
@@ -148,10 +139,6 @@ private slots:
         QCOMPARE(titleSpy.size(), 1);
         QCOMPARE(titleSpy.takeFirst().takeFirst().toString(), note->title());
         QCOMPARE(model.property("title").toString(), note->title());
-
-        QCOMPARE(doneSpy.size(), 1);
-        QCOMPARE(doneSpy.takeFirst().takeFirst().toBool(), false);
-        QCOMPARE(model.property("done").toBool(), false);
 
         QCOMPARE(startSpy.size(), 1);
         QVERIFY(startSpy.takeFirst().takeFirst().toDateTime().isNull());
@@ -192,11 +179,6 @@ private slots:
                                     << QByteArray("title")
                                     << QVariant("new title")
                                     << QByteArray(SIGNAL(titleChanged(QString)));
-
-        QTest::newRow("task done") << Domain::Artifact::Ptr(Domain::Task::Ptr::create())
-                                   << QByteArray("done")
-                                   << QVariant(true)
-                                   << QByteArray(SIGNAL(doneChanged(bool)));
 
         QTest::newRow("task start") << Domain::Artifact::Ptr(Domain::Task::Ptr::create())
                                     << QByteArray("startDate")
