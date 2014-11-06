@@ -150,6 +150,7 @@ void EditorView::setModel(QObject *model)
     connect(this, SIGNAL(startDateChanged(QDateTime)), m_model, SLOT(setStartDate(QDateTime)));
     connect(this, SIGNAL(dueDateChanged(QDateTime)), m_model, SLOT(setDueDate(QDateTime)));
     connect(this, SIGNAL(doneChanged(bool)), m_model, SLOT(setDone(bool)));
+    connect(this, SIGNAL(delegateChanged(QString, QString)), m_model, SLOT(setDelegate(QString, QString)));
 }
 
 void EditorView::onArtifactChanged()
@@ -196,6 +197,7 @@ void EditorView::onDelegateTextChanged()
 
     m_delegateLabel->setVisible(!labelText.isEmpty());
     m_delegateLabel->setText(labelText);
+    m_delegateEdit->clear();
 }
 
 void EditorView::onTextEditChanged()
@@ -254,4 +256,5 @@ void EditorView::onDelegateEntered()
                                   Q_ARG(QString, name),
                                   Q_ARG(QString, email));
     }
+    emit delegateChanged(name, email);
 }

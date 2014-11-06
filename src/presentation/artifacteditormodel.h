@@ -76,6 +76,7 @@ public slots:
     void setDone(bool done);
     void setStartDate(const QDateTime &start);
     void setDueDate(const QDateTime &due);
+    void setDelegate(const QString &name, const QString &email);
     void delegate(const QString &name, const QString &email);
 
 signals:
@@ -112,7 +113,7 @@ private:
     bool m_done;
     QDateTime m_start;
     QDateTime m_due;
-    QString m_delegateText;
+    Domain::Task::Delegate m_delegate;
 
     QTimer *m_saveTimer;
     bool m_saveNeeded;

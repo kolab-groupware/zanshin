@@ -58,6 +58,7 @@ signals:
     void startDateChanged(const QDateTime &start);
     void dueDateChanged(const QDateTime &due);
     void doneChanged(bool done);
+    void delegateChanged(const QString &name, const QString &email);
 
 private slots:
     void onArtifactChanged();
