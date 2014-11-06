@@ -70,6 +70,8 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     m_start = QDateTime();
     m_due = QDateTime();
     m_delegate = Domain::Task::Delegate();
+    m_progress = 0;
+    m_status = Domain::Task::None;
 
     m_artifact = artifact;
 
@@ -90,6 +92,8 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
         m_start = task->startDate();
         m_due = task->dueDate();
         m_delegate = task->delegate();
+        m_progress = task->progress();
+        m_status = task->status();
 
         connect(m_artifact.data(), SIGNAL(doneChanged(bool)),
                 this, SLOT(onDoneChanged(bool)));
@@ -99,6 +103,10 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
                 this, SLOT(onDueDateChanged(QDateTime)));
         connect(m_artifact.data(), SIGNAL(delegateChanged(Domain::Task::Delegate)),
                 this, SLOT(onDelegateChanged(Domain::Task::Delegate)));
+        connect(m_artifact.data(), SIGNAL(progressChanged(int)),
+                this, SLOT(onProgressChanged(int)));
+        connect(m_artifact.data(), SIGNAL(statusChanged(int)),
+                this, SLOT(onStatusChanged(int)));
     }
 
     emit textChanged(m_text);
@@ -109,6 +117,8 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     emit delegateTextChanged(m_delegate.display());
     emit hasTaskPropertiesChanged(hasTaskProperties());
     emit artifactChanged(m_artifact);
+    emit progressChanged(m_progress);
+    emit statusChanged(m_status);
 }
 
 bool ArtifactEditorModel::hasTaskProperties() const
@@ -144,6 +154,16 @@ QDateTime ArtifactEditorModel::dueDate() const
 QString ArtifactEditorModel::delegateText() const
 {
     return m_delegate.display();
+}
+
+int ArtifactEditorModel::progress() const
+{
+    return m_progress;
+}
+
+int ArtifactEditorModel::status() const
+{
+    return m_status;
 }
 
 int ArtifactEditorModel::autoSaveDelay()
@@ -207,6 +227,22 @@ void ArtifactEditorModel::delegate(const QString &name, const QString &email)
     m_taskRepository->delegate(task, delegate);
 }
 
+void ArtifactEditorModel::setProgress(int progress)
+{
+    if (m_progress == progress)
+        return;
+    onProgressChanged(progress);
+    setSaveNeeded(true);
+}
+
+void ArtifactEditorModel::setStatus(int status)
+{
+    if (m_status == status)
+        return;
+    onStatusChanged(status);
+    setSaveNeeded(true);
+}
+
 void ArtifactEditorModel::onTextChanged(const QString &text)
 {
     m_text = text;
@@ -243,6 +279,18 @@ void ArtifactEditorModel::onDelegateChanged(const Domain::Task::Delegate &delega
     emit delegateTextChanged(m_delegate.display());
 }
 
+void ArtifactEditorModel::onProgressChanged(int progress)
+{
+    m_progress = progress;
+    emit progressChanged(progress);
+}
+
+void ArtifactEditorModel::onStatusChanged(int status)
+{
+    m_status = static_cast<Domain::Task::Status>(status);
+    emit statusChanged(status);
+}
+
 void ArtifactEditorModel::save()
 {
     if (!isSaveNeeded())
@@ -258,6 +306,8 @@ void ArtifactEditorModel::save()
         task->setStartDate(m_start);
         task->setDueDate(m_due);
         task->setDelegate(m_delegate);
+        task->setProgress(m_progress);
+        task->setStatus(m_status);
         m_taskRepository->update(task);
     } else {
         auto note = m_artifact.objectCast<Domain::Note>();

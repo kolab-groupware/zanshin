@@ -32,6 +32,8 @@
 class QAbstractButton;
 class QLabel;
 class QPlainTextEdit;
+class QComboBox;
+class QSpinBox;
 
 class KLineEdit;
 
@@ -59,6 +61,8 @@ signals:
     void dueDateChanged(const QDateTime &due);
     void doneChanged(bool done);
     void delegateChanged(const QString &name, const QString &email);
+    void progressChanged(int progress);
+    void statusChanged(int status);
 
 private slots:
     void onArtifactChanged();
@@ -68,6 +72,8 @@ private slots:
     void onDueDateChanged();
     void onDoneChanged();
     void onDelegateTextChanged();
+    void onProgressChanged();
+    void onStatusChanged();
 
     void onTextEditChanged();
     void onStartEditEntered(const QDate &start);
@@ -75,6 +81,8 @@ private slots:
     void onDoneButtonChanged(bool checked);
     void onStartTodayClicked();
     void onDelegateEntered();
+    void onProgressChanged(int progress);
+    void onStatusChanged(int status);
 
 private:
     QObject *m_model;
@@ -87,6 +95,8 @@ private:
     QAbstractButton *m_startTodayButton;
     QAbstractButton *m_doneButton;
     KLineEdit *m_delegateEdit;
+    QComboBox *m_statusComboBox;
+    QSpinBox *m_progressEdit;
 };
 
 }

@@ -41,6 +41,14 @@ public:
     typedef QSharedPointer<Task> Ptr;
     typedef QList<Task::Ptr> List;
 
+    enum Status {
+        None,
+        NeedsAction,
+        InProcess,
+        Complete,
+        Cancelled
+    };
+
     class Delegate
     {
     public:
@@ -72,24 +80,32 @@ public:
     QDateTime startDate() const;
     QDateTime dueDate() const;
     Delegate delegate() const;
+    int progress() const;
+    Status status() const;
 
 public slots:
     void setDone(bool done);
     void setStartDate(const QDateTime &startDate);
     void setDueDate(const QDateTime &dueDate);
     void setDelegate(const Domain::Task::Delegate &delegate);
+    void setProgress(int progress);
+    void setStatus(int status);
 
 signals:
     void doneChanged(bool isDone);
     void startDateChanged(const QDateTime &startDate);
     void dueDateChanged(const QDateTime &dueDate);
     void delegateChanged(const Domain::Task::Delegate &delegate);
+    void progressChanged(int progress);
+    void statusChanged(int status);
 
 private:
     bool m_done;
     QDateTime m_startDate;
     QDateTime m_dueDate;
     Delegate m_delegate;
+    int m_progress;
+    Status m_status;
 };
 
 }

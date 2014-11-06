@@ -50,6 +50,8 @@ class ArtifactEditorModel : public QObject
     Q_PROPERTY(QDateTime dueDate READ dueDate WRITE setDueDate NOTIFY dueDateChanged)
     Q_PROPERTY(QString delegateText READ delegateText NOTIFY delegateTextChanged)
     Q_PROPERTY(bool hasTaskProperties READ hasTaskProperties NOTIFY hasTaskPropertiesChanged)
+    Q_PROPERTY(int progress READ progress WRITE setProgress NOTIFY progressChanged)
+    Q_PROPERTY(int status READ status WRITE setStatus NOTIFY statusChanged)
 public:
     explicit ArtifactEditorModel(Domain::TaskRepository *taskRepository,
                                  Domain::NoteRepository *noteRepository,
@@ -67,6 +69,8 @@ public:
     QDateTime startDate() const;
     QDateTime dueDate() const;
     QString delegateText() const;
+    int progress() const;
+    int status() const;
 
     static int autoSaveDelay();
 
@@ -78,6 +82,8 @@ public slots:
     void setDueDate(const QDateTime &due);
     void setDelegate(const QString &name, const QString &email);
     void delegate(const QString &name, const QString &email);
+    void setProgress(int progress);
+    void setStatus(int status);
 
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);
@@ -88,6 +94,8 @@ signals:
     void startDateChanged(const QDateTime &date);
     void dueDateChanged(const QDateTime &due);
     void delegateTextChanged(const QString &delegateText);
+    void progressChanged(int progress);
+    void statusChanged(int status);
 
 private slots:
     void onTextChanged(const QString &text);
@@ -96,6 +104,8 @@ private slots:
     void onStartDateChanged(const QDateTime &start);
     void onDueDateChanged(const QDateTime &due);
     void onDelegateChanged(const Domain::Task::Delegate &delegate);
+    void onProgressChanged(int status);
+    void onStatusChanged(int status);
 
     void save();
 
@@ -114,6 +124,8 @@ private:
     QDateTime m_start;
     QDateTime m_due;
     Domain::Task::Delegate m_delegate;
+    int m_progress;
+    Domain::Task::Status m_status;
 
     QTimer *m_saveTimer;
     bool m_saveNeeded;

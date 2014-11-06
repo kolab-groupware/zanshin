@@ -92,6 +92,34 @@ void Task::setDelegate(const Task::Delegate &delegate)
     emit delegateChanged(delegate);
 }
 
+int Task::progress() const
+{
+    return m_progress;
+}
+
+void Task::setProgress(int progress)
+{
+    if (m_progress == progress)
+        return;
+
+    m_progress = progress;
+    emit progressChanged(progress);
+}
+
+Task::Status Task::status() const
+{
+    return m_status;
+}
+
+void Task::setStatus(int status)
+{
+    if (m_status == static_cast<Status>(status))
+        return;
+
+    m_status = static_cast<Status>(status);
+    emit statusChanged(status);
+}
+
 
 Task::Delegate::Delegate()
 {

@@ -201,6 +201,44 @@ Domain::Task::Ptr Serializer::createTaskFromItem(Item item)
     return task;
 }
 
+static Domain::Task::Status fromKCalStatus(KCalCore::Incidence::Status status)
+{
+    switch (status) {
+        case KCalCore::Incidence::StatusNone:
+            return Domain::Task::None;
+        case KCalCore::Incidence::StatusInProcess:
+            return Domain::Task::InProcess;
+        case KCalCore::Incidence::StatusCanceled:
+            return Domain::Task::Cancelled;
+        case KCalCore::Incidence::StatusCompleted:
+            return Domain::Task::Complete;
+        case KCalCore::Incidence::StatusNeedsAction:
+            return Domain::Task::NeedsAction;
+        default:
+            break;
+    }
+    return Domain::Task::None;
+}
+
+static KCalCore::Incidence::Status toKCalStatus(Domain::Task::Status status)
+{
+    switch (status) {
+        case Domain::Task::None:
+            return KCalCore::Incidence::StatusNone;
+        case Domain::Task::InProcess:
+            return KCalCore::Incidence::StatusInProcess;
+        case Domain::Task::Cancelled:
+            return KCalCore::Incidence::StatusCanceled;
+        case Domain::Task::Complete:
+            return KCalCore::Incidence::StatusCompleted;
+        case Domain::Task::NeedsAction:
+            return KCalCore::Incidence::StatusNeedsAction;
+        default:
+            break;
+    }
+    return KCalCore::Incidence::StatusNone;
+}
+
 void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
 {
     if (!isTaskItem(item))
@@ -216,6 +254,8 @@ void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
     task->setProperty("itemId", item.id());
     task->setProperty("todoUid", todo->uid());
     task->setProperty("relatedUid", todo->relatedTo());
+    task->setProgress(todo->percentComplete());
+    task->setStatus(fromKCalStatus(todo->status()));
 
     if (todo->attendeeCount() > 0) {
         const auto attendees = todo->attendees();
@@ -250,6 +290,8 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
     todo->setCompleted(task->isDone());
     todo->setDtStart(KDateTime(task->startDate()));
     todo->setDtDue(KDateTime(task->dueDate()));
+    todo->setPercentComplete(task->progress());
+    todo->setStatus(toKCalStatus(task->status()));
 
     if (task->property("todoUid").isValid()) {
         todo->setUid(task->property("todoUid").toString());
