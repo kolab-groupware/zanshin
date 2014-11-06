@@ -69,7 +69,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     m_done = false;
     m_start = QDateTime();
     m_due = QDateTime();
-    m_delegateText = QString();
+    m_delegate = Domain::Task::Delegate();
 
     m_artifact = artifact;
 
@@ -89,7 +89,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
         m_done = task->isDone();
         m_start = task->startDate();
         m_due = task->dueDate();
-        m_delegateText = task->delegate().display();
+        m_delegate = task->delegate();
 
         connect(m_artifact.data(), SIGNAL(doneChanged(bool)),
                 this, SLOT(onDoneChanged(bool)));
@@ -106,7 +106,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     emit doneChanged(m_done);
     emit startDateChanged(m_start);
     emit dueDateChanged(m_due);
-    emit delegateTextChanged(m_delegateText);
+    emit delegateTextChanged(m_delegate.display());
     emit hasTaskPropertiesChanged(hasTaskProperties());
     emit artifactChanged(m_artifact);
 }
@@ -143,7 +143,7 @@ QDateTime ArtifactEditorModel::dueDate() const
 
 QString ArtifactEditorModel::delegateText() const
 {
-    return m_delegateText;
+    return m_delegate.display();
 }
 
 int ArtifactEditorModel::autoSaveDelay()
@@ -191,6 +191,14 @@ void ArtifactEditorModel::setDueDate(const QDateTime &due)
     setSaveNeeded(true);
 }
 
+void ArtifactEditorModel::setDelegate(const QString &name, const QString &email)
+{
+    if ((m_delegate.name() == name) && (m_delegate.email() == email))
+        return;
+    onDelegateChanged(Domain::Task::Delegate(name, email));
+    setSaveNeeded(true);
+}
+
 void ArtifactEditorModel::delegate(const QString &name, const QString &email)
 {
     auto task = m_artifact.objectCast<Domain::Task>();
@@ -231,8 +239,8 @@ void ArtifactEditorModel::onDueDateChanged(const QDateTime &due)
 
 void ArtifactEditorModel::onDelegateChanged(const Domain::Task::Delegate &delegate)
 {
-    m_delegateText = delegate.display();
-    emit delegateTextChanged(m_delegateText);
+    m_delegate = delegate;
+    emit delegateTextChanged(m_delegate.display());
 }
 
 void ArtifactEditorModel::save()
@@ -249,6 +257,7 @@ void ArtifactEditorModel::save()
         task->setDone(m_done);
         task->setStartDate(m_start);
         task->setDueDate(m_due);
+        task->setDelegate(m_delegate);
         m_taskRepository->update(task);
     } else {
         auto note = m_artifact.objectCast<Domain::Note>();
