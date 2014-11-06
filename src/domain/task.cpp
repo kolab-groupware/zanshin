@@ -27,8 +27,7 @@
 using namespace Domain;
 
 Task::Task(QObject *parent)
-    : Artifact(parent),
-      m_done(false)
+    : Artifact(parent)
 {
 }
 
@@ -38,16 +37,16 @@ Task::~Task()
 
 bool Task::isDone() const
 {
-    return m_done;
+    return (status() == Complete);
 }
 
 void Task::setDone(bool done)
 {
-    if (m_done == done)
-        return;
-
-    m_done = done;
-    emit doneChanged(done);
+    if (done) {
+        setStatus(Complete);
+    } else {
+        setStatus(None);
+    }
 }
 
 QDateTime Task::startDate() const

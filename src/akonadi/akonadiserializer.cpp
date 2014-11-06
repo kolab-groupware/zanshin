@@ -248,7 +248,6 @@ void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
 
     task->setTitle(todo->summary());
     task->setText(todo->description());
-    task->setDone(todo->isCompleted());
     task->setStartDate(todo->dtStart().dateTime());
     task->setDueDate(todo->dtDue().dateTime());
     task->setProperty("itemId", item.id());
@@ -287,7 +286,6 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
 
     todo->setSummary(task->title());
     todo->setDescription(task->text());
-    todo->setCompleted(task->isDone());
     todo->setDtStart(KDateTime(task->startDate()));
     todo->setDtDue(KDateTime(task->dueDate()));
     todo->setPercentComplete(task->progress());

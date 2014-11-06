@@ -33,7 +33,6 @@ namespace Domain {
 class Task : public Artifact
 {
     Q_OBJECT
-    Q_PROPERTY(bool done READ isDone WRITE setDone NOTIFY doneChanged)
     Q_PROPERTY(QDateTime startDate READ startDate WRITE setStartDate NOTIFY startDateChanged)
     Q_PROPERTY(QDateTime dueDate READ dueDate WRITE setDueDate NOTIFY dueDateChanged)
     Q_PROPERTY(Domain::Task::Delegate delegate READ delegate WRITE setDelegate NOTIFY delegateChanged)
@@ -92,7 +91,6 @@ public slots:
     void setStatus(int status);
 
 signals:
-    void doneChanged(bool isDone);
     void startDateChanged(const QDateTime &startDate);
     void dueDateChanged(const QDateTime &dueDate);
     void delegateChanged(const Domain::Task::Delegate &delegate);
@@ -100,7 +98,6 @@ signals:
     void statusChanged(int status);
 
 private:
-    bool m_done;
     QDateTime m_startDate;
     QDateTime m_dueDate;
     Delegate m_delegate;

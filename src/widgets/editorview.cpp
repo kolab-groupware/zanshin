@@ -49,7 +49,6 @@ EditorView::EditorView(QWidget *parent)
       m_startDateEdit(new KPIM::KDateEdit(m_taskGroup)),
       m_dueDateEdit(new KPIM::KDateEdit(m_taskGroup)),
       m_startTodayButton(new QPushButton(tr("Start today"), m_taskGroup)),
-      m_doneButton(new QCheckBox(tr("Done"), m_taskGroup)),
       m_delegateEdit(0),
       m_statusComboBox(new QComboBox(m_taskGroup)),
       m_progressEdit(new QSpinBox(m_taskGroup))
@@ -66,7 +65,6 @@ EditorView::EditorView(QWidget *parent)
     m_textEdit->setObjectName("textEdit");
     m_startDateEdit->setObjectName("startDateEdit");
     m_dueDateEdit->setObjectName("dueDateEdit");
-    m_doneButton->setObjectName("doneButton");
     m_startTodayButton->setObjectName("startTodayButton");
     m_statusComboBox->setObjectName("statusComboBox");
     m_progressEdit->setObjectName("progressEdit");
@@ -101,7 +99,6 @@ EditorView::EditorView(QWidget *parent)
     vbox->addLayout(datesHBox);
     QHBoxLayout *bottomHBox = new QHBoxLayout;
     bottomHBox->addWidget(m_startTodayButton);
-    bottomHBox->addWidget(m_doneButton);
     bottomHBox->addStretch();
     vbox->addLayout(bottomHBox);
     auto progressHBox = new QHBoxLayout;
@@ -125,7 +122,6 @@ EditorView::EditorView(QWidget *parent)
     connect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
     connect(m_startDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onStartEditEntered(QDate)));
     connect(m_dueDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onDueEditEntered(QDate)));
-    connect(m_doneButton, SIGNAL(toggled(bool)), this, SLOT(onDoneButtonChanged(bool)));
     connect(m_startTodayButton, SIGNAL(clicked()), this, SLOT(onStartTodayClicked()));
     connect(m_delegateEdit, SIGNAL(returnPressed()), this, SLOT(onDelegateEntered()));
     connect(m_progressEdit, SIGNAL(valueChanged(int)), this, SLOT(onProgressChanged(int)));
@@ -156,7 +152,6 @@ void EditorView::setModel(QObject *model)
     onHasTaskPropertiesChanged();
     onStartDateChanged();
     onDueDateChanged();
-    onDoneChanged();
     onDelegateTextChanged();
     onProgressChanged();
     onStatusChanged();
@@ -169,7 +164,6 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(textChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(startDateChanged(QDateTime)), this, SLOT(onStartDateChanged()));
     connect(m_model, SIGNAL(dueDateChanged(QDateTime)), this, SLOT(onDueDateChanged()));
-    connect(m_model, SIGNAL(doneChanged(bool)), this, SLOT(onDoneChanged()));
     connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
     connect(m_model, SIGNAL(progressChanged(int)), this, SLOT(onProgressChanged()));
     connect(m_model, SIGNAL(statusChanged(int)), this, SLOT(onStatusChanged()));
@@ -178,7 +172,6 @@ void EditorView::setModel(QObject *model)
     connect(this, SIGNAL(textChanged(QString)), m_model, SLOT(setText(QString)));
     connect(this, SIGNAL(startDateChanged(QDateTime)), m_model, SLOT(setStartDate(QDateTime)));
     connect(this, SIGNAL(dueDateChanged(QDateTime)), m_model, SLOT(setDueDate(QDateTime)));
-    connect(this, SIGNAL(doneChanged(bool)), m_model, SLOT(setDone(bool)));
     connect(this, SIGNAL(delegateChanged(QString, QString)), m_model, SLOT(setDelegate(QString, QString)));
     connect(this, SIGNAL(progressChanged(int)), m_model, SLOT(setProgress(int)));
     connect(this, SIGNAL(statusChanged(int)), m_model, SLOT(setStatus(int)));
@@ -213,11 +206,6 @@ void EditorView::onStartDateChanged()
 void EditorView::onDueDateChanged()
 {
     m_dueDateEdit->setDate(m_model->property("dueDate").toDateTime().date());
-}
-
-void EditorView::onDoneChanged()
-{
-    m_doneButton->setChecked(m_model->property("done").toBool());
 }
 
 void EditorView::onProgressChanged()
@@ -265,11 +253,6 @@ void EditorView::onStartEditEntered(const QDate &start)
 void EditorView::onDueEditEntered(const QDate &due)
 {
     emit dueDateChanged(QDateTime(due));
-}
-
-void EditorView::onDoneButtonChanged(bool checked)
-{
-    emit doneChanged(checked);
 }
 
 void EditorView::onStartTodayClicked()

@@ -45,7 +45,6 @@ class ArtifactEditorModel : public QObject
     Q_PROPERTY(Domain::Artifact::Ptr artifact READ artifact WRITE setArtifact NOTIFY artifactChanged)
     Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
-    Q_PROPERTY(bool done READ isDone WRITE setDone NOTIFY doneChanged)
     Q_PROPERTY(QDateTime startDate READ startDate WRITE setStartDate NOTIFY startDateChanged)
     Q_PROPERTY(QDateTime dueDate READ dueDate WRITE setDueDate NOTIFY dueDateChanged)
     Q_PROPERTY(QString delegateText READ delegateText NOTIFY delegateTextChanged)
@@ -65,7 +64,6 @@ public:
 
     QString text() const;
     QString title() const;
-    bool isDone() const;
     QDateTime startDate() const;
     QDateTime dueDate() const;
     QString delegateText() const;
@@ -77,7 +75,6 @@ public:
 public slots:
     void setText(const QString &text);
     void setTitle(const QString &title);
-    void setDone(bool done);
     void setStartDate(const QDateTime &start);
     void setDueDate(const QDateTime &due);
     void setDelegate(const QString &name, const QString &email);
@@ -90,7 +87,6 @@ signals:
     void hasTaskPropertiesChanged(bool hasTaskProperties);
     void textChanged(const QString &text);
     void titleChanged(const QString &title);
-    void doneChanged(bool done);
     void startDateChanged(const QDateTime &date);
     void dueDateChanged(const QDateTime &due);
     void delegateTextChanged(const QString &delegateText);
@@ -100,7 +96,6 @@ signals:
 private slots:
     void onTextChanged(const QString &text);
     void onTitleChanged(const QString &title);
-    void onDoneChanged(bool done);
     void onStartDateChanged(const QDateTime &start);
     void onDueDateChanged(const QDateTime &due);
     void onDelegateChanged(const Domain::Task::Delegate &delegate);
@@ -120,7 +115,6 @@ private:
 
     QString m_text;
     QString m_title;
-    bool m_done;
     QDateTime m_start;
     QDateTime m_due;
     Domain::Task::Delegate m_delegate;
