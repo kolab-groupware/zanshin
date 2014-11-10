@@ -784,6 +784,7 @@ private slots:
         QCOMPARE(result->data().size(), 2);
 
         // WHEN
+        col2.setEnabled(false);
         monitor->changeCollection(col2);
 
         // THEN
@@ -897,7 +898,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                  .thenReturn(collectionFetchJob);
@@ -923,7 +924,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                          .exactly(1));
@@ -949,7 +950,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                  .thenReturn(collectionFetchJob);
@@ -980,7 +981,7 @@ private slots:
         monitor->addCollection(col);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                          .exactly(1));
@@ -1012,7 +1013,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                  .thenReturn(collectionFetchJob);
@@ -1041,7 +1042,7 @@ private slots:
         monitor->removeCollection(col2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                          .exactly(1));
@@ -1074,7 +1075,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                  .thenReturn(collectionFetchJob);
@@ -1108,7 +1109,7 @@ private slots:
         monitor->changeCollection(col2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                          .exactly(1));
@@ -1144,7 +1145,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                  .thenReturn(collectionFetchJob);
@@ -1171,10 +1172,11 @@ private slots:
         QCOMPARE(result->data().size(), 2);
 
         // WHEN
+        col2.setEnabled(false);
         monitor->changeCollection(col2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                          .exactly(1));
@@ -1183,6 +1185,139 @@ private slots:
 
         QCOMPARE(result->data().size(), 1);
         QCOMPARE(result->data().first(), source1);
+    }
+
+    void shouldIncludeAdditionalParents()
+    {
+        // GIVEN
+
+        // One parent collection
+        Akonadi::Collection parentCol(41);
+        parentCol.setParentCollection(Akonadi::Collection::root());
+        auto parent = Domain::DataSource::Ptr::create();
+
+        // one child
+        Akonadi::Collection col1(42);
+        col1.setParentCollection(parentCol);
+        col1.setEnabled(false);
+        auto source1 = Domain::DataSource::Ptr::create();
+
+        // one sub-child
+        Akonadi::Collection col2(43);
+        col2.setParentCollection(col1);
+        col2.setEnabled(false);
+        auto source2 = Domain::DataSource::Ptr::create();
+
+        MockCollectionFetchJob *collectionFetchJob = new MockCollectionFetchJob(this);
+
+        // Storage mock returning the fetch jobs
+        mock_object<Akonadi::StorageInterface> storageMock;
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+                                                                       Akonadi::StorageInterface::Recursive,
+                                                                       Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
+                                                                 .thenReturn(collectionFetchJob);
+
+        // Serializer mock returning the tasks from the items
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::createCollectionFromDataSource).when(parent).thenReturn(parentCol);
+        serializerMock(&Akonadi::SerializerInterface::createCollectionFromDataSource).when(source1).thenReturn(col1);
+        serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).thenReturn(source1);
+        serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).thenReturn(source2);
+        serializerMock(&Akonadi::SerializerInterface::representsCollection).when(source1, col2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::representsCollection).when(source2, col2).thenReturn(true);
+
+        // Monitor mock
+        MockMonitor *monitor = new MockMonitor(this);
+
+        QScopedPointer<Domain::DataSourceQueries> queries(new Akonadi::DataSourceQueries(&storageMock.getInstance(),
+                                                                                         &serializerMock.getInstance(),
+                                                                                         monitor));
+        Domain::QueryResult<Domain::DataSource::Ptr>::Ptr firstLevelResult = queries->findChildren(parent);
+        Domain::QueryResult<Domain::DataSource::Ptr>::Ptr secondLevelResult = queries->findChildren(source1);
+
+        //Trigger population
+        firstLevelResult->data();
+
+        QTest::qWait(150);
+        QCOMPARE(firstLevelResult->data().size(), 0);
+        QCOMPARE(secondLevelResult->data().size(), 0);
+
+        // WHEN
+        col2.setEnabled(true);
+        monitor->changeCollection(col2);
+
+        // THEN
+        QCOMPARE(firstLevelResult->data().size(), 1);
+        QCOMPARE(firstLevelResult->data().first(), source1);
+        QCOMPARE(secondLevelResult->data().size(), 1);
+        QCOMPARE(secondLevelResult->data().first(), source2);
+    }
+
+    void shouldRemoveNoLongerRequiredParents()
+    {
+        // GIVEN
+
+        // One parent collection
+        Akonadi::Collection parentCol(41);
+        parentCol.setParentCollection(Akonadi::Collection::root());
+        auto parent = Domain::DataSource::Ptr::create();
+
+        // one child
+        Akonadi::Collection col1(42);
+        col1.setParentCollection(parentCol);
+        col1.setEnabled(false);
+        auto source1 = Domain::DataSource::Ptr::create();
+
+        // one sub-child
+        Akonadi::Collection col2(43);
+        col2.setParentCollection(col1);
+        col2.setEnabled(true);
+        auto source2 = Domain::DataSource::Ptr::create();
+
+        MockCollectionFetchJob *collectionFetchJob = new MockCollectionFetchJob(this);
+        collectionFetchJob->setCollections(Akonadi::Collection::List() << parentCol << col1 << col2);
+
+        // Storage mock returning the fetch jobs
+        mock_object<Akonadi::StorageInterface> storageMock;
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+                                                                       Akonadi::StorageInterface::Recursive,
+                                                                       Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
+                                                                 .thenReturn(collectionFetchJob);
+
+        // Serializer mock returning the tasks from the items
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::createCollectionFromDataSource).when(parent).thenReturn(parentCol);
+        serializerMock(&Akonadi::SerializerInterface::createCollectionFromDataSource).when(source1).thenReturn(col1);
+        serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).thenReturn(source1);
+        serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).thenReturn(source2);
+        serializerMock(&Akonadi::SerializerInterface::representsCollection).when(source1, col2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::representsCollection).when(source2, col2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::representsCollection).when(source1, col1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::representsCollection).when(source2, col1).thenReturn(false);
+
+        // Monitor mock
+        MockMonitor *monitor = new MockMonitor(this);
+
+        QScopedPointer<Domain::DataSourceQueries> queries(new Akonadi::DataSourceQueries(&storageMock.getInstance(),
+                                                                                         &serializerMock.getInstance(),
+                                                                                         monitor));
+        Domain::QueryResult<Domain::DataSource::Ptr>::Ptr firstLevelResult = queries->findChildren(parent);
+        Domain::QueryResult<Domain::DataSource::Ptr>::Ptr secondLevelResult = queries->findChildren(source1);
+
+        //Trigger population
+        firstLevelResult->data();
+
+        QTest::qWait(150);
+        QCOMPARE(firstLevelResult->data().size(), 1);
+        QCOMPARE(secondLevelResult->data().size(), 1);
+
+        // WHEN
+        col2.setEnabled(false);
+        monitor->changeCollection(col2);
+
+        // THEN
+        QCOMPARE(firstLevelResult->data().size(), 0);
+        QCOMPARE(secondLevelResult->data().size(), 0);
     }
 
     void shouldNotCrashDuringFindChildrenWhenFetchJobFailedOrEmpty_data()
@@ -1234,7 +1369,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                  .thenReturn(collectionFetchJob);
@@ -1255,7 +1390,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(parentCol,
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks | Akonadi::StorageInterface::Notes)
                                                                          .exactly(1));

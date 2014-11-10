@@ -108,6 +108,8 @@ private:
             return;
 
         for (auto child : m_children->data()) {
+            //Protect from endless loop
+            Q_ASSERT(child != m_item);
             QueryTreeNodeBase *node = new QueryTreeNode<ItemType>(child, this,
                                                                   model, queryGenerator,
                                                                   m_flagsFunction,

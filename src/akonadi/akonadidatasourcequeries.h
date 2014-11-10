@@ -28,12 +28,12 @@
 
 #include <QHash>
 
+#include <KJob>
+
 #include <Akonadi/Collection>
 
 #include "domain/datasourcequeries.h"
 #include "domain/livequery.h"
-
-class KJob;
 
 namespace Akonadi {
 
@@ -41,6 +41,7 @@ class Item;
 class MonitorInterface;
 class SerializerInterface;
 class StorageInterface;
+class TreeQuery;
 
 class DataSourceQueries : public QObject, public Domain::DataSourceQueries
 {
@@ -79,12 +80,65 @@ private:
 
     DataSourceQuery::Ptr m_findTasks;
     DataSourceQuery::Ptr m_findNotes;
-    DataSourceQuery::Ptr m_findTopLevel;
-    QHash<Akonadi::Entity::Id, DataSourceQuery::Ptr> m_findChildren;
     DataSourceQuery::List m_dataSourceQueries;
     QString m_searchTerm;
     DataSourceQuery::Ptr m_findSearchTopLevel;
     QHash<Akonadi::Entity::Id, DataSourceQuery::Ptr> m_findSearchChildren;
+    QSharedPointer<TreeQuery> m_treeQuery;
+};
+
+// This represents a reactive result set for an akonadi query
+class AkonadiCollectionTreeSource : public QObject
+{
+    Q_OBJECT
+public:
+    AkonadiCollectionTreeSource(StorageInterface *storage, MonitorInterface *monitor);
+
+    void findChildren(const Akonadi::Collection &parent);
+
+signals:
+    void added(Akonadi::Collection);
+    void removed(Akonadi::Collection);
+    void changed(Akonadi::Collection);
+
+private slots:
+    void onAdded(const Akonadi::Collection &);
+    void onRemoved(const Akonadi::Collection &);
+    void onChanged(const Akonadi::Collection &);
+
+private:
+    //Internally trigger a fetch job and then call the appropriate signals/callbacks
+    void populate(const std::function<void()> &callback);
+    QHash<Collection::Id /*parent*/, Collection::List /*children*/> m_collections;
+    StorageInterface *m_storage;
+    MonitorInterface *m_monitor;
+    bool m_populated;
+    bool m_populationInProgress;
+    QList <std::function<void()> > m_pendingCallbacks;
+};
+
+//Maps the signals to the appropriate query
+class TreeQuery : public QObject
+{
+    Q_OBJECT
+public:
+    typedef Domain::LiveQuery<Akonadi::Collection, Domain::DataSource::Ptr> DataSourceQuery;
+    typedef Domain::QueryResultProvider<Domain::DataSource::Ptr> DataSourceProvider;
+    typedef Domain::QueryResult<Domain::DataSource::Ptr> DataSourceResult;
+
+    TreeQuery(SerializerInterface *, const QSharedPointer<AkonadiCollectionTreeSource> &source);
+
+    DataSourceResult::Ptr findChildren(Domain::DataSource::Ptr source);
+
+private slots:
+    void onAdded(const Akonadi::Collection &col);
+    void onRemoved(const Akonadi::Collection &col);
+    void onChanged(const Akonadi::Collection &col);
+
+private:
+    QHash<Akonadi::Entity::Id, DataSourceQuery::Ptr> m_findChildren;
+    SerializerInterface *m_serializer;
+    QSharedPointer<AkonadiCollectionTreeSource> m_source;
 };
 
 }
