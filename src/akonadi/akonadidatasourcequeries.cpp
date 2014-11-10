@@ -35,12 +35,85 @@
 
 using namespace Akonadi;
 
+AkonadiDataSourceCache::AkonadiDataSourceCache(StorageInterface *storage)
+    : QObject(),
+    m_populated(false),
+    m_storage(storage)
+{
+
+}
+
+void AkonadiDataSourceCache::populate()
+{
+    CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks | StorageInterface::Notes);
+    Utils::JobHandler::install(job->kjob(), [this, job] {
+        if (job->kjob()->error()) {
+            kWarning() << "Failed to fetch collections " << job->kjob()->errorString();
+        }
+        for (auto collection : job->collections()) {
+            kDebug() << collection.id() << collection.parentCollection().id() << collection.name();
+
+            auto topLevel = collection;
+            while (topLevel.isValid() && topLevel != Collection::root()) {
+                add(topLevel);
+                topLevel = topLevel.parentCollection();
+            }
+        }
+        m_populated = true;
+        emit populated();
+    });
+}
+
+void AkonadiDataSourceCache::add(const Collection &col)
+{
+    Collection::List &collections = m_collections[col.parentCollection().id()];
+    if (!collections.contains(col)) {
+        Q_ASSERT(col.id() != col.parentCollection().id());
+        collections.append(col);
+    }
+}
+
+void AkonadiDataSourceCache::remove(const Collection &col)
+{
+    m_collections[col.parentCollection().id()].removeAll(col);
+    m_collections.remove(col.id());
+}
+
+void AkonadiDataSourceCache::update(const Collection & col)
+{
+    Collection::List &collections = m_collections[col.parentCollection().id()];
+    collections.removeAll(col);
+    collections.append(col);
+}
+
+
+CacheRetrievalJob::CacheRetrievalJob(AkonadiDataSourceCache *cache)
+    : m_cache(cache)
+{
+}
+
+void CacheRetrievalJob::start()
+{
+    if (m_cache->m_populated) {
+        emitResult();
+        return;
+    }
+    m_cache->populate();
+    connect(m_cache, SIGNAL(populated()), this, SLOT(onPopulated()));
+}
+
+void CacheRetrievalJob::onPopulated()
+{
+    emitResult();
+}
+
 DataSourceQueries::DataSourceQueries(QObject *parent)
     : QObject(parent),
       m_storage(new Storage),
       m_serializer(new Serializer),
       m_monitor(new MonitorImpl),
-      m_ownInterfaces(true)
+      m_ownInterfaces(true),
+      m_dataSourceCache(new AkonadiDataSourceCache(m_storage))
 {
     connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onCollectionAdded(Akonadi::Collection)));
     connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onCollectionRemoved(Akonadi::Collection)));
@@ -78,8 +151,9 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTasks() const
         m_findTasks->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
             CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks);
             Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                for (auto collection : job->collections())
+                for (auto collection : job->collections()) {
                     add(collection);
+                }
             });
         });
 
@@ -142,24 +216,16 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTopLevel() const
         }
 
         m_findTopLevel->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
-            CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(),
-                                                                           StorageInterface::Recursive,
-                                                                           StorageInterface::Tasks | StorageInterface::Notes);
-            Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                if (job->kjob()->error())
+            CacheRetrievalJob *job = new CacheRetrievalJob(m_dataSourceCache.data());
+            Utils::JobHandler::install(job, [this, job, add] {
+                if (job->error()) {
+                    kWarning() << job->errorString();
                     return;
-
-                QHash<Collection::Id, Collection> topLevels;
-                foreach (const auto &collection, job->collections()) {
-                    auto topLevel = collection;
-                    while (topLevel.parentCollection() != Collection::root())
-                        topLevel = topLevel.parentCollection();
-                    if (!topLevels.contains(topLevel.id()))
-                        topLevels[topLevel.id()] = topLevel;
                 }
 
-                foreach (const auto &topLevel, topLevels.values())
-                    add(topLevel);
+                foreach (const auto &collection, m_dataSourceCache->m_collections.value(Collection::root().id())) {
+                    add(collection);
+                }
             });
         });
 
@@ -195,24 +261,17 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildren(Domain:
         }
 
         query->setFetchFunction([this, root] (const DataSourceQuery::AddFunction &add) {
-            CollectionFetchJobInterface *job = m_storage->fetchCollections(root,
-                                                                           StorageInterface::Recursive,
-                                                                           StorageInterface::Tasks | StorageInterface::Notes);
-            Utils::JobHandler::install(job->kjob(), [this, root, job, add] {
-                if (job->kjob()->error())
+            CacheRetrievalJob *job = new CacheRetrievalJob(m_dataSourceCache.data());
+            Utils::JobHandler::install(job, [this, root, job, add] {
+                if (job->error()) {
+                    kWarning() << job->errorString();
                     return;
-
-                QHash<Collection::Id, Collection> children;
-                foreach (const auto &collection, job->collections()) {
-                    auto child = collection;
-                    while (child.parentCollection() != root)
-                        child = child.parentCollection();
-                    if (!children.contains(child.id()))
-                        children[child.id()] = child;
                 }
 
-                foreach (const auto &topLevel, children.values())
-                    add(topLevel);
+                foreach (const auto &collection, m_dataSourceCache->m_collections.value(root.id())) {
+                    Q_ASSERT(collection.id() != root.id());
+                    add(collection);
+                }
             });
         });
 
@@ -223,9 +282,7 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildren(Domain:
             m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
         });
         query->setPredicateFunction([this, root] (const Akonadi::Collection &collection) {
-            return collection.isValid()
-                && collection.parentCollection() == root
-                && m_serializer->isListedCollection(collection);
+            return m_dataSourceCache->m_collections[root.id()].contains(collection);
         });
         query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
             return m_serializer->representsCollection(source, collection);
@@ -357,18 +414,21 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildren(D
 
 void DataSourceQueries::onCollectionAdded(const Collection &collection)
 {
+    m_dataSourceCache->add(collection);
     foreach (const DataSourceQuery::Ptr &query, m_dataSourceQueries)
         query->onAdded(collection);
 }
 
 void DataSourceQueries::onCollectionRemoved(const Collection &collection)
 {
+    m_dataSourceCache->remove(collection);
     foreach (const DataSourceQuery::Ptr &query, m_dataSourceQueries)
         query->onRemoved(collection);
 }
 
 void DataSourceQueries::onCollectionChanged(const Collection &collection)
 {
+    m_dataSourceCache->update(collection);
     foreach (const DataSourceQuery::Ptr &query, m_dataSourceQueries)
         query->onChanged(collection);
 }

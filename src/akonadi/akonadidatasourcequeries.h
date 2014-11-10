@@ -28,12 +28,12 @@
 
 #include <QHash>
 
+#include <KJob>
+
 #include <Akonadi/Collection>
 
 #include "domain/datasourcequeries.h"
 #include "domain/livequery.h"
-
-class KJob;
 
 namespace Akonadi {
 
@@ -41,6 +41,7 @@ class Item;
 class MonitorInterface;
 class SerializerInterface;
 class StorageInterface;
+class AkonadiDataSourceCache;
 
 class DataSourceQueries : public QObject, public Domain::DataSourceQueries
 {
@@ -85,6 +86,42 @@ private:
     QString m_searchTerm;
     DataSourceQuery::Ptr m_findSearchTopLevel;
     QHash<Akonadi::Entity::Id, DataSourceQuery::Ptr> m_findSearchChildren;
+    QSharedPointer<AkonadiDataSourceCache> m_dataSourceCache;
+};
+
+class AkonadiDataSourceCache : public QObject {
+    Q_OBJECT
+public:
+    AkonadiDataSourceCache(StorageInterface *);
+
+    void populate();
+    void add(const Collection &col);
+    void remove(const Collection &col);
+    void update(const Collection &col);
+
+    QHash<Collection::Id /*parent*/, Collection::List /*children*/> m_collections;
+    bool m_populated;
+
+signals:
+    void populated();
+
+private:
+    StorageInterface *m_storage;
+};
+
+class CacheRetrievalJob : public KJob
+{
+    Q_OBJECT
+public:
+    CacheRetrievalJob(AkonadiDataSourceCache *cache);
+
+    void start();
+
+private slots:
+    void onPopulated();
+
+private:
+    AkonadiDataSourceCache *m_cache;
 };
 
 }
