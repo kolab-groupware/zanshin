@@ -27,7 +27,9 @@
 using namespace Domain;
 
 Task::Task(QObject *parent)
-    : Artifact(parent)
+    : Artifact(parent),
+    m_progress(0),
+    m_status(None)
 {
 }
 
