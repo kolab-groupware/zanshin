@@ -127,10 +127,6 @@ private slots:
         QVERIFY(dueDateEdit);
         QVERIFY(!dueDateEdit->isVisibleTo(&editor));
 
-        auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
-        QVERIFY(doneButton);
-        QVERIFY(!doneButton->isVisibleTo(&editor));
-
         auto delegateLabel = editor.findChild<QLabel*>("delegateLabel");
         QVERIFY(delegateLabel);
         QVERIFY(!delegateLabel->isVisibleTo(&editor));
@@ -153,9 +149,6 @@ private slots:
         auto dueDateEdit = editor.findChild<KPIM::KDateEdit*>("dueDateEdit");
         QVERIFY(!dueDateEdit->isVisibleTo(&editor));
 
-        auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
-        QVERIFY(!doneButton->isVisibleTo(&editor));
-
         auto delegateLabel = editor.findChild<QLabel*>("delegateLabel");
         QVERIFY(!delegateLabel->isVisibleTo(&editor));
 
@@ -168,7 +161,6 @@ private slots:
         // THEN
         QVERIFY(startDateEdit->isVisibleTo(&editor));
         QVERIFY(dueDateEdit->isVisibleTo(&editor));
-        QVERIFY(doneButton->isVisibleTo(&editor));
         QVERIFY(!delegateLabel->isVisibleTo(&editor));
         QVERIFY(delegateEdit->isVisibleTo(&editor));
     }
@@ -246,16 +238,12 @@ private slots:
         auto dueDateEdit = editor.findChild<KPIM::KDateEdit*>("dueDateEdit");
         QVERIFY(!dueDateEdit->isVisibleTo(&editor));
 
-        auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
-        QVERIFY(!doneButton->isVisibleTo(&editor));
-
         // WHEN
         model.setPropertyAndSignal("hasTaskProperties", true);
 
         // THEN
         QVERIFY(startDateEdit->isVisibleTo(&editor));
         QVERIFY(dueDateEdit->isVisibleTo(&editor));
-        QVERIFY(doneButton->isVisibleTo(&editor));
     }
 
     void shouldDisplayModelProperties()
@@ -274,7 +262,6 @@ private slots:
         auto textEdit = editor.findChild<QPlainTextEdit*>("textEdit");
         auto startDateEdit = editor.findChild<KPIM::KDateEdit*>("startDateEdit");
         auto dueDateEdit = editor.findChild<KPIM::KDateEdit*>("dueDateEdit");
-        auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
 
         // WHEN
         editor.setModel(&model);
@@ -285,7 +272,6 @@ private slots:
                                                 + model.property("text").toString()));
         QCOMPARE(startDateEdit->date(), model.property("startDate").toDateTime().date());
         QCOMPARE(dueDateEdit->date(), model.property("dueDate").toDateTime().date());
-        QCOMPARE(doneButton->isChecked(), model.property("done").toBool());
     }
 
     void shouldReactToTitleChanges()
@@ -352,46 +338,6 @@ private slots:
         // THEN
         QCOMPARE(model.property("title").toString(), QString("Title"));
         QCOMPARE(model.property("text").toString(), QString("\nText"));
-    }
-
-    void shouldReactToDoneChanges()
-    {
-        // GIVEN
-        Widgets::EditorView editor;
-        EditorModelStub model;
-        model.makeTaskAvailable();
-        model.setProperty("title", "My title");
-        model.setProperty("text", "\nMy text");
-        model.setProperty("startDate", QDateTime::currentDateTime());
-        model.setProperty("dueDate", QDateTime::currentDateTime().addDays(2));
-        model.setProperty("done", false);
-        editor.setModel(&model);
-
-        auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
-        QVERIFY(!doneButton->isChecked());
-
-        // WHEN
-        model.setPropertyAndSignal("done", true);
-
-        // THEN
-        QVERIFY(doneButton->isChecked());
-    }
-
-    void shouldApplyDoneButtonChanges()
-    {
-        // GIVEN
-        Widgets::EditorView editor;
-        EditorModelStub model;
-        model.makeTaskAvailable();
-        editor.setModel(&model);
-
-        auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
-
-        // WHEN
-        doneButton->setChecked(true);
-
-        // THEN
-        QCOMPARE(model.property("done").toBool(), true);
     }
 
     void shouldReactToStartDateChanges()

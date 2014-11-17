@@ -79,17 +79,16 @@ private slots:
     void shouldNotifyStatusChanges()
     {
         Task t;
-        QSignalSpy spy(&t, SIGNAL(doneChanged(bool)));
+        QSignalSpy spy(&t, SIGNAL(statusChanged(int)));
         t.setDone(true);
         QCOMPARE(spy.count(), 1);
-        QCOMPARE(spy.first().first().toBool(), true);
     }
 
     void shouldNotNotifyIdenticalStatusChanges()
     {
         Task t;
         t.setDone(true);
-        QSignalSpy spy(&t, SIGNAL(doneChanged(bool)));
+        QSignalSpy spy(&t, SIGNAL(statusChanged(int)));
         t.setDone(true);
         QCOMPARE(spy.count(), 0);
     }

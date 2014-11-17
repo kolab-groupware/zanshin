@@ -27,6 +27,7 @@ set(akonadi_SRCS
     akonaditaskqueries.cpp
     akonaditaskrepository.cpp
     akonaditimestampattribute.cpp
+    collectionsearchjob.cpp
 )
 
 kde4_add_library(akonadi STATIC ${akonadi_SRCS})
@@ -36,4 +37,5 @@ target_link_libraries(akonadi
     ${KDEPIMLIBS_AKONADI_NOTES_LIBS}
     ${KDEPIMLIBS_KCALCORE_LIBS}
     ${KDEPIMLIBS_KMIME_LIBS}
+    ${BALOO_LIBRARIES}
 )

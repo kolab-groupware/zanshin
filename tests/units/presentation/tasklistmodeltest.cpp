@@ -209,7 +209,6 @@ private slots:
         Presentation::TaskListModel model(list, &repositoryMock.getInstance());
         new ModelTest(&model);
         QSignalSpy titleChangedSpy(task.data(), SIGNAL(titleChanged(QString)));
-        QSignalSpy doneChangedSpy(task.data(), SIGNAL(doneChanged(bool)));
 
         // WHEN
         const auto index = model.index(taskPos);
@@ -221,8 +220,6 @@ private slots:
 
         QCOMPARE(titleChangedSpy.size(), 1);
         QCOMPARE(titleChangedSpy.first().first().toString(), QString("alternate second"));
-        QCOMPARE(doneChangedSpy.size(), 1);
-        QCOMPARE(doneChangedSpy.first().first().toBool(), true);
     }
 };
 

@@ -73,7 +73,7 @@ private slots:
     void shouldRemoveTag()
     {
         // GIVEN
-        Akonadi::Tag akonadiTag;
+        Akonadi::Tag akonadiTag(42);
         auto tag = Domain::Tag::Ptr::create();
         tag->setProperty("tagId", qint64(42)); // must be set
         tag->setName("42");
@@ -95,6 +95,44 @@ private slots:
 
         // THEN
         QVERIFY(storageMock(&Akonadi::StorageInterface::removeTag).when(akonadiTag).exactly(1));
+    }
+
+    void shouldAssociateTaskToTag()
+    {
+        // GIVEN
+        auto tag = Domain::Tag::Ptr::create();
+        Akonadi::Tag akonadiTag(42);
+
+        Domain::Artifact::Ptr task = Domain::Task::Ptr::create();
+        Akonadi::Item taskItem(42);
+
+        // A mock of update job
+        auto itemModifyJob = new MockAkonadiJob(this);
+
+        auto itemFetchJob = new MockItemFetchJob(this);
+        itemFetchJob->setItems(Akonadi::Item::List() << taskItem);
+
+        // Storage mock returning the tagCreatejob
+        mock_object<Akonadi::StorageInterface> storageMock;
+        storageMock(&Akonadi::StorageInterface::updateItem).when(taskItem, 0)
+                                                          .thenReturn(itemModifyJob);
+
+        storageMock(&Akonadi::StorageInterface::fetchItem).when(taskItem)
+                                                          .thenReturn(itemFetchJob);
+        // Serializer mock
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::createAkonadiTagFromTag).when(tag).thenReturn(akonadiTag);
+        serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task.objectCast<Domain::Task>()).thenReturn(taskItem);
+
+        // WHEN
+        QScopedPointer<Akonadi::TagRepository> repository(new Akonadi::TagRepository(&storageMock.getInstance(), &serializerMock.getInstance()));
+        repository->associate(tag, task)->exec();
+
+        // THEN
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createAkonadiTagFromTag).when(tag).exactly(1));
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task.objectCast<Domain::Task>()).exactly(1));
+
+        QVERIFY(storageMock(&Akonadi::StorageInterface::updateItem).when(taskItem, 0).exactly(1));
     }
 };
 
