@@ -36,7 +36,9 @@ class ArtifactFilterProxyModel : public QSortFilterProxyModel
 public:
     enum SortType {
         TitleSort = 0,
-        DateSort
+        DateSort,
+        ProgressSort,
+        StatusSort
     };
 
     explicit ArtifactFilterProxyModel(QObject *parent = 0);

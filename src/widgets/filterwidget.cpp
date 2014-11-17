@@ -44,6 +44,8 @@ FilterWidget::FilterWidget(QWidget *parent)
     ui->extension->hide();
     ui->sortTypeCombo->addItem(tr("Sort by title"), Presentation::ArtifactFilterProxyModel::TitleSort);
     ui->sortTypeCombo->addItem(tr("Sort by date"), Presentation::ArtifactFilterProxyModel::DateSort);
+    ui->sortTypeCombo->addItem(tr("Sort by progress"), Presentation::ArtifactFilterProxyModel::ProgressSort);
+    ui->sortTypeCombo->addItem(tr("Sort by status"), Presentation::ArtifactFilterProxyModel::StatusSort);
 
     connect(ui->filterEdit, SIGNAL(textChanged(QString)),
             this, SLOT(onTextChanged(QString)));

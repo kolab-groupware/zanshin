@@ -88,23 +88,64 @@ static QDateTime validDt(const QDateTime &date = QDateTime())
     return QDateTime::fromTime_t(std::numeric_limits<uint>::max() - 1);
 }
 
+static int statusPriority(Domain::Task::Status status)
+{
+    switch (status) {
+        case Domain::Task::Status::Complete:
+            return 0;
+        case Domain::Task::Status::None:
+            return 2;
+        case Domain::Task::Status::NeedsAction:
+            return 3;
+        case Domain::Task::Status::InProcess:
+            return 4;
+        case Domain::Task::Status::Cancelled:
+            return 1;
+    };
+    return -1;
+}
+
 bool ArtifactFilterProxyModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-    if (m_sortType != DateSort)
+    if (m_sortType == TitleSort) {
         return QSortFilterProxyModel::lessThan(left, right);
+    } else if (m_sortType == DateSort) {
+        const auto leftArtifact = left.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
+        const auto rightArtifact = right.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
 
-    const auto leftArtifact = left.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
-    const auto rightArtifact = right.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
+        const auto leftTask = leftArtifact.objectCast<Domain::Task>();
+        const auto rightTask = rightArtifact.objectCast<Domain::Task>();
 
-    const auto leftTask = leftArtifact.objectCast<Domain::Task>();
-    const auto rightTask = rightArtifact.objectCast<Domain::Task>();
+        const QDateTime leftDue = leftTask ? validDt(leftTask->dueDate()) : validDt().addSecs(1);
+        const QDateTime rightDue = rightTask ? validDt(rightTask->dueDate()) : validDt().addSecs(1);
 
-    const QDateTime leftDue = leftTask ? validDt(leftTask->dueDate()) : validDt().addSecs(1);
-    const QDateTime rightDue = rightTask ? validDt(rightTask->dueDate()) : validDt().addSecs(1);
+        const QDateTime leftStart = leftTask ? validDt(leftTask->startDate()) : validDt().addSecs(1);
+        const QDateTime rightStart = rightTask ? validDt(rightTask->startDate()) : validDt().addSecs(1);
 
-    const QDateTime leftStart = leftTask ? validDt(leftTask->startDate()) : validDt().addSecs(1);
-    const QDateTime rightStart = rightTask ? validDt(rightTask->startDate()) : validDt().addSecs(1);
+        return leftDue < rightDue
+            || leftStart < rightStart;
+    } else if (m_sortType == ProgressSort) {
+        const auto leftArtifact = left.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
+        const auto rightArtifact = right.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
 
-    return leftDue < rightDue
-        || leftStart < rightStart;
+        const auto leftTask = leftArtifact.objectCast<Domain::Task>();
+        const auto rightTask = rightArtifact.objectCast<Domain::Task>();
+
+        const int leftProgress = leftTask ? leftTask->progress() : std::numeric_limits<int>::max();
+        const int rightProgress = rightTask ? rightTask->progress() : std::numeric_limits<int>::max();
+
+        return leftProgress < rightProgress;
+    } else if (m_sortType == StatusSort) {
+        const auto leftArtifact = left.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
+        const auto rightArtifact = right.data(QueryTreeModelBase::ObjectRole).value<Domain::Artifact::Ptr>();
+
+        const auto leftTask = leftArtifact.objectCast<Domain::Task>();
+        const auto rightTask = rightArtifact.objectCast<Domain::Task>();
+
+        const int leftStatusPriority = leftTask ? statusPriority(leftTask->status()) : 0;
+        const int rightStatusPriority = rightTask ? statusPriority(rightTask->status()) : 0;
+
+        return leftStatusPriority < rightStatusPriority;
+    }
+    return QSortFilterProxyModel::lessThan(left, right);
 }
