@@ -29,9 +29,11 @@
 #include <QLineEdit>
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QMessageBox>
 
 #include "filterwidget.h"
 #include "itemdelegate.h"
+#include "messagebox.h"
 
 #include "presentation/artifactfilterproxymodel.h"
 #include "presentation/metatypes.h"
@@ -41,6 +43,7 @@ using namespace Widgets;
 
 PageView::PageView(QWidget *parent)
     : QWidget(parent),
+      m_model(0),
       m_filterWidget(new FilterWidget(this)),
       m_centralView(new QTreeView(this)),
       m_quickAddEdit(new QLineEdit(this))
@@ -52,6 +55,7 @@ PageView::PageView(QWidget *parent)
     m_centralView->setAlternatingRowColors(true);
     m_centralView->setItemDelegate(new ItemDelegate(this));
     m_centralView->setDragDropMode(QTreeView::DragDrop);
+    m_centralView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_centralView->setModel(m_filterWidget->proxyModel());
 
     m_quickAddEdit->setObjectName("quickAddEdit");
@@ -68,6 +72,8 @@ PageView::PageView(QWidget *parent)
     removeItemAction->setShortcut(Qt::Key_Delete);
     connect(removeItemAction, SIGNAL(triggered()), this, SLOT(onRemoveItemRequested()));
     addAction(removeItemAction);
+
+    m_messageBoxInterface = MessageBox::Ptr::create();
 }
 
 QObject *PageView::model() const
@@ -99,6 +105,16 @@ void PageView::setModel(QObject *model)
             this, SLOT(onCurrentChanged(QModelIndex)));
 }
 
+MessageBoxInterface::Ptr PageView::messageBoxInterface() const
+{
+    return m_messageBoxInterface;
+}
+
+void PageView::setMessageBoxInterface(const MessageBoxInterface::Ptr &interface)
+{
+    m_messageBoxInterface = interface;
+}
+
 void PageView::onEditingFinished()
 {
     if (m_quickAddEdit->text().isEmpty())
@@ -110,11 +126,51 @@ void PageView::onEditingFinished()
 
 void PageView::onRemoveItemRequested()
 {
-    QModelIndex currentIndex = m_centralView->selectionModel()->currentIndex();
-    if (!currentIndex.isValid())
+    const QModelIndexList &currentIndexes = m_centralView->selectionModel()->selectedIndexes();
+    if (currentIndexes.isEmpty())
         return;
 
-    QMetaObject::invokeMethod(m_model, "removeItem", Q_ARG(QModelIndex, currentIndex));
+    QString text;
+    if (currentIndexes.size() > 1) {
+        bool hasDescendants = false;
+        foreach (const QModelIndex &currentIndex, currentIndexes) {
+            if (!currentIndex.isValid())
+                continue;
+
+            if (currentIndex.model()->rowCount(currentIndex) > 0) {
+                hasDescendants = true;
+                break;
+            }
+        }
+
+        if (hasDescendants)
+            text = tr("Do you really want to delete the selected items and their children?");
+        else
+            text = tr("Do you really want to delete the selected items?");
+
+    } else {
+        const QModelIndex &currentIndex = currentIndexes.first();
+        if (!currentIndex.isValid())
+            return;
+
+        if (currentIndex.model()->rowCount(currentIndex) > 0)
+            text = tr("Do you really want to delete the selected task and all its children?");
+    }
+
+    if (!text.isEmpty()) {
+        QMessageBox::Button button = m_messageBoxInterface->askConfirmation(this, tr("Delete Tasks"), text);
+        bool canRemove = (button == QMessageBox::Yes);
+
+        if (!canRemove)
+            return;
+    }
+
+    foreach (const QModelIndex &currentIndex, currentIndexes) {
+        if (!currentIndex.isValid())
+            continue;
+
+        QMetaObject::invokeMethod(m_model, "removeItem", Q_ARG(QModelIndex, currentIndex));
+    }
 }
 
 void PageView::onCurrentChanged(const QModelIndex &current)

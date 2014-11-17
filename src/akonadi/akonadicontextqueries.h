@@ -1,6 +1,7 @@
 /* This file is part of Zanshin
 
    Copyright 2014 Franck Arrecot <franck.arrecot@gmail.com>
+   Copyright 2014 Rémi Benoit <r3m1.benoit@gmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -27,6 +28,7 @@
 #include <Akonadi/Item>
 
 #include "domain/contextqueries.h"
+#include "domain/livequery.h"
 
 namespace Akonadi {
 
@@ -38,33 +40,45 @@ class ContextQueries : public QObject, public Domain::ContextQueries
 {
     Q_OBJECT
 public:
+    typedef Domain::LiveQuery<Akonadi::Item, Domain::Task::Ptr> TaskQuery;
     typedef Domain::QueryResult<Domain::Task::Ptr> TaskResult;
     typedef Domain::QueryResultProvider<Domain::Task::Ptr> TaskProvider;
 
+    typedef Domain::LiveQuery<Akonadi::Tag, Domain::Context::Ptr> ContextQuery;
     typedef Domain::QueryResult<Domain::Context::Ptr> ContextResult;
     typedef Domain::QueryResultProvider<Domain::Context::Ptr> ContextProvider;
 
-    ContextQueries();
+    explicit ContextQueries(QObject *parent = 0);
     ContextQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor);
     virtual ~ContextQueries();
 
 
     ContextResult::Ptr findAll() const;
-    ContextResult::Ptr findChildren(Domain::Context::Ptr context) const;
-    TaskResult::Ptr findTasks(Domain::Context::Ptr context) const;
+    TaskResult::Ptr findTopLevelTasks(Domain::Context::Ptr context) const;
 
 private slots:
     void onTagAdded(const Akonadi::Tag &tag);
     void onTagRemoved(const Akonadi::Tag &tag);
     void onTagChanged(const Akonadi::Tag &tag);
 
+    void onItemAdded(const Akonadi::Item &item);
+    void onItemRemoved(const Akonadi::Item &item);
+    void onItemChanged(const Akonadi::Item &item);
+
 private:
-    mutable ContextProvider::WeakPtr m_contextProvider;
+    ContextQuery::Ptr createContextQuery();
+    TaskQuery::Ptr createTaskQuery();
 
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
     MonitorInterface *m_monitor;
     bool m_ownInterfaces;
+
+    ContextQuery::Ptr m_findAll;
+    ContextQuery::List m_contextQueries;
+
+    QHash<Akonadi::Tag::Id, TaskQuery::Ptr> m_findToplevel;
+    TaskQuery::List m_taskQueries;
 };
 
 } // akonadi namespace

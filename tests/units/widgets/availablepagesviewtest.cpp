@@ -25,15 +25,24 @@
 
 #include <QAbstractItemModel>
 #include <QAction>
+#include <QDebug>
 #include <QHeaderView>
+#include <QStandardItemModel>
 #include <QStringListModel>
 #include <QToolBar>
 #include <QTreeView>
 
+#include "domain/project.h"
+#include "domain/context.h"
+#include "domain/tag.h"
+
 #include "presentation/metatypes.h"
+#include "presentation/querytreemodelbase.h"
 
 #include "widgets/availablepagesview.h"
 #include "widgets/newpagedialog.h"
+
+#include "messageboxstub.h"
 
 class NewPageDialogStub : public Widgets::NewPageDialogInterface
 {
@@ -64,6 +73,21 @@ public:
         defaultSource = source;
     }
 
+    void setDefaultPageType(PageType type)
+    {
+        defaultPageType = type;
+    }
+
+    void setPageType(PageType type)
+    {
+        lastPageAdded = type;
+    }
+
+    PageType pageType() const
+    {
+        return lastPageAdded;
+    }
+
     QString name() const
     {
         return "name";
@@ -79,6 +103,8 @@ public:
     QAbstractItemModel *sourceModel;
     Domain::DataSource::Ptr defaultSource;
     Domain::DataSource::Ptr source;
+    PageType defaultPageType;
+    PageType lastPageAdded;
 };
 
 class AvailablePagesModelStub : public QObject
@@ -96,9 +122,30 @@ public slots:
         sources << source;
     }
 
+    void addContext(const QString &name)
+    {
+        contextNames << name;
+    }
+
+    void addTag(const QString &name)
+    {
+        tagNames << name;
+    }
+
+    void removeItem(const QModelIndex &index)
+    {
+        projectRemoved = index.data().toString();
+    }
+
+public Q_SLOTS:
+    QObject *createPageForIndex(const QModelIndex &) { return 0; }
+
 public:
     QStringList projectNames;
+    QStringList contextNames;
+    QStringList tagNames;
     QList<Domain::DataSource::Ptr> sources;
+    QString projectRemoved;
 };
 
 class AvailablePagesViewTest : public QObject
@@ -135,7 +182,7 @@ private slots:
         // GIVEN
         QStringListModel model(QStringList() << "A" << "B" << "C" );
 
-        QObject stubPagesModel;
+        AvailablePagesModelStub stubPagesModel;
         stubPagesModel.setProperty("pageListModel", QVariant::fromValue(static_cast<QAbstractItemModel*>(&model)));
 
         Widgets::AvailablePagesView available;
@@ -167,6 +214,7 @@ private slots:
         available.setDefaultProjectSource(source);
         available.setDialogFactory([dialogStub] (QWidget *parent) {
             dialogStub->parent = parent;
+            dialogStub->setPageType(Widgets::NewPageDialogInterface::Project);
             return dialogStub;
         });
 
@@ -185,6 +233,126 @@ private slots:
         QCOMPARE(model.sources.size(), 1);
         QCOMPARE(model.sources.first(), dialogStub->dataSource());
         QCOMPARE(available.defaultProjectSource(), dialogStub->dataSource());
+    }
+
+    void shouldAddNewContexts()
+    {
+        // GIVEN
+        AvailablePagesModelStub model;
+        QStringListModel sourceModel;
+        auto dialogStub = NewPageDialogStub::Ptr::create();
+
+        auto source = Domain::DataSource::Ptr::create();
+
+        Widgets::AvailablePagesView available;
+        available.setModel(&model);
+        available.setProjectSourcesModel(&sourceModel);
+        available.setDefaultProjectSource(source);
+        available.setDialogFactory([dialogStub] (QWidget *parent) {
+            dialogStub->parent = parent;
+            dialogStub->setPageType(Widgets::NewPageDialogInterface::Context);
+            return dialogStub;
+        });
+
+        auto addAction = available.findChild<QAction*>("addAction");
+
+        // WHEN
+        addAction->trigger();
+
+        // THEN
+        QCOMPARE(dialogStub->execCount, 1);
+        QCOMPARE(dialogStub->parent, &available);
+        QCOMPARE(dialogStub->sourceModel, &sourceModel);
+        QCOMPARE(dialogStub->pageType(), Widgets::NewPageDialogInterface::Context);
+        QCOMPARE(model.contextNames.size(), 1);
+        QCOMPARE(model.contextNames.first(), dialogStub->name());
+    }
+
+    void shouldAddNewTags()
+    {
+        // GIVEN
+        AvailablePagesModelStub model;
+        QStringListModel sourceModel;
+        auto dialogStub = NewPageDialogStub::Ptr::create();
+
+        auto source = Domain::DataSource::Ptr::create();
+
+        Widgets::AvailablePagesView available;
+        available.setModel(&model);
+        available.setProjectSourcesModel(&sourceModel);
+        available.setDefaultProjectSource(source);
+        available.setDialogFactory([dialogStub] (QWidget *parent) {
+            dialogStub->parent = parent;
+            dialogStub->setPageType(Widgets::NewPageDialogInterface::Tag);
+            return dialogStub;
+        });
+
+        auto addAction = available.findChild<QAction*>("addAction");
+
+        // WHEN
+        addAction->trigger();
+
+        // THEN
+        QCOMPARE(dialogStub->execCount, 1);
+        QCOMPARE(dialogStub->parent, &available);
+        QCOMPARE(dialogStub->sourceModel, &sourceModel);
+        QCOMPARE(dialogStub->pageType(), Widgets::NewPageDialogInterface::Tag);
+        QCOMPARE(model.tagNames.size(), 1);
+        QCOMPARE(model.tagNames.first(), dialogStub->name());
+    }
+
+    void shouldRemoveAPage_data()
+    {
+        QTest::addColumn<QObjectPtr>("object");
+
+        auto project1 = Domain::Project::Ptr::create();
+        project1->setName("Project 1");
+        QTest::newRow("project") << QObjectPtr(project1);
+
+        auto context1 = Domain::Context::Ptr::create();
+        context1->setName("Context 1");
+        QTest::newRow("context") << QObjectPtr(context1);
+
+        auto tag1 = Domain::Tag::Ptr::create();
+        tag1->setName("Tag 1");
+        QTest::newRow("tag") << QObjectPtr(tag1);
+    }
+
+    void shouldRemoveAPage()
+    {
+        QFETCH(QObjectPtr, object);
+
+        // GIVEN
+        QStringList list;
+        list << "A" << "B" << "C";
+        QStandardItemModel model;
+        for (int row = 0; row < list.count(); ++row) {
+            model.setItem(row, new QStandardItem(list.at(row)));
+        }
+
+        AvailablePagesModelStub stubPagesModel;
+        stubPagesModel.setProperty("pageListModel", QVariant::fromValue(static_cast<QAbstractItemModel*>(&model)));
+
+        Widgets::AvailablePagesView available;
+        auto pagesView = available.findChild<QTreeView*>("pagesView");
+        QVERIFY(pagesView);
+        QVERIFY(!pagesView->model());
+
+        available.setModel(&stubPagesModel);
+        QTest::qWait(10);
+
+        auto removeAction = available.findChild<QAction*>("removeAction");
+
+        QVERIFY(model.setData(model.index(0, 0), QVariant::fromValue(object), Presentation::QueryTreeModelBase::ObjectRole));
+
+        auto msgbox = MessageBoxStub::Ptr::create();
+        available.setMessageBoxInterface(msgbox);
+
+        // WHEN
+        removeAction->trigger();
+
+        // THEN
+        QCOMPARE(stubPagesModel.projectRemoved, list.first());
     }
 };
 

@@ -36,6 +36,7 @@
 
 #include "widgets/applicationcomponents.h"
 #include "widgets/availablepagesview.h"
+#include "widgets/availablesourcesview.h"
 #include "widgets/datasourcecombobox.h"
 #include "widgets/editorview.h"
 #include "widgets/pageview.h"
@@ -196,6 +197,7 @@ public:
     explicit ApplicationComponentsTest(QObject *parent = 0)
         : QObject(parent)
     {
+        qputenv("ZANSHIN_UNIT_TEST_RUN", "1");
         qRegisterMetaType<ComboGetterFunction>();
     }
 
@@ -211,6 +213,39 @@ private slots:
 
         // THEN
         QCOMPARE(components.model(), &model);
+    }
+
+    void shouldApplyAvailableSourcesModelToAvailableSourcesView()
+    {
+        // GIVEN
+        Widgets::ApplicationComponents components;
+        QObject model;
+        QObject availableSources;
+        model.setProperty("availableSources", QVariant::fromValue(&availableSources));
+
+        // WHEN
+        components.setModel(&model);
+
+        // THEN
+        QCOMPARE(components.availableSourcesView()->model(), &availableSources);
+    }
+
+    void shouldApplyAvailableSourcesModelAlsoToCreatedAvailableSourcesView()
+    {
+        // GIVEN
+        Widgets::ApplicationComponents components;
+        // Force creation
+        components.availableSourcesView();
+
+        QObject model;
+        QObject availableSources;
+        model.setProperty("availableSources", QVariant::fromValue(&availableSources));
+
+        // WHEN
+        components.setModel(&model);
+
+        // THEN
+        QCOMPARE(components.availableSourcesView()->model(), &availableSources);
     }
 
     void shouldApplyAvailablePagesModelToAvailablePagesView()

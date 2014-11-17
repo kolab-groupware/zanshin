@@ -27,11 +27,17 @@
 
 #include <QWidget>
 
+#include <QSharedPointer>
+
+#include <functional>
+
 #include "domain/artifact.h"
+#include "messageboxinterface.h"
 
 class QLineEdit;
 class QModelIndex;
 class QTreeView;
+class QMessageBox;
 
 namespace Widgets {
 
@@ -44,9 +50,11 @@ public:
     explicit PageView(QWidget *parent = 0);
 
     QObject *model() const;
+    MessageBoxInterface::Ptr messageBoxInterface() const;
 
 public slots:
     void setModel(QObject *model);
+    void setMessageBoxInterface(const MessageBoxInterface::Ptr &interface);
 
 signals:
     void currentArtifactChanged(const Domain::Artifact::Ptr &artifact);
@@ -61,6 +69,7 @@ private:
     FilterWidget *m_filterWidget;
     QTreeView *m_centralView;
     QLineEdit *m_quickAddEdit;
+    MessageBoxInterface::Ptr m_messageBoxInterface;
 };
 
 }

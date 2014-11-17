@@ -25,11 +25,15 @@
 
 #include "akonadi/akonadiartifactqueries.h"
 #include "akonadi/akonadicontextqueries.h"
+#include "akonadi/akonadicontextrepository.h"
 #include "akonadi/akonadidatasourcequeries.h"
+#include "akonadi/akonadidatasourcerepository.h"
 #include "akonadi/akonadinotequeries.h"
 #include "akonadi/akonadinoterepository.h"
 #include "akonadi/akonadiprojectqueries.h"
 #include "akonadi/akonadiprojectrepository.h"
+#include "akonadi/akonaditagqueries.h"
+#include "akonadi/akonaditagrepository.h"
 #include "akonadi/akonaditaskqueries.h"
 #include "akonadi/akonaditaskrepository.h"
 
@@ -40,11 +44,15 @@ void App::initializeDependencies()
     auto &deps = Utils::DependencyManager::globalInstance();
     deps.add<Domain::ArtifactQueries, Akonadi::ArtifactQueries>();
     deps.add<Domain::ContextQueries, Akonadi::ContextQueries>();
+    deps.add<Domain::ContextRepository, Akonadi::ContextRepository>();
     deps.add<Domain::DataSourceQueries, Akonadi::DataSourceQueries>();
+    deps.add<Domain::DataSourceRepository, Akonadi::DataSourceRepository>();
     deps.add<Domain::NoteQueries, Akonadi::NoteQueries>();
     deps.add<Domain::NoteRepository, Akonadi::NoteRepository>();
     deps.add<Domain::ProjectQueries, Akonadi::ProjectQueries>();
     deps.add<Domain::ProjectRepository, Akonadi::ProjectRepository>();
+    deps.add<Domain::TagQueries, Akonadi::TagQueries>();
+    deps.add<Domain::TagRepository, Akonadi::TagRepository>();
     deps.add<Domain::TaskQueries, Akonadi::TaskQueries>();
     deps.add<Domain::TaskRepository, Akonadi::TaskRepository>();
 }

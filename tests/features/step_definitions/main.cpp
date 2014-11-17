@@ -12,10 +12,15 @@
 #include <KGlobal>
 
 #include "akonadi/akonadiartifactqueries.h"
+#include "akonadi/akonadicontextqueries.h"
+#include "akonadi/akonadicontextrepository.h"
 #include "akonadi/akonadidatasourcequeries.h"
+#include "akonadi/akonadidatasourcerepository.h"
 #include "akonadi/akonadinoterepository.h"
 #include "akonadi/akonadiprojectqueries.h"
 #include "akonadi/akonadiprojectrepository.h"
+#include "akonadi/akonaditagqueries.h"
+#include "akonadi/akonaditagrepository.h"
 #include "akonadi/akonaditaskqueries.h"
 #include "akonadi/akonaditaskrepository.h"
 #include "presentation/applicationmodel.h"
@@ -54,10 +59,15 @@ public:
         auto appModel = new ApplicationModel(new Akonadi::ArtifactQueries(this),
                                              new Akonadi::ProjectQueries(this),
                                              new Akonadi::ProjectRepository(this),
+                                             new Akonadi::ContextQueries(this),
+                                             new Akonadi::ContextRepository(this),
                                              new Akonadi::DataSourceQueries(this),
+                                             new Akonadi::DataSourceRepository(this),
                                              new Akonadi::TaskQueries(this),
                                              new Akonadi::TaskRepository(this),
                                              new Akonadi::NoteRepository(this),
+                                             new Akonadi::TagQueries(this),
+                                             new Akonadi::TagRepository(this),
                                              this);
         // Since it is lazy loaded force ourselves in a known state
         appModel->defaultNoteDataSource();
@@ -88,6 +98,7 @@ public:
     QPersistentModelIndex index;
     QObject *presentation;
     QObject *editor;
+    QList<QPersistentModelIndex> dragIndices;
 
 private:
     QSortFilterProxyModel *proxyModel;
@@ -204,6 +215,19 @@ do {\
 } while (0)
 
 
+GIVEN("^I display the available data sources$") {
+    ScenarioScope<ZanshinContext> context;
+    auto availableSources = context->app->property("availableSources").value<QObject*>();
+    VERIFY(availableSources);
+
+    auto sourceListModel = availableSources->property("sourceListModel").value<QAbstractItemModel*>();
+    VERIFY(sourceListModel);
+
+    context->presentation = availableSources;
+    context->setModel(sourceListModel);
+    QTest::qWait(500);
+}
+
 GIVEN("^I display the available (\\S+) data sources$") {
     REGEX_PARAM(QString, sourceType);
 
@@ -258,18 +282,48 @@ GIVEN("^there is an item named \"(.+)\" in the central list$") {
     QTest::qWait(500);
     context->setModel(model);
 
-    for (int row = 0; row < context->model()->rowCount(); row++) {
-        QModelIndex index = context->model()->index(row, 0);
-        if (Zanshin::indexString(index) == itemName) {
-            context->index = index;
-            return;
-        }
-    }
-
-    qDebug() << "Couldn't find an item named" << itemName;
-    VERIFY_OR_DUMP(false);
+    context->index = Zanshin::findIndex(context->model(), itemName);
+    VERIFY_OR_DUMP(context->index.isValid());
 }
 
+GIVEN("^there is an item named \"(.+)\" in the available data sources$") {
+    REGEX_PARAM(QString, itemName);
+
+    ScenarioScope<ZanshinContext> context;
+    QTest::qWait(500);
+
+    auto availableSources = context->app->property("availableSources").value<QObject*>();
+    VERIFY(availableSources);
+    QTest::qWait(500);
+    auto model = availableSources->property("sourceListModel").value<QAbstractItemModel*>();
+    VERIFY(model);
+    QTest::qWait(500);
+    context->setModel(model);
+
+    context->index = Zanshin::findIndex(context->model(), itemName);
+    VERIFY_OR_DUMP(context->index.isValid());
+}
+
+GIVEN("^the central list contains items named:") {
+    TABLE_PARAM(tableParam);
+
+    ScenarioScope<ZanshinContext> context;
+    context->dragIndices.clear();
+    QTest::qWait(500);
+
+    auto model = context->presentation->property("centralListModel").value<QAbstractItemModel*>();
+    QTest::qWait(500);
+    context->setModel(model);
+
+    for (const auto row : tableParam.hashes()) {
+        for (const auto it : row) {
+            const QString itemName = QString::fromUtf8(it.second.data());
+            QModelIndex index = Zanshin::findIndex(context->model(), itemName);
+            VERIFY_OR_DUMP(index.isValid());
+            context->dragIndices << index;
+        }
+    }
+}
 
 WHEN("^I look at the central list$") {
     ScenarioScope<ZanshinContext> context;
@@ -281,21 +335,19 @@ WHEN("^I look at the central list$") {
 
 WHEN("^I check the item$") {
     ScenarioScope<ZanshinContext> context;
-    context->model()->setData(context->index, Qt::Checked, Qt::CheckStateRole);
-    QTest::qWait(500);
+    VERIFY(context->model()->setData(context->index, Qt::Checked, Qt::CheckStateRole));
+    QTest::qWait(1500);
+}
+
+WHEN("^I uncheck the item$") {
+    ScenarioScope<ZanshinContext> context;
+    VERIFY(context->model()->setData(context->index, Qt::Unchecked, Qt::CheckStateRole));
+    QTest::qWait(1500);
 }
 
 WHEN("^I remove the item$") {
     ScenarioScope<ZanshinContext> context;
     VERIFY(QMetaObject::invokeMethod(context->presentation, "removeItem", Q_ARG(QModelIndex, context->index)));
-    QTest::qWait(500);
-}
-
-WHEN("^I add a task named \"(.+)\"$") {
-    REGEX_PARAM(QString, itemName);
-
-    ScenarioScope<ZanshinContext> context;
-    VERIFY(QMetaObject::invokeMethod(context->presentation, "addTask", Q_ARG(QString, itemName)));
     QTest::qWait(500);
 }
 
@@ -317,6 +369,78 @@ WHEN("^I add a project named \"(.*)\" in the source named \"(.*)\"$") {
     VERIFY(QMetaObject::invokeMethod(context->presentation, "addProject",
                                      Q_ARG(QString, projectName),
                                      Q_ARG(Domain::DataSource::Ptr, source)));
+    QTest::qWait(500);
+}
+
+WHEN("^I rename a \"(.*)\" named \"(.*)\" to \"(.*)\"$") {
+    REGEX_PARAM(QString, objectType);
+    REGEX_PARAM(QString, oldName);
+    REGEX_PARAM(QString, newName);
+
+    const QString pageNodeName = (objectType == "project") ? "Projects / "
+                               : (objectType == "context") ? "Contexts / "
+                               : QString();
+
+    VERIFY(!pageNodeName.isEmpty());
+
+    ScenarioScope<ZanshinContext> context;
+    auto availablePages = context->app->property("availablePages").value<QObject*>();
+    VERIFY(availablePages);
+
+    auto pageListModel = availablePages->property("pageListModel").value<QAbstractItemModel*>();
+    VERIFY(pageListModel);
+    QTest::qWait(500);
+
+    QModelIndex pageIndex = Zanshin::findIndex(pageListModel, pageNodeName + oldName);
+    VERIFY(pageIndex.isValid());
+
+    pageListModel->setData(pageIndex, newName);
+}
+
+WHEN("^I remove a \"(.*)\" named \"(.*)\"$") {
+    REGEX_PARAM(QString, objectType);
+    REGEX_PARAM(QString, objectName);
+
+    const QString pageNodeName = (objectType == "project") ? "Projects / "
+                               : (objectType == "context") ? "Contexts / "
+                               : (objectType == "tag")     ? "Tags / "
+                               : QString();
+
+    VERIFY(!pageNodeName.isEmpty());
+
+    ScenarioScope<ZanshinContext> context;
+    auto availablePages = context->app->property("availablePages").value<QObject*>();
+    VERIFY(availablePages);
+
+    auto pageListModel = availablePages->property("pageListModel").value<QAbstractItemModel*>();
+    VERIFY(pageListModel);
+    QTest::qWait(500);
+
+    QModelIndex pageIndex = Zanshin::findIndex(pageListModel, pageNodeName + objectName);
+    VERIFY(pageIndex.isValid());
+
+    VERIFY(QMetaObject::invokeMethod(availablePages, "removeItem",
+                                     Q_ARG(QModelIndex, pageIndex)));
+    QTest::qWait(500);
+}
+
+WHEN("^I add a \"(.*)\" named \"(.+)\"$") {
+    REGEX_PARAM(QString, objectType);
+    REGEX_PARAM(QString, objectName);
+
+    QByteArray actionName = (objectType == "context") ? "addContext"
+                          : (objectType == "task")    ? "addTask"
+                          : (objectType == "tag")     ? "addTag"
+                          : QByteArray();
+
+    VERIFY(!actionName.isEmpty());
+
+    ScenarioScope<ZanshinContext> context;
+    QTest::qWait(500);
+
+    VERIFY(QMetaObject::invokeMethod(context->presentation,
+                                     actionName.data(),
+                                     Q_ARG(QString, objectName)));
     QTest::qWait(500);
 }
 
@@ -388,12 +512,62 @@ WHEN("^I drop the item on \"(.*)\" in the central list") {
     QTest::qWait(500);
 }
 
+WHEN("^I drop items on \"(.*)\" in the central list") {
+    REGEX_PARAM(QString, itemName);
+
+    ScenarioScope<ZanshinContext> context;
+    VERIFY(!context->dragIndices.isEmpty());
+    QModelIndexList indexes;
+    std::transform(context->dragIndices.constBegin(), context->dragIndices.constEnd(),
+                   std::back_inserter(indexes),
+                   [] (const QPersistentModelIndex &index) {
+                        VERIFY(index.isValid());
+                        return index;
+                   });
+
+    const QMimeData *data = context->model()->mimeData(indexes);
+
+    QAbstractItemModel *destModel = context->model();
+    QModelIndex dropIndex = Zanshin::findIndex(destModel, itemName);
+    VERIFY(dropIndex.isValid());
+    VERIFY(destModel->dropMimeData(data, Qt::MoveAction, -1, -1, dropIndex));
+    QTest::qWait(500);
+}
+
 WHEN("^I drop the item on \"(.*)\" in the page list") {
     REGEX_PARAM(QString, itemName);
 
     ScenarioScope<ZanshinContext> context;
     VERIFY(context->index.isValid());
     const QMimeData *data = context->model()->mimeData(QModelIndexList() << context->index);
+
+    auto availablePages = context->app->property("availablePages").value<QObject*>();
+    VERIFY(availablePages);
+
+    auto destModel = availablePages->property("pageListModel").value<QAbstractItemModel*>();
+    VERIFY(destModel);
+    QTest::qWait(500);
+
+    QModelIndex dropIndex = Zanshin::findIndex(destModel, itemName);
+    VERIFY(dropIndex.isValid());
+    VERIFY(destModel->dropMimeData(data, Qt::MoveAction, -1, -1, dropIndex));
+    QTest::qWait(500);
+}
+
+WHEN("^I drop items on \"(.*)\" in the page list") {
+    REGEX_PARAM(QString, itemName);
+
+    ScenarioScope<ZanshinContext> context;
+    VERIFY(!context->dragIndices.isEmpty());
+    QModelIndexList indexes;
+    std::transform(context->dragIndices.constBegin(), context->dragIndices.constEnd(),
+                   std::back_inserter(indexes),
+                   [] (const QPersistentModelIndex &index) {
+                        VERIFY(index.isValid());
+                        return index;
+                   });
+
+    const QMimeData *data = context->model()->mimeData(indexes);
 
     auto availablePages = context->app->property("availablePages").value<QObject*>();
     VERIFY(availablePages);
@@ -522,12 +696,14 @@ THEN("^the editor shows \"(.*)\" as (.*)$") {
 
     const QVariant value = (field == "text") ? string
                          : (field == "title") ? string
+                         : (field == "delegate") ? string
                          : (field == "start date") ? QDateTime::fromString(string, Qt::ISODate)
                          : (field == "due date") ? QDateTime::fromString(string, Qt::ISODate)
                          : QVariant();
 
     const QByteArray property = (field == "text") ? field.toUtf8()
                               : (field == "title") ? field.toUtf8()
+                              : (field == "delegate") ? "delegateText"
                               : (field == "start date") ? "startDate"
                               : (field == "due date") ? "dueDate"
                               : QByteArray();

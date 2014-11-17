@@ -1,6 +1,7 @@
 /* This file is part of Zanshin
 
    Copyright 2014 Franck Arrecot <franck.arrecot@gmail.com>
+   Copyright 2014 Rémi Benoit <r3m1.benoit@gmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -36,12 +37,20 @@
 
 using namespace Akonadi;
 
-ContextQueries::ContextQueries()
-    : m_storage(new Storage),
+ContextQueries::ContextQueries(QObject *parent)
+    : QObject(parent),
+      m_storage(new Storage),
       m_serializer(new Serializer),
       m_monitor(new MonitorImpl),
       m_ownInterfaces(true)
 {
+    connect(m_monitor, SIGNAL(tagAdded(Akonadi::Tag)), this, SLOT(onTagAdded(Akonadi::Tag)));
+    connect(m_monitor, SIGNAL(tagRemoved(Akonadi::Tag)), this, SLOT(onTagRemoved(Akonadi::Tag)));
+    connect(m_monitor, SIGNAL(tagChanged(Akonadi::Tag)), this, SLOT(onTagChanged(Akonadi::Tag)));
+
+    connect(m_monitor, SIGNAL(itemAdded(Akonadi::Item)), this, SLOT(onItemAdded(Akonadi::Item)));
+    connect(m_monitor, SIGNAL(itemRemoved(Akonadi::Item)), this, SLOT(onItemRemoved(Akonadi::Item)));
+    connect(m_monitor, SIGNAL(itemChanged(Akonadi::Item)), this, SLOT(onItemChanged(Akonadi::Item)));
 }
 
 ContextQueries::ContextQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor)
@@ -53,96 +62,141 @@ ContextQueries::ContextQueries(StorageInterface *storage, SerializerInterface *s
     connect(m_monitor, SIGNAL(tagAdded(Akonadi::Tag)), this, SLOT(onTagAdded(Akonadi::Tag)));
     connect(m_monitor, SIGNAL(tagRemoved(Akonadi::Tag)), this, SLOT(onTagRemoved(Akonadi::Tag)));
     connect(m_monitor, SIGNAL(tagChanged(Akonadi::Tag)), this, SLOT(onTagChanged(Akonadi::Tag)));
+
+    connect(m_monitor, SIGNAL(itemAdded(Akonadi::Item)), this, SLOT(onItemAdded(Akonadi::Item)));
+    connect(m_monitor, SIGNAL(itemRemoved(Akonadi::Item)), this, SLOT(onItemRemoved(Akonadi::Item)));
+    connect(m_monitor, SIGNAL(itemChanged(Akonadi::Item)), this, SLOT(onItemChanged(Akonadi::Item)));
 }
 
 ContextQueries::~ContextQueries()
 {
+    if (m_ownInterfaces) {
+        delete m_storage;
+        delete m_serializer;
+        delete m_monitor;
+    }
 }
 
 ContextQueries::ContextResult::Ptr ContextQueries::findAll() const
 {
-    ContextProvider::Ptr provider(m_contextProvider.toStrongRef());
-
-    if (provider)
-        return ContextResult::create(provider);
-
-    provider = ContextProvider::Ptr::create();
-    m_contextProvider = provider.toWeakRef();
-
-    auto result = ContextResult::create(provider);
-    TagFetchJobInterface *job = m_storage->fetchTags();
-    Utils::JobHandler::install(job->kjob(), [provider, job, this] {
-        for (Akonadi::Tag tag : job->tags()) {
-            auto context = m_serializer->createContextFromTag(tag);
-            if (context) {
-                provider->append(context);
-            }
+    if (!m_findAll) {
+        {
+            ContextQueries *self = const_cast<ContextQueries*>(this);
+            self->m_findAll = self->createContextQuery();
         }
-    });
-    return result;
+
+        m_findAll->setFetchFunction([this] (const ContextQuery::AddFunction &add) {
+            TagFetchJobInterface *job = m_storage->fetchTags();
+            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                for (Akonadi::Tag tag : job->tags())
+                    add(tag);
+            });
+        });
+
+        m_findAll->setConvertFunction([this] (const Akonadi::Tag &tag) {
+            return m_serializer->createContextFromTag(tag);
+        });
+
+        m_findAll->setUpdateFunction([this] (const Akonadi::Tag &tag, Domain::Context::Ptr &context) {
+            m_serializer->updateContextFromTag(context, tag);
+        });
+        m_findAll->setPredicateFunction([this] (const Akonadi::Tag &tag) {
+            return tag.type() == Akonadi::Serializer::contextTagType();
+        });
+        m_findAll->setRepresentsFunction([this] (const Akonadi::Tag &tag, const Domain::Context::Ptr &context) {
+            return m_serializer->isContextTag(context, tag);
+        });
+    }
+
+    return m_findAll->result();
 }
 
-ContextQueries::ContextResult::Ptr ContextQueries::findChildren(Domain::Context::Ptr context) const
+ContextQueries::TaskResult::Ptr ContextQueries::findTopLevelTasks(Domain::Context::Ptr context) const
 {
-    qFatal("Not implemented yet");
-    // TODO : cache system to store context children
-    Q_UNUSED(context);
-    return ContextResult::Ptr();
-    // NOTE : will be done when tag parent support exists
-}
+    Akonadi::Tag tag = m_serializer->createTagFromContext(context);
+    if (!m_findToplevel.contains(tag.id())) {
+        TaskQuery::Ptr query;
 
-ContextQueries::TaskResult::Ptr ContextQueries::findTasks(Domain::Context::Ptr context) const
-{
-    qFatal("Not implemented yet");
-    Q_UNUSED(context);
-    return TaskResult::Ptr();
+        {
+            ContextQueries *self = const_cast<ContextQueries*>(this);
+            query = self->createTaskQuery();
+            self->m_findToplevel.insert(tag.id(), query);
+        }
+
+        query->setFetchFunction([this, tag] (const TaskQuery::AddFunction &add) {
+            ItemFetchJobInterface *job = m_storage->fetchTagItems(tag);
+            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                if (job->kjob()->error() != KJob::NoError)
+                    return;
+
+                for (auto item : job->items())
+                    add(item);
+            });
+
+        });
+        query->setConvertFunction([this] (const Akonadi::Item &item) {
+            return m_serializer->createTaskFromItem(item);
+        });
+        query->setUpdateFunction([this] (const Akonadi::Item &item, Domain::Task::Ptr &task) {
+            m_serializer->updateTaskFromItem(task, item);
+        });
+        query->setPredicateFunction([this, context] (const Akonadi::Item &item) {
+            return m_serializer->isContextChild(context, item);
+        });
+        query->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Task::Ptr &task) {
+            return m_serializer->representsItem(task, item);
+        });
+    }
+
+    return m_findToplevel.value(tag.id())->result();
 }
 
 void ContextQueries::onTagAdded(const Tag &tag)
 {
-    ContextProvider::Ptr provider(m_contextProvider.toStrongRef());
-    auto context = m_serializer->createContextFromTag(tag);
-
-    if (!context)
-        return;
-
-    if (provider) {
-        provider->append(context);
-    }
+    foreach (const ContextQuery::Ptr &query, m_contextQueries)
+        query->onAdded(tag);
 }
 
 void ContextQueries::onTagRemoved(const Tag &tag)
 {
-    if (tag.type() != Akonadi::Serializer::contextTagType())
-        return;
-
-    ContextProvider::Ptr provider(m_contextProvider.toStrongRef());
-
-    if (provider) {
-        for (int i = 0; i < provider->data().size(); i++) {
-            auto context = provider->data().at(i);
-            if (m_serializer->isContextTag(context, tag)) {
-                provider->removeAt(i);
-                i--;
-            }
-        }
-    }
+    foreach (const ContextQuery::Ptr &query, m_contextQueries)
+        query->onRemoved(tag);
 }
 
 void ContextQueries::onTagChanged(const Tag &tag)
 {
-    if (tag.type() != Akonadi::Serializer::contextTagType())
-        return;
+    foreach (const ContextQuery::Ptr &query, m_contextQueries)
+        query->onChanged(tag);
+}
 
-    ContextProvider::Ptr provider(m_contextProvider.toStrongRef());
+void ContextQueries::onItemAdded(const Item &item)
+{
+    foreach (const TaskQuery::Ptr &query, m_taskQueries)
+        query->onAdded(item);
+}
 
-    if (provider) {
-        for (int i = 0; i < provider->data().size(); i++) {
-            auto context = provider->data().at(i);
-            if (m_serializer->isContextTag(context, tag)) {
-                m_serializer->updateContextFromTag(context, tag);
-                provider->replace(i, context);
-            }
-        }
-    }
+void ContextQueries::onItemRemoved(const Item &item)
+{
+    foreach (const TaskQuery::Ptr &query, m_taskQueries)
+        query->onRemoved(item);
+}
+
+void ContextQueries::onItemChanged(const Item &item)
+{
+    foreach (const TaskQuery::Ptr &query, m_taskQueries)
+        query->onChanged(item);
+}
+
+ContextQueries::ContextQuery::Ptr ContextQueries::createContextQuery()
+{
+    auto query = ContextQuery::Ptr::create();
+    m_contextQueries << query;
+    return query;
+}
+
+ContextQueries::TaskQuery::Ptr ContextQueries::createTaskQuery()
+{
+    auto query = TaskQuery::Ptr::create();
+    m_taskQueries << query;
+    return query;
 }

@@ -27,7 +27,10 @@
 using namespace Domain;
 
 DataSource::DataSource(QObject *parent)
-    : QObject(parent)
+    : QObject(parent),
+      m_contentTypes(NoContent),
+      m_listStatus(Unlisted),
+      m_selected(false)
 {
 }
 
@@ -43,6 +46,21 @@ QString DataSource::name() const
 QString DataSource::iconName() const
 {
     return m_iconName;
+}
+
+DataSource::ContentTypes DataSource::contentTypes() const
+{
+    return m_contentTypes;
+}
+
+DataSource::ListStatus DataSource::listStatus() const
+{
+    return m_listStatus;
+}
+
+bool DataSource::isSelected() const
+{
+    return m_selected;
 }
 
 void DataSource::setName(const QString &name)
@@ -61,4 +79,31 @@ void DataSource::setIconName(const QString &iconName)
 
     m_iconName = iconName;
     emit iconNameChanged(iconName);
+}
+
+void DataSource::setContentTypes(ContentTypes types)
+{
+    if (m_contentTypes == types)
+        return;
+
+    m_contentTypes = types;
+    emit contentTypesChanged(types);
+}
+
+void DataSource::setListStatus(ListStatus status)
+{
+    if (m_listStatus == status)
+        return;
+
+    m_listStatus = status;
+    emit listStatusChanged(status);
+}
+
+void DataSource::setSelected(bool selected)
+{
+    if (m_selected == selected)
+        return;
+
+    m_selected = selected;
+    emit selectedChanged(selected);
 }

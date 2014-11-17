@@ -30,7 +30,10 @@
 #include <QDateTime>
 
 class QAbstractButton;
+class QLabel;
 class QPlainTextEdit;
+
+class KLineEdit;
 
 namespace KPIM {
     class KDateEdit;
@@ -63,20 +66,26 @@ private slots:
     void onStartDateChanged();
     void onDueDateChanged();
     void onDoneChanged();
+    void onDelegateTextChanged();
 
     void onTextEditChanged();
     void onStartEditEntered(const QDate &start);
     void onDueEditEntered(const QDate &due);
     void onDoneButtonChanged(bool checked);
+    void onStartTodayClicked();
+    void onDelegateEntered();
 
 private:
     QObject *m_model;
 
+    QLabel *m_delegateLabel;
     QPlainTextEdit *m_textEdit;
     QWidget *m_taskGroup;
     KPIM::KDateEdit *m_startDateEdit;
     KPIM::KDateEdit *m_dueDateEdit;
+    QAbstractButton *m_startTodayButton;
     QAbstractButton *m_doneButton;
+    KLineEdit *m_delegateEdit;
 };
 
 }

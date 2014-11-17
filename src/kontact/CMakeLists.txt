@@ -10,10 +10,10 @@ target_link_libraries(zanshin-next_part
     ${KDE4_KPARTS_LIBS}
     akonadi
     domain
-    pimlibs
     presentation
     utils
     widgets
+    ${KDEPIM_STATIC_LIBS}
 )
 
 install(TARGETS zanshin-next_part DESTINATION ${PLUGIN_INSTALL_DIR})

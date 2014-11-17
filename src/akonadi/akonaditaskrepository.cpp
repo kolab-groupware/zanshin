@@ -28,6 +28,7 @@
 
 #include "akonadicollectionfetchjobinterface.h"
 #include "akonadiitemfetchjobinterface.h"
+#include "akonadimessaging.h"
 #include "akonadiserializer.h"
 #include "akonadistorage.h"
 #include "akonadistoragesettings.h"
@@ -41,13 +42,15 @@ TaskRepository::TaskRepository(QObject *parent)
     : QObject(parent),
       m_storage(new Storage),
       m_serializer(new Serializer),
+      m_messaging(new Messaging),
       m_ownInterfaces(true)
 {
 }
 
-TaskRepository::TaskRepository(StorageInterface *storage, SerializerInterface *serializer)
+TaskRepository::TaskRepository(StorageInterface *storage, SerializerInterface *serializer, MessagingInterface *messaging)
     : m_storage(storage),
       m_serializer(serializer),
+      m_messaging(messaging),
       m_ownInterfaces(false)
 {
 }
@@ -57,6 +60,7 @@ TaskRepository::~TaskRepository()
     if (m_ownInterfaces) {
         delete m_storage;
         delete m_serializer;
+        delete m_messaging;
     }
 }
 
@@ -73,11 +77,8 @@ void TaskRepository::setDefaultSource(Domain::DataSource::Ptr source)
     StorageSettings::instance().setDefaultTaskCollection(collection);
 }
 
-KJob *TaskRepository::create(Domain::Task::Ptr task)
+KJob *TaskRepository::createItem(const Item &item)
 {
-    auto item = m_serializer->createItemFromTask(task);
-    Q_ASSERT(!item.isValid());
-
     const Akonadi::Collection defaultCollection = m_storage->defaultTaskCollection();
     if (defaultCollection.isValid()) {
         return m_storage->createItem(item, defaultCollection);
@@ -105,6 +106,13 @@ KJob *TaskRepository::create(Domain::Task::Ptr task)
     }
 }
 
+KJob *TaskRepository::create(Domain::Task::Ptr task)
+{
+    auto item = m_serializer->createItemFromTask(task);
+    Q_ASSERT(!item.isValid());
+    return createItem(item);
+}
+
 KJob *TaskRepository::createInProject(Domain::Task::Ptr task, Domain::Project::Ptr project)
 {
     Item taskItem = m_serializer->createItemFromTask(task);
@@ -119,6 +127,30 @@ KJob *TaskRepository::createInProject(Domain::Task::Ptr task, Domain::Project::P
     return m_storage->createItem(taskItem, projectItem.parentCollection());
 }
 
+KJob *TaskRepository::createInContext(Domain::Task::Ptr task, Domain::Context::Ptr context)
+{
+    Item item = m_serializer->createItemFromTask(task);
+    Q_ASSERT(!item.isValid());
+
+    Tag tag = m_serializer->createTagFromContext(context);
+    Q_ASSERT(tag .isValid());
+    item.setTag(tag);
+
+    return createItem(item);
+}
+
+KJob *TaskRepository::createInTag(Domain::Task::Ptr task, Domain::Tag::Ptr tag)
+{
+    Item item = m_serializer->createItemFromTask(task);
+    Q_ASSERT(!item.isValid());
+
+    Tag akonadiTag = m_serializer->createAkonadiTagFromTag(tag);
+    Q_ASSERT(akonadiTag .isValid());
+    item.setTag(akonadiTag);
+
+    return createItem(item);
+}
+
 KJob *TaskRepository::update(Domain::Task::Ptr task)
 {
     auto item = m_serializer->createItemFromTask(task);
@@ -130,7 +162,31 @@ KJob *TaskRepository::remove(Domain::Task::Ptr task)
 {
     auto item = m_serializer->createItemFromTask(task);
     Q_ASSERT(item.isValid());
-    return m_storage->removeItem(item);
+
+    auto compositeJob = new CompositeJob();
+    ItemFetchJobInterface *fetchItemJob = m_storage->fetchItem(item);
+    compositeJob->install(fetchItemJob->kjob(), [fetchItemJob, compositeJob, this] {
+        if (fetchItemJob->kjob()->error() != KJob::NoError)
+           return;
+
+        Q_ASSERT(fetchItemJob->items().size() == 1);
+        auto item = fetchItemJob->items().first();
+
+        ItemFetchJobInterface *fetchCollectionItemsJob = m_storage->fetchItems(item.parentCollection());
+        compositeJob->install(fetchCollectionItemsJob->kjob(), [fetchCollectionItemsJob, item, compositeJob, this] {
+            if (fetchCollectionItemsJob->kjob()->error() != KJob::NoError)
+                return;
+
+            Item::List childItems = m_serializer->filterDescendantItems(fetchCollectionItemsJob->items(), item);
+            childItems << item;
+
+            auto removeJob = m_storage->removeItems(childItems);
+            compositeJob->addSubjob(removeJob);
+            removeJob->start();
+        });
+    });
+
+    return compositeJob;
 }
 
 KJob *TaskRepository::associate(Domain::Task::Ptr parent, Domain::Task::Ptr child)
@@ -186,36 +242,40 @@ KJob *TaskRepository::associate(Domain::Task::Ptr parent, Domain::Task::Ptr chil
     return job;
 }
 
-KJob *TaskRepository::dissociate(Domain::Task::Ptr parent, Domain::Task::Ptr child)
+KJob *TaskRepository::dissociate(Domain::Task::Ptr child)
 {
     auto job = new CompositeJob();
-    auto parentItem = m_serializer->createItemFromTask(parent);
-    ItemFetchJobInterface *fetchParentItemJob = m_storage->fetchItem(parentItem);
-    job->install(fetchParentItemJob->kjob(), [fetchParentItemJob, child, job, this] {
-        if (fetchParentItemJob->kjob()->error() != KJob::NoError)
+    auto childItem = m_serializer->createItemFromTask(child);
+    ItemFetchJobInterface *fetchItemJob = m_storage->fetchItem(childItem);
+    job->install(fetchItemJob->kjob(), [fetchItemJob, job, this] {
+        if (fetchItemJob->kjob()->error() != KJob::NoError)
             return;
 
-        Q_ASSERT(fetchParentItemJob->items().size() == 1);
-        auto parentItem = fetchParentItemJob->items().first();
+        Q_ASSERT(fetchItemJob->items().size() == 1);
+        auto childItem = fetchItemJob->items().first();
 
-        Q_ASSERT(m_serializer->isTaskChild(child, parentItem));
+        m_serializer->removeItemParent(childItem);
 
-        auto childItem = m_serializer->createItemFromTask(child);
-        ItemFetchJobInterface *fetchItemJob = m_storage->fetchItem(childItem);
-        job->install(fetchItemJob->kjob(), [fetchItemJob, job, this] {
-            if (fetchItemJob->kjob()->error() != KJob::NoError)
-                return;
-
-            Q_ASSERT(fetchItemJob->items().size() == 1);
-            auto childItem = fetchItemJob->items().first();
-
-            m_serializer->removeItemParent(childItem);
-
-            auto updateJob = m_storage->updateItem(childItem);
-            job->addSubjob(updateJob);
-            updateJob->start();
-        });
+        auto updateJob = m_storage->updateItem(childItem);
+        job->addSubjob(updateJob);
+        updateJob->start();
     });
 
     return job;
+}
+
+KJob *TaskRepository::delegate(Domain::Task::Ptr task, Domain::Task::Delegate delegate)
+{
+    auto originalDelegate = task->delegate();
+
+    task->blockSignals(true);
+    task->setDelegate(delegate);
+
+    auto item = m_serializer->createItemFromTask(task);
+
+    task->setDelegate(originalDelegate);
+    task->blockSignals(false);
+
+    m_messaging->sendDelegationMessage(item);
+    return 0;
 }

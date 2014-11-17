@@ -26,17 +26,24 @@
 
 #include <KCalCore/Todo>
 
+#include <Akonadi/AttributeFactory>
 #include <Akonadi/CollectionFetchScope>
 #include <Akonadi/ItemFetchScope>
 #include <Akonadi/Monitor>
 #include <Akonadi/Notes/NoteUtils>
 #include <Akonadi/TagFetchScope>
 
+#include "akonadi/akonadiapplicationselectedattribute.h"
+#include "akonadi/akonaditimestampattribute.h"
+
 using namespace Akonadi;
 
 MonitorImpl::MonitorImpl()
     : m_monitor(new Akonadi::Monitor)
 {
+    AttributeFactory::registerAttribute<ApplicationSelectedAttribute>();
+    AttributeFactory::registerAttribute<TimestampAttribute>();
+
     m_monitor->fetchCollection(true);
     m_monitor->setCollectionMonitored(Akonadi::Collection::root());
 
@@ -81,10 +88,24 @@ void MonitorImpl::onCollectionChanged(const Collection &collection, const QSet<Q
     static const QSet<QByteArray> allowedParts = QSet<QByteArray>() << "NAME"
                                                                     << "REMOTEID"
                                                                     << "AccessRights"
-                                                                    << "ENTITYDISPLAY";
+                                                                    << "ENTITYDISPLAY"
+                                                                    << "ZanshinSelected"
+                                                                    << "ZanshinTimestamp";
 
-    QSet<QByteArray> intersection = parts;
-    intersection.intersect(allowedParts);
-    if (!intersection.isEmpty())
+    QSet<QByteArray> partsIntersection = parts;
+    partsIntersection.intersect(allowedParts);
+    if (!partsIntersection.isEmpty())
         emit collectionChanged(collection);
+
+    if (parts.contains("ZanshinSelected")
+     && hasSupportedMimeTypes(collection)) {
+        emit collectionSelectionChanged(collection);
+    }
+}
+
+bool MonitorImpl::hasSupportedMimeTypes(const Collection &collection)
+{
+    QSet<QString> mimeIntersection = m_monitor->mimeTypesMonitored().toSet();
+    mimeIntersection.intersect(collection.contentMimeTypes().toSet());
+    return !mimeIntersection.isEmpty();
 }

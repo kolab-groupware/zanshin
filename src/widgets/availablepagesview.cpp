@@ -25,7 +25,9 @@
 #include "availablepagesview.h"
 
 #include <QAction>
+#include <QDebug>
 #include <QHeaderView>
+#include <QMessageBox>
 #include <QToolBar>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -34,8 +36,14 @@
 #include "presentation/querytreemodelbase.h"
 
 #include "widgets/newpagedialog.h"
+#include "widgets/messagebox.h"
+
+#include "domain/project.h"
+#include "domain/context.h"
+#include "domain/tag.h"
 
 using namespace Widgets;
+using namespace Presentation;
 
 AvailablePagesView::AvailablePagesView(QWidget *parent)
     : QWidget(parent),
@@ -58,6 +66,13 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
     connect(addAction, SIGNAL(triggered()), this, SLOT(onAddTriggered()));
     m_actionBar->addAction(addAction);
 
+    QAction *removeAction = new QAction(this);
+    removeAction->setObjectName("removeAction");
+    removeAction->setText(tr("Remove page"));
+    removeAction->setIcon(QIcon::fromTheme("list-remove"));
+    connect(removeAction, SIGNAL(triggered()), this, SLOT(onRemoveTriggered()));
+    m_actionBar->addAction(removeAction);
+
     QHBoxLayout *actionBarLayout = new QHBoxLayout;
     actionBarLayout->setAlignment(Qt::AlignRight);
     actionBarLayout->addWidget(m_actionBar);
@@ -70,6 +85,7 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
     m_dialogFactory = [] (QWidget *parent) {
         return DialogPtr(new NewPageDialog(parent));
     };
+    m_messageBoxInterface = MessageBox::Ptr::create();
 }
 
 QObject *AvailablePagesView::model() const
@@ -130,6 +146,11 @@ void AvailablePagesView::setDialogFactory(const AvailablePagesView::DialogFactor
     m_dialogFactory = factory;
 }
 
+void AvailablePagesView::setMessageBoxInterface(const MessageBoxInterface::Ptr &interface)
+{
+    m_messageBoxInterface = interface;
+}
+
 void AvailablePagesView::onCurrentChanged(const QModelIndex &current)
 {
     QObject *page = 0;
@@ -144,12 +165,61 @@ void AvailablePagesView::onAddTriggered()
     NewPageDialogInterface::Ptr dialog = m_dialogFactory(this);
     dialog->setDataSourcesModel(m_sources);
     dialog->setDefaultSource(m_defaultSource);
+
     if (dialog->exec() == QDialog::Accepted) {
         m_defaultSource = dialog->dataSource();
-        QMetaObject::invokeMethod(m_model, "addProject",
-                                  Q_ARG(QString, dialog->name()),
-                                  Q_ARG(Domain::DataSource::Ptr, dialog->dataSource()));
+        switch (dialog->pageType()) {
+        case NewPageDialogInterface::Project:
+            QMetaObject::invokeMethod(m_model, "addProject",
+                                      Q_ARG(QString, dialog->name()),
+                                      Q_ARG(Domain::DataSource::Ptr, dialog->dataSource()));
+            break;
+        case NewPageDialogInterface::Context:
+            QMetaObject::invokeMethod(m_model, "addContext",
+                                      Q_ARG(QString, dialog->name()));
+            break;
+        case NewPageDialogInterface::Tag:
+            QMetaObject::invokeMethod(m_model, "addTag",
+                                      Q_ARG(QString, dialog->name()));
+            break;
+        }
     }
+}
+
+void AvailablePagesView::onRemoveTriggered()
+{
+    const QModelIndex current = m_pagesView->currentIndex();
+    if (!current.isValid())
+        return;
+
+    QString title;
+    QString text;
+    QObjectPtr object = current.data(QueryTreeModelBase::ObjectRole).value<QObjectPtr>();
+    if (!object) {
+        qDebug() << "Model doesn't have ObjectRole for" << current;
+        return;
+    }
+    if (Domain::Project::Ptr project = object.objectCast<Domain::Project>()) {
+        title = tr("Delete Project");
+        text = tr("Do you really want to delete the project '%1', with all its actions?").arg(project->name());
+    } else if (Domain::Context::Ptr context = object.objectCast<Domain::Context>()) {
+        title = tr("Delete Context");
+        text = tr("Do you really want to delete the context '%1'?").arg(context->name());
+    } else if (Domain::Tag::Ptr tag = object.objectCast<Domain::Tag>()) {
+        title = tr("Delete Tag");
+        text = tr("Do you really want to delete the tag '%1'?").arg(tag->name());
+    } else {
+        qFatal("Unrecognized object type");
+        return;
+    }
+
+    QMessageBox::Button button = m_messageBoxInterface->askConfirmation(this, text, title);
+    if (button != QMessageBox::Yes) {
+        return;
+    }
+
+    QMetaObject::invokeMethod(m_model, "removeItem",
+                              Q_ARG(QModelIndex, current));
 }
 
 void AvailablePagesView::onInitTimeout()

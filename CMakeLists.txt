@@ -3,6 +3,7 @@ project(zanshin)
 find_package(KDE4 REQUIRED)
 find_package(KdepimLibs REQUIRED)
 find_package(Boost REQUIRED)
+find_package(Baloo REQUIRED)
 macro_log_feature(KDEPIMLIBS_FOUND "kdepimlibs" "KDE PIM libraries" "The KDE PIM libs are required to build Zanshin" "http://www.kde.org")
 
 include(KDE4Defaults)
@@ -17,13 +18,22 @@ endmacro()
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     # using Clang >= 3.3
     assert_min_ver("3.3")
+    add_definitions(-DQ_DECL_OVERRIDE=override)
+    add_definitions(-DQ_DECL_FINAL=final)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # using GCC >= 4.8
     assert_min_ver("4.8")
+    add_definitions(-DQ_DECL_OVERRIDE=override)
+    add_definitions(-DQ_DECL_FINAL=final)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     # currently Intel compiler does not support all required C++11 features in zanshin
     # http://software.intel.com/en-us/articles/c0x-features-supported-by-intel-c-compiler
     assert_min_ver("15.0")
+    add_definitions(-DQ_DECL_OVERRIDE=)
+    add_definitions(-DQ_DECL_FINAL=)
+else()
+    add_definitions(-DQ_DECL_OVERRIDE=)
+    add_definitions(-DQ_DECL_FINAL=)
 endif()
 
 if(UNIX)
@@ -46,6 +56,26 @@ include_directories (
     ${KDEPIMLIBS_INCLUDE_DIRS}
     ${KDE4_INCLUDES}
     ${Boost_INCLUDE_DIR}
+    3rdparty/kdepim/
+    3rdparty/kdepim/libkdepim/
+)
+
+set(KDEPIM_STATIC_LIBS
+  zanshinkdepimstatic
+  ${KDEPIMLIBS_KRESOURCES_LIBS}
+  ${KDEPIMLIBS_KABC_LIBS}
+  ${KDEPIMLIBS_KPIMUTILS_LIBS}
+  ${KDEPIMLIBS_KLDAP_LIBS}
+  ${KDEPIMLIBS_KPIMIDENTITIES_LIBS}
+  ${KDE4_KCMUTILS_LIBS}
+  ${KDE4_SOLID_LIBS}
+  ${KDEPIMLIBS_KMIME_LIBS}
+  ${KDEPIMLIBS_KPIMTEXTEDIT_LIBS}
+  ${KDEPIMLIBS_KMIME_LIBS}
+  ${KDEPIMLIBS_AKONADI_LIBS}
+  ${KDEPIMLIBS_AKONADI_CONTACT_LIBS}
+  ${KDEPIMLIBS_AKONADI_CALENDAR_LIBS}
+  ${BALOO_LIBRARIES}
 )
 
 add_subdirectory(3rdparty)

@@ -36,6 +36,12 @@ namespace Widgets {
 class NewPageDialogInterface
 {
 public:
+    enum PageType {
+        Project = 0,
+        Context,
+        Tag
+    };
+
     typedef QSharedPointer<NewPageDialogInterface> Ptr;
 
     virtual ~NewPageDialogInterface();
@@ -44,12 +50,14 @@ public:
 
     virtual void setDataSourcesModel(QAbstractItemModel *model) = 0;
     virtual void setDefaultSource(const Domain::DataSource::Ptr &source) = 0;
-
-
+    virtual void setPageType(PageType type) = 0;
     virtual QString name() const = 0;
+    virtual PageType pageType() const = 0;
     virtual Domain::DataSource::Ptr dataSource() const = 0;
 };
 
 }
+
+Q_DECLARE_METATYPE(Widgets::NewPageDialogInterface::PageType)
 
 #endif // WIDGETS_NEWPAGEDIALOGINTERFACE_H

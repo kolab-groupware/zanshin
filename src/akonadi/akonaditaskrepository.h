@@ -27,9 +27,11 @@
 #include "domain/taskrepository.h"
 
 #include <Akonadi/Collection>
+#include <Akonadi/Item>
 
 namespace Akonadi {
 
+class MessagingInterface;
 class SerializerInterface;
 class StorageInterface;
 
@@ -38,7 +40,7 @@ class TaskRepository : public QObject, public Domain::TaskRepository
     Q_OBJECT
 public:
     explicit TaskRepository(QObject *parent = 0);
-    TaskRepository(StorageInterface *storage, SerializerInterface *serializer);
+    TaskRepository(StorageInterface *storage, SerializerInterface *serializer, MessagingInterface *messaging);
     virtual ~TaskRepository();
 
     virtual bool isDefaultSource(Domain::DataSource::Ptr source) const;
@@ -46,17 +48,24 @@ public:
 
     virtual KJob *create(Domain::Task::Ptr task);
     virtual KJob *createInProject(Domain::Task::Ptr task, Domain::Project::Ptr project);
+    virtual KJob *createInContext(Domain::Task::Ptr task, Domain::Context::Ptr context);
+    virtual KJob *createInTag(Domain::Task::Ptr task, Domain::Tag::Ptr tag);
 
     virtual KJob *update(Domain::Task::Ptr task);
     virtual KJob *remove(Domain::Task::Ptr task);
 
     virtual KJob *associate(Domain::Task::Ptr parent, Domain::Task::Ptr child);
-    virtual KJob *dissociate(Domain::Task::Ptr parent, Domain::Task::Ptr child);
+    virtual KJob *dissociate(Domain::Task::Ptr child);
+
+    virtual KJob *delegate(Domain::Task::Ptr task, Domain::Task::Delegate delegate);
 
 private:
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
+    MessagingInterface *m_messaging;
     bool m_ownInterfaces;
+
+    KJob *createItem(const Akonadi::Item &item);
 };
 
 }

@@ -25,6 +25,7 @@
 #include "akonadidatasourcequeries.h"
 
 #include "akonadicollectionfetchjobinterface.h"
+#include "akonadicollectionsearchjobinterface.h"
 #include "akonadiitemfetchjobinterface.h"
 #include "akonadimonitorimpl.h"
 #include "akonadiserializer.h"
@@ -68,107 +69,313 @@ DataSourceQueries::~DataSourceQueries()
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTasks() const
 {
-    DataSourceProvider::Ptr provider(m_taskDataSourceProvider.toStrongRef());
+    if (!m_findTasks) {
+        {
+            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+            self->m_findTasks = self->createDataSourceQuery();
+        }
 
-    if (provider) {
-        return DataSourceResult::create(provider);
+        m_findTasks->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
+            CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks);
+            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                for (auto collection : job->collections())
+                    add(collection);
+            });
+        });
+
+        m_findTasks->setConvertFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
+        });
+        m_findTasks->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
+            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::FullPath);
+        });
+        m_findTasks->setPredicateFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->isTaskCollection(collection);
+        });
+        m_findTasks->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+            return m_serializer->representsCollection(source, collection);
+        });
     }
 
-    provider = DataSourceProvider::Ptr(new DataSourceProvider);
-    m_taskDataSourceProvider = provider.toWeakRef();
-    auto result = DataSourceResult::create(provider);
-
-    CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks);
-    Utils::JobHandler::install(job->kjob(), [provider, job, this] {
-        for (auto collection : job->collections()) {
-            auto dataSource = deserializeDataSource(collection);
-            if (dataSource)
-                provider->append(dataSource);
-        }
-    });
-
-    return result;
+    return m_findTasks->result();
 }
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findNotes() const
 {
-    DataSourceProvider::Ptr provider(m_noteDataSourceProvider.toStrongRef());
+    if (!m_findNotes) {
+        {
+            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+            self->m_findNotes = self->createDataSourceQuery();
+        }
 
-    if (provider) {
-        return DataSourceResult::create(provider);
+        m_findNotes->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
+            CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Notes);
+            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                for (auto collection : job->collections())
+                    add(collection);
+            });
+        });
+
+        m_findNotes->setConvertFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
+        });
+        m_findNotes->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
+            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::FullPath);
+        });
+        m_findNotes->setPredicateFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->isNoteCollection(collection);
+        });
+        m_findNotes->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+            return m_serializer->representsCollection(source, collection);
+        });
     }
 
-    provider = DataSourceProvider::Ptr(new DataSourceProvider);
-    m_noteDataSourceProvider = provider.toWeakRef();
-    auto result = DataSourceResult::create(provider);
+    return m_findNotes->result();
+}
 
-    CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Notes);
-    Utils::JobHandler::install(job->kjob(), [provider, job, this] {
-        for (auto collection : job->collections()) {
-            auto dataSource = deserializeDataSource(collection);
-            if (dataSource)
-                provider->append(dataSource);
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTopLevel() const
+{
+    if (!m_findTopLevel) {
+        {
+            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+            self->m_findTopLevel = self->createDataSourceQuery();
         }
-    });
 
-    return result;
+        m_findTopLevel->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
+            CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(),
+                                                                           StorageInterface::Recursive,
+                                                                           StorageInterface::Tasks | StorageInterface::Notes);
+            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                if (job->kjob()->error())
+                    return;
+
+                QHash<Collection::Id, Collection> topLevels;
+                foreach (const auto &collection, job->collections()) {
+                    auto topLevel = collection;
+                    while (topLevel.parentCollection() != Collection::root())
+                        topLevel = topLevel.parentCollection();
+                    if (!topLevels.contains(topLevel.id()))
+                        topLevels[topLevel.id()] = topLevel;
+                }
+
+                foreach (const auto &topLevel, topLevels.values())
+                    add(topLevel);
+            });
+        });
+
+        m_findTopLevel->setConvertFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
+        });
+        m_findTopLevel->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
+            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
+        });
+        m_findTopLevel->setPredicateFunction([this] (const Akonadi::Collection &collection) {
+            return collection.isValid()
+                && collection.parentCollection() == Akonadi::Collection::root()
+                && m_serializer->isListedCollection(collection);
+        });
+        m_findTopLevel->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+            return m_serializer->representsCollection(source, collection);
+        });
+    }
+
+    return m_findTopLevel->result();
+}
+
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildren(Domain::DataSource::Ptr source) const
+{
+    Collection root = m_serializer->createCollectionFromDataSource(source);
+    if (!m_findChildren.contains(root.id())) {
+        DataSourceQuery::Ptr query;
+
+        {
+            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+            query = self->createDataSourceQuery();
+            self->m_findChildren.insert(root.id(), query);
+        }
+
+        query->setFetchFunction([this, root] (const DataSourceQuery::AddFunction &add) {
+            CollectionFetchJobInterface *job = m_storage->fetchCollections(root,
+                                                                           StorageInterface::Recursive,
+                                                                           StorageInterface::Tasks | StorageInterface::Notes);
+            Utils::JobHandler::install(job->kjob(), [this, root, job, add] {
+                if (job->kjob()->error())
+                    return;
+
+                QHash<Collection::Id, Collection> children;
+                foreach (const auto &collection, job->collections()) {
+                    auto child = collection;
+                    while (child.parentCollection() != root)
+                        child = child.parentCollection();
+                    if (!children.contains(child.id()))
+                        children[child.id()] = child;
+                }
+
+                foreach (const auto &topLevel, children.values())
+                    add(topLevel);
+            });
+        });
+
+        query->setConvertFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
+        });
+        query->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
+            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
+        });
+        query->setPredicateFunction([this, root] (const Akonadi::Collection &collection) {
+            return collection.isValid()
+                && collection.parentCollection() == root
+                && m_serializer->isListedCollection(collection);
+        });
+        query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+            return m_serializer->representsCollection(source, collection);
+        });
+    }
+
+    return m_findChildren.value(root.id())->result();
+}
+
+QString DataSourceQueries::searchTerm() const
+{
+    return m_searchTerm;
+}
+
+void DataSourceQueries::setSearchTerm(QString term)
+{
+    if (m_searchTerm == term)
+        return;
+
+    m_searchTerm = term;
+    if (m_findSearchTopLevel) {
+        m_findSearchTopLevel->reset();
+    }
+    foreach(auto query, m_findSearchChildren.values())
+        query->reset();
+}
+
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchTopLevel() const
+{
+    if (!m_findSearchTopLevel) {
+        {
+            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+            self->m_findSearchTopLevel = self->createDataSourceQuery();
+        }
+
+        m_findSearchTopLevel->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
+            if (m_searchTerm.isEmpty())
+                return;
+
+            CollectionSearchJobInterface *job = m_storage->searchCollections(m_searchTerm);
+            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                if (job->kjob()->error())
+                    return;
+
+                QHash<Collection::Id, Collection> topLevels;
+                foreach (const auto &collection, job->collections()) {
+                    auto topLevel = collection;
+                    while (topLevel.parentCollection() != Collection::root())
+                        topLevel = topLevel.parentCollection();
+                    if (!topLevels.contains(topLevel.id()))
+                        topLevels[topLevel.id()] = topLevel;
+                }
+
+                foreach (const auto &topLevel, topLevels.values())
+                    add(topLevel);
+
+            });
+        });
+
+        m_findSearchTopLevel->setConvertFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
+        });
+        m_findSearchTopLevel->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
+            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
+        });
+        m_findSearchTopLevel->setPredicateFunction([this] (const Akonadi::Collection &collection) {
+            return collection.isValid()
+                && collection.parentCollection() == Akonadi::Collection::root();
+        });
+        m_findSearchTopLevel->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+            return m_serializer->representsCollection(source, collection);
+        });
+    }
+
+    return m_findSearchTopLevel->result();
+}
+
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildren(Domain::DataSource::Ptr source) const
+{
+    Collection root = m_serializer->createCollectionFromDataSource(source);
+    if (!m_findSearchChildren.contains(root.id())) {
+        DataSourceQuery::Ptr query;
+
+        {
+            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+            query = self->createDataSourceQuery();
+            self->m_findSearchChildren.insert(root.id(), query);
+        }
+
+        query->setFetchFunction([this, root] (const DataSourceQuery::AddFunction &add) {
+            if (m_searchTerm.isEmpty())
+                return;
+
+            CollectionSearchJobInterface *job = m_storage->searchCollections(m_searchTerm);
+            Utils::JobHandler::install(job->kjob(), [this, root, job, add] {
+                if (job->kjob()->error())
+                    return;
+
+                QHash<Collection::Id, Collection> children;
+                foreach (const auto &collection, job->collections()) {
+                    auto child = collection;
+                    while (child.parentCollection() != root && child.parentCollection().isValid())
+                        child = child.parentCollection();
+                    if (!children.contains(child.id()))
+                        children[child.id()] = child;
+                }
+
+                foreach (const auto &topLevel, children.values())
+                    add(topLevel);
+            });
+        });
+
+        query->setConvertFunction([this] (const Akonadi::Collection &collection) {
+            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
+        });
+        query->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
+            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
+        });
+        query->setPredicateFunction([this, root] (const Akonadi::Collection &collection) {
+            return collection.isValid() && collection.parentCollection() == root;
+        });
+        query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+            return m_serializer->representsCollection(source, collection);
+        });
+    }
+
+    return m_findSearchChildren.value(root.id())->result();
 }
 
 void DataSourceQueries::onCollectionAdded(const Collection &collection)
 {
-    DataSourceProvider::Ptr provider = m_serializer->isNoteCollection(collection) ? m_noteDataSourceProvider.toStrongRef()
-                                     : m_serializer->isTaskCollection(collection) ? m_taskDataSourceProvider.toStrongRef()
-                                     : DataSourceProvider::Ptr();
-    auto dataSource = deserializeDataSource(collection);
-
-    if (!dataSource)
-        return;
-
-    if (provider) {
-        provider->append(dataSource);
-    }
+    foreach (const DataSourceQuery::Ptr &query, m_dataSourceQueries)
+        query->onAdded(collection);
 }
 
 void DataSourceQueries::onCollectionRemoved(const Collection &collection)
 {
-    QList<DataSourceProvider::Ptr> providers;
-    providers << m_taskDataSourceProvider.toStrongRef()
-              << m_noteDataSourceProvider.toStrongRef();
-
-    for (auto provider : providers) {
-        if (!provider)
-            continue;
-
-        for (int i = 0; i < provider->data().size(); i++) {
-            auto dataSource = provider->data().at(i);
-            if (m_serializer->representsCollection(dataSource, collection)) {
-                provider->removeAt(i);
-                i--;
-            }
-        }
-    }
+    foreach (const DataSourceQuery::Ptr &query, m_dataSourceQueries)
+        query->onRemoved(collection);
 }
 
 void DataSourceQueries::onCollectionChanged(const Collection &collection)
 {
-    QList<DataSourceProvider::Ptr> providers;
-    providers << m_taskDataSourceProvider.toStrongRef()
-              << m_noteDataSourceProvider.toStrongRef();
-
-    for (auto provider : providers) {
-        if (!provider)
-            continue;
-        for (int i = 0; i < provider->data().size(); i++) {
-            auto dataSource = provider->data().at(i);
-            if (m_serializer->representsCollection(dataSource, collection)) {
-                m_serializer->updateDataSourceFromCollection(dataSource, collection);
-                provider->replace(i, dataSource);
-            }
-        }
-    }
+    foreach (const DataSourceQuery::Ptr &query, m_dataSourceQueries)
+        query->onChanged(collection);
 }
 
-Domain::DataSource::Ptr DataSourceQueries::deserializeDataSource(const Collection &collection) const
+DataSourceQueries::DataSourceQuery::Ptr DataSourceQueries::createDataSourceQuery()
 {
-    return m_serializer->createDataSourceFromCollection(collection);
+    auto query = DataSourceQuery::Ptr::create();
+    m_dataSourceQueries << query;
+    return query;
 }

@@ -6,6 +6,7 @@ set(domain_SRCS
     contextrepository.cpp
     datasource.cpp
     datasourcequeries.cpp
+    datasourcerepository.cpp
     note.cpp
     notequeries.cpp
     noterepository.cpp
@@ -15,12 +16,12 @@ set(domain_SRCS
     queryresult.cpp
     queryresultinterface.cpp
     queryresultprovider.cpp
+    tag.cpp
+    tagqueries.cpp
+    tagrepository.cpp
     task.cpp
     taskqueries.cpp
     taskrepository.cpp
-    topic.cpp
-    topicqueries.cpp
-    topicrepository.cpp
 )
 
 kde4_add_library(domain STATIC ${domain_SRCS})

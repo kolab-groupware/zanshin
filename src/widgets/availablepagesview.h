@@ -32,6 +32,7 @@
 #include <functional>
 
 #include "domain/datasource.h"
+#include "messageboxinterface.h"
 
 class QAbstractItemModel;
 class QModelIndex;
@@ -61,6 +62,7 @@ public slots:
     void setProjectSourcesModel(QAbstractItemModel *sources);
     void setDefaultProjectSource(const Domain::DataSource::Ptr &source);
     void setDialogFactory(const DialogFactory &factory);
+    void setMessageBoxInterface(const MessageBoxInterface::Ptr &interface);
 
 signals:
     void currentPageChanged(QObject *page);
@@ -68,6 +70,7 @@ signals:
 private slots:
     void onCurrentChanged(const QModelIndex &current);
     void onAddTriggered();
+    void onRemoveTriggered();
     void onInitTimeout();
 
 private:
@@ -77,6 +80,7 @@ private:
     QTreeView *m_pagesView;
     QToolBar *m_actionBar;
     DialogFactory m_dialogFactory;
+    MessageBoxInterface::Ptr m_messageBoxInterface;
 };
 
 }

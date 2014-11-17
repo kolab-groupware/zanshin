@@ -82,14 +82,16 @@ private slots:
 
         // Serializer mock returning the projects from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col2).thenReturn(true);
+
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).thenReturn(project1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(project2);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item3).thenReturn(project3);
-
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item1).thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn(QString());
 
         // WHEN
         QScopedPointer<Domain::ProjectQueries> queries(new Akonadi::ProjectQueries(&storageMock.getInstance(),
@@ -150,11 +152,13 @@ private slots:
 
         // Serializer mock returning the projects from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col).thenReturn(true);
+
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).thenReturn(project1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(project2);
-
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item1).thenReturn(QString());
 
         // WHEN
         QScopedPointer<Domain::ProjectQueries> queries(new Akonadi::ProjectQueries(&storageMock.getInstance(),
@@ -171,7 +175,7 @@ private slots:
                                                                          .exactly(1));
         QVERIFY(storageMock(&Akonadi::StorageInterface::fetchItems).when(col).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).exactly(1));
-        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).exactly(1));
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).exactly(0));
 
         QCOMPARE(result->data().size(), 1);
         QCOMPARE(result->data().at(0), project1);
@@ -209,9 +213,12 @@ private slots:
         Domain::Project::Ptr project1(new Domain::Project);
         Akonadi::Item item2(43);
         Domain::Project::Ptr project2;
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).thenReturn(project1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(project2);
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn(QString());
+
         monitor->addItem(item1);
         monitor->addItem(item2);
 
@@ -221,7 +228,7 @@ private slots:
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).exactly(1));
-        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).exactly(1));
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).exactly(0));
 
         QCOMPARE(result->data().size(), 1);
         QCOMPARE(result->data().first(), project1);
@@ -261,13 +268,19 @@ private slots:
 
         // Serializer mock returning the projects from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col).thenReturn(true);
+
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).thenReturn(project1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(project2);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item3).thenReturn(project3);
+
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(project1, item2).thenReturn(false);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(project2, item2).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(project3, item2).thenReturn(false);
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn(QString());
 
         // Monitor mock
         MockMonitor *monitor = new MockMonitor(this);
@@ -331,14 +344,20 @@ private slots:
 
         // Serializer mock returning the projects from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col).thenReturn(true);
+
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).thenReturn(project1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(project2);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item3).thenReturn(project3);
         serializerMock(&Akonadi::SerializerInterface::updateProjectFromItem).when(project2, item2).thenReturn();
+
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(project1, item2).thenReturn(false);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(project2, item2).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(project3, item2).thenReturn(false);
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn(QString());
 
         // Monitor mock
         MockMonitor *monitor = new MockMonitor(this);
@@ -375,6 +394,84 @@ private slots:
         QCOMPARE(result->data().at(1), project2);
         QCOMPARE(result->data().at(2), project3);
         QVERIFY(replaceHandlerCalled);
+    }
+
+    void shouldReactToCollectionSelectionChangesForAllProjects()
+    {
+        // GIVEN
+
+        // Two top level collections
+        Akonadi::Collection col1(42);
+        col1.setParentCollection(Akonadi::Collection::root());
+        Akonadi::Collection col2(43);
+        col2.setParentCollection(Akonadi::Collection::root());
+        MockCollectionFetchJob *collectionFetchJob1 = new MockCollectionFetchJob(this);
+        collectionFetchJob1->setCollections(Akonadi::Collection::List() << col1 << col2);
+        MockCollectionFetchJob *collectionFetchJob2 = new MockCollectionFetchJob(this);
+        collectionFetchJob2->setCollections(Akonadi::Collection::List() << col1 << col2);
+
+        // Two projects, one in each collection
+        Akonadi::Item item1(42);
+        item1.setParentCollection(col1);
+        Domain::Project::Ptr project1(new Domain::Project);
+        MockItemFetchJob *itemFetchJob1 = new MockItemFetchJob(this);
+        itemFetchJob1->setItems(Akonadi::Item::List() << item1);
+        MockItemFetchJob *itemFetchJob2 = new MockItemFetchJob(this);
+        itemFetchJob2->setItems(Akonadi::Item::List() << item1);
+
+        Akonadi::Item item2(43);
+        item2.setParentCollection(col2);
+        Domain::Project::Ptr project2(new Domain::Project);
+        MockItemFetchJob *itemFetchJob3 = new MockItemFetchJob(this);
+        itemFetchJob3->setItems(Akonadi::Item::List() << item2);
+
+        // Storage mock returning the fetch jobs
+        mock_object<Akonadi::StorageInterface> storageMock;
+        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+                                                                       Akonadi::StorageInterface::Recursive,
+                                                                       Akonadi::StorageInterface::Tasks)
+                                                                 .thenReturn(collectionFetchJob1)
+                                                                 .thenReturn(collectionFetchJob2);
+        storageMock(&Akonadi::StorageInterface::fetchItems).when(col1)
+                                                           .thenReturn(itemFetchJob1)
+                                                           .thenReturn(itemFetchJob2);
+        storageMock(&Akonadi::StorageInterface::fetchItems).when(col2)
+                                                           .thenReturn(itemFetchJob3);
+
+        // Serializer mock returning the projects from the items
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isSelectedCollection).when(col2).thenReturn(true)
+                                                                                      .thenReturn(false);
+
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(true);
+
+        serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item1).thenReturn(project1);
+        serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(project2);
+
+        serializerMock(&Akonadi::SerializerInterface::representsItem).when(project1, item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::representsItem).when(project1, item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::representsItem).when(project2, item1).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::representsItem).when(project2, item2).thenReturn(true);
+
+        // Monitor mock
+        MockMonitor *monitor = new MockMonitor(this);
+
+        QScopedPointer<Domain::ProjectQueries> queries(new Akonadi::ProjectQueries(&storageMock.getInstance(),
+                                                                                   &serializerMock.getInstance(),
+                                                                                   monitor));
+        Domain::QueryResult<Domain::Project::Ptr>::Ptr result = queries->findAll();
+        QTest::qWait(150);
+        QCOMPARE(result->data().size(), 2);
+
+        // WHEN
+        monitor->changeCollectionSelection(col2);
+        QTest::qWait(150);
+
+        // THEN
+        QCOMPARE(result->data().size(), 1);
+        QCOMPARE(result->data().first(), project1);
     }
 
     void shouldLookInAllCollectionsForProjectTopLevelArtifacts()
@@ -425,7 +522,14 @@ private slots:
 
         // Serializer mock returning the objects from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item4).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item5).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item4).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item5).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).thenReturn(task2);
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item3).thenReturn(task3);
@@ -440,12 +544,6 @@ private slots:
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item3).thenReturn(false);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item4).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item5).thenReturn(false);
-
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item1).thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn("1");
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item4).thenReturn("1");
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item5).thenReturn(QString());
 
         // WHEN
         QScopedPointer<Domain::ProjectQueries> queries(new Akonadi::ProjectQueries(&storageMock.getInstance(),
@@ -512,7 +610,6 @@ private slots:
 
         // Serializer mock
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
 
@@ -566,7 +663,7 @@ private slots:
 
         // Serializer mock
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
 
@@ -588,14 +685,20 @@ private slots:
         Akonadi::Item item3(44);
         item3.setParentCollection(col);
         auto note3 = Domain::Note::Ptr::create();
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item3).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).thenReturn(task2);
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item3).thenReturn(Domain::Task::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createNoteFromItem).when(item3).thenReturn(note3);
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn("1");
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn("1");
+
+        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item3).thenReturn(true);
 
         monitor->addItem(item2);
         monitor->addItem(item3);
@@ -603,8 +706,6 @@ private slots:
         // THEN
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createNoteFromItem).when(item3).exactly(1));
-        QVERIFY(serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).exactly(2));
-        QVERIFY(serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).exactly(2));
 
         QCOMPARE(result->data().size(), 2);
         QCOMPARE(result->data()[0].objectCast<Domain::Task>(), task2);
@@ -645,7 +746,13 @@ private slots:
 
         // Serializer mock returning the tasks from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).thenReturn(task2);
@@ -655,10 +762,6 @@ private slots:
 
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(task2, item2).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(note3, item2).thenReturn(false);
-
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn("1");
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn("1");
 
         // Serializer mock returning if task1 is parent of items
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
@@ -728,7 +831,13 @@ private slots:
 
         // Serializer mock returning the tasks from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).thenReturn(task2);
@@ -739,14 +848,10 @@ private slots:
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(task2, item2).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(note3, item2).thenReturn(false);
 
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn("1")
-                                                                                     .thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn("1");
-
-        // Serializer mock returning if task1 is parent of items
+        // Serializer mock returning if project1 is parent of items
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
-        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(true)
+                                                                                           .thenReturn(false);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item3).thenReturn(true);
 
         // Monitor mock
@@ -807,7 +912,13 @@ private slots:
 
         // Serializer mock returning the tasks from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).thenReturn(task2);
@@ -818,12 +929,10 @@ private slots:
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(task2, item2).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(note3, item2).thenReturn(false);
 
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn("1");
-
         // Serializer mock returning if task1 is parent of items
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
-        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(false)
+                                                                                           .thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item3).thenReturn(true);
 
         // Monitor mock
@@ -838,7 +947,6 @@ private slots:
         QCOMPARE(result->data().size(), 1);
 
         // WHEN
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn("1");
         monitor->changeItem(item2);
 
         // Then
@@ -892,22 +1000,18 @@ private slots:
 
         // Serializer mock returning the objects from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
-        serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(true);
 
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project2).thenReturn("2");
+        serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project2).thenReturn(item2);
 
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item3).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item3).thenReturn(task3);
 
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(task3, item3).thenReturn(true);
-
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item1).thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn("1")
-                                                                                     .thenReturn("2");
 
         // Serializer mock returning if project1 is parent of items
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
@@ -978,7 +1082,13 @@ private slots:
 
         // Serializer mock returning the tasks from the items
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::objectUid).when(project1).thenReturn("1");
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item1).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item2).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isTaskItem).when(item3).thenReturn(false);
+        serializerMock(&Akonadi::SerializerInterface::isNoteItem).when(item3).thenReturn(true);
+
         serializerMock(&Akonadi::SerializerInterface::createItemFromProject).when(project1).thenReturn(item1);
         serializerMock(&Akonadi::SerializerInterface::createProjectFromItem).when(item2).thenReturn(Domain::Project::Ptr());
         serializerMock(&Akonadi::SerializerInterface::createTaskFromItem).when(item2).thenReturn(task2);
@@ -989,14 +1099,10 @@ private slots:
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(task2, item2).thenReturn(true);
         serializerMock(&Akonadi::SerializerInterface::representsItem).when(note3, item2).thenReturn(false);
 
-        // Serializer mock returning if the item has a relatedItem
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item2).thenReturn("1")
-                                                                                     .thenReturn(QString());
-        serializerMock(&Akonadi::SerializerInterface::relatedUidFromItem).when(item3).thenReturn("1");
-
         // Serializer mock returning if task1 is parent of items
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item1).thenReturn(false);
-        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(true);
+        serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item2).thenReturn(true)
+                                                                                           .thenReturn(false);
         serializerMock(&Akonadi::SerializerInterface::isProjectChild).when(project1, item3).thenReturn(true);
 
         // Monitor mock

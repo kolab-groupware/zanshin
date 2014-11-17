@@ -1,6 +1,7 @@
 /* This file is part of Zanshin
 
    Copyright 2014 Kevin Ottens <ervin@kde.org>
+   Copyright 2014 Rémi Benoit <r3m1.benoit@gmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -24,11 +25,14 @@
 #include <QtTest>
 
 #include "akonadi/akonadiserializer.h"
+#include "akonadi/akonadiapplicationselectedattribute.h"
+#include "akonadi/akonaditimestampattribute.h"
 
 #include <Akonadi/Collection>
 #include <Akonadi/EntityDisplayAttribute>
 #include <Akonadi/Item>
 #include <Akonadi/Notes/NoteUtils>
+#include <Akonadi/Tag>
 #include <KCalCore/Todo>
 #include <KMime/Message>
 
@@ -88,6 +92,31 @@ private slots:
         QVERIFY(!serializer.representsItem(object, item));
     }
 
+    void shouldKnowWhenAnAkonadiTagRepresentsATag()
+    {
+        // GIVEN
+        Akonadi::Serializer serializer;
+        Akonadi::Tag akondiTag(42);
+        auto tag = Domain::Tag::Ptr::create();
+
+        // WHEN
+        // Nothing yet
+        // THEN
+        QVERIFY(!serializer.representsAkonadiTag(tag, akondiTag));
+
+        // WHEN
+        tag->setProperty("tagId", 42);
+
+        // THEN
+        QVERIFY(serializer.representsAkonadiTag(tag, akondiTag));
+
+        // WHEN
+        tag->setProperty("tagId", 43);
+
+        // THEN
+        QVERIFY(!serializer.representsAkonadiTag(tag, akondiTag));
+    }
+
     void shouldKnowObjectUid()
     {
         // GIVEN
@@ -105,9 +134,33 @@ private slots:
     {
         QTest::addColumn<QString>("name");
         QTest::addColumn<QString>("iconName");
+        QTest::addColumn<QStringList>("mimeTypes");
+        QTest::addColumn<bool>("hasSelectedAttribute");
+        QTest::addColumn<bool>("isSelected");
+        QTest::addColumn<bool>("isReferenced");
+        QTest::addColumn<bool>("isEnabled");
 
-        QTest::newRow("nominal case") << "name" << "icon";
-        QTest::newRow("empty case") << QString() << QString();
+        const auto noteMimeTypes = QStringList() << "text/x-vnd.akonadi.note";
+        const auto taskMimeTypes = QStringList() << "application/x-vnd.akonadi.calendar.todo";
+        const auto bogusMimeTypes = QStringList() << "foo/bar";
+        const auto allMimeTypes = noteMimeTypes + taskMimeTypes + bogusMimeTypes;
+
+        QTest::newRow("nominal case") << "name" << "icon" << allMimeTypes << true << false << false << true;
+
+        QTest::newRow("only notes") << "name" << "icon" << noteMimeTypes << true << false << false << true;
+        QTest::newRow("only tasks") << "name" << "icon" << taskMimeTypes << true << false << false << true;
+        QTest::newRow("only bogus") << "name" << "icon" << bogusMimeTypes << true << false << false << true;
+
+        QTest::newRow("no selected attribute") << "name" << "icon" << allMimeTypes << false << false << false << true;
+        QTest::newRow("selected attribute (false)") << "name" << "icon" << allMimeTypes << true << false << false << true;
+        QTest::newRow("selected attribute (true)") << "name" << "icon" << allMimeTypes << true << true << false << true;
+
+        QTest::newRow("enabled and referenced") << "name" << "icon" << allMimeTypes << true << false << true << true;
+        QTest::newRow("enabled and !referenced") << "name" << "icon" << allMimeTypes << true << false << true << false;
+        QTest::newRow("!enabled and referenced") << "name" << "icon" << allMimeTypes << true << false << false << true;
+        QTest::newRow("!enabled and !referenced") << "name" << "icon" << allMimeTypes << true << false << false << false;
+
+        QTest::newRow("empty case") << QString() << QString() << QStringList() << false << false << false << true;
     }
 
     void shouldCreateDataSourceFromCollection()
@@ -117,23 +170,47 @@ private slots:
         // Data...
         QFETCH(QString, name);
         QFETCH(QString, iconName);
+        QFETCH(QStringList, mimeTypes);
+        QFETCH(bool, hasSelectedAttribute);
+        QFETCH(bool, isSelected);
+        QFETCH(bool, isReferenced);
+        QFETCH(bool, isEnabled);
+
+        Domain::DataSource::ContentTypes expectedContentTypes;
+        if (mimeTypes.contains("text/x-vnd.akonadi.note")) {
+            expectedContentTypes |= Domain::DataSource::Notes;
+        }
+        if (mimeTypes.contains("application/x-vnd.akonadi.calendar.todo")) {
+            expectedContentTypes |= Domain::DataSource::Tasks;
+        }
 
         // ... stored in a collection
         Akonadi::Collection collection(42);
-        collection.setContentMimeTypes(QStringList() << "foo/bar");
+        collection.setContentMimeTypes(mimeTypes);
         collection.setName(name);
-        auto attribute = new Akonadi::EntityDisplayAttribute;
-        attribute->setIconName(iconName);
-        collection.addAttribute(attribute);
+        collection.setReferenced(isReferenced);
+        collection.setEnabled(isEnabled);
+        auto displayAttribute = new Akonadi::EntityDisplayAttribute;
+        displayAttribute->setIconName(iconName);
+        collection.addAttribute(displayAttribute);
+        if (hasSelectedAttribute) {
+            auto selectedAttribute = new Akonadi::ApplicationSelectedAttribute;
+            selectedAttribute->setSelected(isSelected);
+            collection.addAttribute(selectedAttribute);
+        }
 
         // WHEN
         Akonadi::Serializer serializer;
-        auto dataSource = serializer.createDataSourceFromCollection(collection);
+        auto dataSource = serializer.createDataSourceFromCollection(collection, Akonadi::SerializerInterface::BaseName);
 
         // THEN
         QCOMPARE(dataSource->name(), name);
         QCOMPARE(dataSource->iconName(), iconName);
+        QCOMPARE(dataSource->contentTypes(), expectedContentTypes);
+        QCOMPARE(dataSource->isSelected(), !hasSelectedAttribute || isSelected);
         QCOMPARE(dataSource->property("collectionId").value<Akonadi::Collection::Id>(), collection.id());
+        QCOMPARE((dataSource->listStatus() & Domain::DataSource::Listed) != 0, isReferenced || isEnabled);
+        QCOMPARE((dataSource->listStatus() == Domain::DataSource::Bookmarked), isEnabled);
     }
 
     void shouldCreateNullDataSourceFromInvalidCollection()
@@ -143,7 +220,7 @@ private slots:
 
         // WHEN
         Akonadi::Serializer serializer;
-        auto dataSource = serializer.createDataSourceFromCollection(collection);
+        auto dataSource = serializer.createDataSourceFromCollection(collection, Akonadi::SerializerInterface::BaseName);
 
         // THEN
         QVERIFY(dataSource.isNull());
@@ -167,7 +244,7 @@ private slots:
 
         // ... deserialized as a data source
         Akonadi::Serializer serializer;
-        auto dataSource = serializer.createDataSourceFromCollection(originalCollection);
+        auto dataSource = serializer.createDataSourceFromCollection(originalCollection, Akonadi::SerializerInterface::BaseName);
 
         // WHEN
 
@@ -178,7 +255,7 @@ private slots:
         Akonadi::Collection updatedCollection(42);
         updatedCollection.setName(updatedName);
 
-        serializer.updateDataSourceFromCollection(dataSource, updatedCollection);
+        serializer.updateDataSourceFromCollection(dataSource, updatedCollection, Akonadi::SerializerInterface::BaseName);
 
         // THEN
         QCOMPARE(dataSource->name(), updatedName);
@@ -197,18 +274,18 @@ private slots:
 
         // ... deserialized as a data source
         Akonadi::Serializer serializer;
-        auto dataSource = serializer.createDataSourceFromCollection(originalCollection);
+        auto dataSource = serializer.createDataSourceFromCollection(originalCollection, Akonadi::SerializerInterface::BaseName);
 
         // WHEN
         Akonadi::Collection invalidCollection;
         invalidCollection.setName("foo");
-        serializer.updateDataSourceFromCollection(dataSource, invalidCollection);
+        serializer.updateDataSourceFromCollection(dataSource, invalidCollection, Akonadi::SerializerInterface::BaseName);
 
         // THEN
         QCOMPARE(dataSource->name(), name);
     }
 
-    void shouldNameDataSourceFromCollectionPath()
+    void shouldNameDataSourceFromCollectionPathIfRequested()
     {
         // GIVEN
 
@@ -228,39 +305,81 @@ private slots:
 
         // WHEN
         Akonadi::Serializer serializer;
-        auto dataSource1 = serializer.createDataSourceFromCollection(collection);
+        auto dataSource1 = serializer.createDataSourceFromCollection(collection, Akonadi::SerializerInterface::FullPath);
+        auto dataSource2 = serializer.createDataSourceFromCollection(collection, Akonadi::SerializerInterface::BaseName);
 
         // Give it another try with the root
         parentCollection.setParentCollection(Akonadi::Collection::root());
         collection.setParentCollection(parentCollection);
-        auto dataSource2 = serializer.createDataSourceFromCollection(collection);
+        auto dataSource3 = serializer.createDataSourceFromCollection(collection, Akonadi::SerializerInterface::FullPath);
+        auto dataSource4 = serializer.createDataSourceFromCollection(collection, Akonadi::SerializerInterface::BaseName);
 
         // THEN
         QCOMPARE(dataSource1->name(), QString(parentName + "/" + name));
-        QCOMPARE(dataSource2->name(), QString(parentName + "/" + name));
+        QCOMPARE(dataSource2->name(), name);
+        QCOMPARE(dataSource3->name(), QString(parentName + "/" + name));
+        QCOMPARE(dataSource4->name(), name);
     }
 
     void shouldCreateCollectionFromDataSource_data()
     {
         QTest::addColumn<QString>("name");
         QTest::addColumn<QString>("iconName");
+        QTest::addColumn<Domain::DataSource::ContentTypes>("contentTypes");
+        QTest::addColumn<bool>("isSelected");
+        QTest::addColumn<Domain::DataSource::ListStatus>("listStatus");
 
-        QTest::newRow("nominal case") << "name" << "icon-name";
-        QTest::newRow("empty case") << QString() << QString();
+        const auto noType = Domain::DataSource::ContentTypes(Domain::DataSource::NoContent);
+        const auto taskType = Domain::DataSource::ContentTypes(Domain::DataSource::Tasks);
+        const auto noteType = Domain::DataSource::ContentTypes(Domain::DataSource::Notes);
+        const auto allTypes = taskType | noteType;
+
+        const auto unlisted = Domain::DataSource::Unlisted;
+        const auto listed = Domain::DataSource::Listed;
+        const auto bookmarked = Domain::DataSource::Bookmarked;
+
+        QTest::newRow("nominal case") << "name" << "icon-name" << allTypes << true << unlisted;
+
+        QTest::newRow("only notes") << "name" << "icon-name" << noteType << true << unlisted;
+        QTest::newRow("only tasks") << "name" << "icon-name" << taskType << true << unlisted;
+        QTest::newRow("only nothing ;)") << "name" << "icon-name" << noType << true << unlisted;
+
+        QTest::newRow("not selected") << "name" << "icon-name" << allTypes << false << unlisted;
+        QTest::newRow("selected") << "name" << "icon-name" << allTypes << true << unlisted;
+
+        QTest::newRow("unlisted") << "name" << "icon-name" << allTypes << true << unlisted;
+        QTest::newRow("listed") << "name" << "icon-name" << allTypes << true << listed;
+        QTest::newRow("bookmarked") << "name" << "icon-name" << allTypes << true << bookmarked;
+
+        QTest::newRow("empty case") << QString() << QString() << noType << true << unlisted;
     }
 
     void shouldCreateCollectionFromDataSource()
     {
         // GIVEN
+        const auto timestamp = QDateTime::currentMSecsSinceEpoch();
 
         // Data...
         QFETCH(QString, name);
         QFETCH(QString, iconName);
+        QFETCH(Domain::DataSource::ContentTypes, contentTypes);
+        QFETCH(bool, isSelected);
+        QFETCH(Domain::DataSource::ListStatus, listStatus);
+
+        QStringList mimeTypes;
+        if (contentTypes & Domain::DataSource::Tasks)
+            mimeTypes << "application/x-vnd.akonadi.calendar.todo";
+        if (contentTypes & Domain::DataSource::Notes)
+            mimeTypes << "text/x-vnd.akonadi.note";
+
 
         // ... stored in a data source
         auto source = Domain::DataSource::Ptr::create();
         source->setName(name);
         source->setIconName(iconName);
+        source->setContentTypes(contentTypes);
+        source->setListStatus(listStatus);
+        source->setSelected(isSelected);
         source->setProperty("collectionId", 42);
 
         // WHEN
@@ -269,6 +388,135 @@ private slots:
 
         // THEN
         QCOMPARE(collection.id(), source->property("collectionId").value<Akonadi::Collection::Id>());
+        QVERIFY(collection.hasAttribute<Akonadi::ApplicationSelectedAttribute>());
+        QCOMPARE(collection.attribute<Akonadi::ApplicationSelectedAttribute>()->isSelected(), isSelected);
+        QVERIFY(collection.hasAttribute<Akonadi::TimestampAttribute>());
+        QVERIFY(collection.attribute<Akonadi::TimestampAttribute>()->timestamp() >= timestamp);
+
+        switch (listStatus) {
+        case Domain::DataSource::Unlisted:
+            QVERIFY(!collection.referenced());
+            QVERIFY(!collection.enabled());
+            break;
+        case Domain::DataSource::Listed:
+            QVERIFY(collection.referenced());
+            QVERIFY(!collection.enabled());
+            break;
+        case Domain::DataSource::Bookmarked:
+            QVERIFY(collection.enabled());
+            break;
+        default:
+            qFatal("Shouldn't happen");
+            break;
+        }
+    }
+
+    void shouldVerifyIfCollectionIsListed_data()
+    {
+        QTest::addColumn<bool>("isEnabled");
+        QTest::addColumn<bool>("isReferenced");
+        QTest::addColumn<bool>("expectedListed");
+
+        QTest::newRow("enabled and referenced") << true << true << true;
+        QTest::newRow("enabled and !referenced") << true << false << true;
+        QTest::newRow("!enabled and referenced") << false << true << true;
+        QTest::newRow("!enabled and !referenced") << false << false << false;
+    }
+
+    void shouldVerifyIfCollectionIsListed()
+    {
+        // GIVEN
+        QFETCH(bool, isEnabled);
+        QFETCH(bool, isReferenced);
+
+        // ... stored in a collection
+        Akonadi::Collection collection(42);
+        collection.setReferenced(isReferenced);
+        collection.setEnabled(isEnabled);
+
+        // WHEN
+        Akonadi::Serializer serializer;
+
+        // THEN
+        QFETCH(bool, expectedListed);
+        QCOMPARE(serializer.isListedCollection(collection), expectedListed);
+    }
+
+    void shouldVerifyIfCollectionIsSelected_data()
+    {
+        QTest::addColumn<QStringList>("mimeTypes");
+        QTest::addColumn<bool>("hasSelectedAttribute");
+        QTest::addColumn<bool>("isSelected");
+        QTest::addColumn<bool>("isReferenced");
+        QTest::addColumn<bool>("isEnabled");
+        QTest::addColumn<bool>("expectedSelected");
+
+        const auto noteMimeTypes = QStringList() << "text/x-vnd.akonadi.note";
+        const auto taskMimeTypes = QStringList() << "application/x-vnd.akonadi.calendar.todo";
+        const auto bogusMimeTypes = QStringList() << "foo/bar";
+        const auto allMimeTypes = noteMimeTypes + taskMimeTypes + bogusMimeTypes;
+
+        QTest::newRow("nominal case") << allMimeTypes << true << false << false << true << false;
+
+        QTest::newRow("only notes") << noteMimeTypes << true << false << false << true << false;
+        QTest::newRow("only tasks") << taskMimeTypes << true << false << false << true << false;
+        QTest::newRow("only bogus") << bogusMimeTypes << true << false << false << true << false;
+
+        QTest::newRow("selected, only notes") << noteMimeTypes << true << true << false << true << true;
+        QTest::newRow("selected, only tasks") << taskMimeTypes << true << true << false << true << true;
+        QTest::newRow("selected, only bogus") << bogusMimeTypes << true << true << false << true << false;
+
+        QTest::newRow("no selected attribute") << allMimeTypes << false << false << false << true << true;
+        QTest::newRow("selected attribute (false)") << allMimeTypes << true << false << false << true << false;
+        QTest::newRow("selected attribute (true)") << allMimeTypes << true << true << false << true << true;
+
+        QTest::newRow("enabled and referenced") << allMimeTypes << true << false << true << true << false;
+        QTest::newRow("enabled and !referenced") << allMimeTypes << true << false << true << false << false;
+        QTest::newRow("!enabled and referenced") << allMimeTypes << true << false << false << true << false;
+        QTest::newRow("!enabled and !referenced") << allMimeTypes << true << false << false << false << false;
+
+        QTest::newRow("selected, enabled and referenced") << allMimeTypes << true << true << true << true << true;
+        QTest::newRow("selected, enabled and !referenced") << allMimeTypes << true << true << true << false << true;
+        QTest::newRow("selected, !enabled and referenced") << allMimeTypes << true << true << false << true << true;
+        QTest::newRow("selected, !enabled and !referenced") << allMimeTypes << true << true << false << false << false;
+
+        QTest::newRow("empty case") << QStringList() << false << false << false << true << false;
+    }
+
+    void shouldVerifyIfCollectionIsSelected()
+    {
+        // GIVEN
+        QFETCH(QStringList, mimeTypes);
+        QFETCH(bool, hasSelectedAttribute);
+        QFETCH(bool, isSelected);
+        QFETCH(bool, isReferenced);
+        QFETCH(bool, isEnabled);
+
+        Domain::DataSource::ContentTypes expectedContentTypes;
+        if (mimeTypes.contains("text/x-vnd.akonadi.note")) {
+            expectedContentTypes |= Domain::DataSource::Notes;
+        }
+        if (mimeTypes.contains("application/x-vnd.akonadi.calendar.todo")) {
+            expectedContentTypes |= Domain::DataSource::Tasks;
+        }
+
+        // ... stored in a collection
+        Akonadi::Collection collection(42);
+        collection.setContentMimeTypes(mimeTypes);
+        collection.setReferenced(isReferenced);
+        collection.setEnabled(isEnabled);
+        if (hasSelectedAttribute) {
+            auto selectedAttribute = new Akonadi::ApplicationSelectedAttribute;
+            selectedAttribute->setSelected(isSelected);
+            collection.addAttribute(selectedAttribute);
+        }
+
+        // WHEN
+        Akonadi::Serializer serializer;
+
+        // THEN
+        QFETCH(bool, expectedSelected);
+        QCOMPARE(serializer.isSelectedCollection(collection), expectedSelected);
     }
 
     void shouldVerifyCollectionContents_data()
@@ -309,10 +557,12 @@ private slots:
         QTest::addColumn<bool>("isDone");
         QTest::addColumn<QDateTime>("startDate");
         QTest::addColumn<QDateTime>("dueDate");
+        QTest::addColumn<QString>("delegateName");
+        QTest::addColumn<QString>("delegateEmail");
 
-        QTest::newRow("nominal case") << "summary" << "content" << false << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01));
-        QTest::newRow("done case") << "summary" << "content" << true << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01));
-        QTest::newRow("empty case") << QString() << QString() << false << QDateTime() << QDateTime();
+        QTest::newRow("nominal case") << "summary" << "content" << false << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01)) << "John Doe" << "j@d.com";
+        QTest::newRow("done case") << "summary" << "content" << true << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01)) << "John Doe" << "j@d.com";
+        QTest::newRow("empty case") << QString() << QString() << false << QDateTime() << QDateTime() << QString() << QString();
     }
 
     void shouldCreateTaskFromItem()
@@ -325,6 +575,8 @@ private slots:
         QFETCH(bool, isDone);
         QFETCH(QDateTime, startDate);
         QFETCH(QDateTime, dueDate);
+        QFETCH(QString, delegateName);
+        QFETCH(QString, delegateEmail);
 
         // ... stored in a todo...
         KCalCore::Todo::Ptr todo(new KCalCore::Todo);
@@ -334,6 +586,14 @@ private slots:
         todo->setDtStart(KDateTime(startDate));
         todo->setDtDue(KDateTime(dueDate));
         todo->setRelatedTo("my-uid");
+        if (!delegateName.isEmpty() || !delegateEmail.isEmpty()) {
+            KCalCore::Attendee::Ptr attendee(new KCalCore::Attendee(delegateName,
+                                                                    delegateEmail,
+                                                                    true,
+                                                                    KCalCore::Attendee::Delegated));
+            todo->addAttendee(attendee);
+        }
+
 
         // ... as payload of an item
         Akonadi::Item item;
@@ -353,6 +613,8 @@ private slots:
         QCOMPARE(task->property("todoUid").toString(), todo->uid());
         QCOMPARE(task->property("relatedUid").toString(), todo->relatedTo());
         QCOMPARE(task->property("itemId").toLongLong(), item.id());
+        QCOMPARE(task->delegate().name(), delegateName);
+        QCOMPARE(task->delegate().email(), delegateEmail);
     }
 
     void shouldCreateNullTaskFromInvalidItem()
@@ -398,9 +660,11 @@ private slots:
         QTest::addColumn<QDateTime>("updatedStartDate");
         QTest::addColumn<QDateTime>("updatedDueDate");
         QTest::addColumn<QString>("updatedRelated");
+        QTest::addColumn<QString>("updatedDelegateName");
+        QTest::addColumn<QString>("updatedDelegateEmail");
 
-        QTest::newRow("no change") << "summary" << "content" << false << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01)) << "my-uid";
-        QTest::newRow("changed") << "new summary" << "new content" << true << QDateTime(QDate(2013, 11, 25)) << QDateTime(QDate(2014, 03, 02)) << "my-new-uid";
+        QTest::newRow("no change") << "summary" << "content" << false << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01)) << "my-uid" << "John Doe" << "j@d.com";
+        QTest::newRow("changed") << "new summary" << "new content" << true << QDateTime(QDate(2013, 11, 25)) << QDateTime(QDate(2014, 03, 02)) << "my-new-uid" << "John Smith" << "j@s.com";
     }
 
     void shouldUpdateTaskFromItem()
@@ -415,6 +679,11 @@ private slots:
         originalTodo->setDtStart(KDateTime(QDate(2013, 11, 24)));
         originalTodo->setDtDue(KDateTime(QDate(2014, 03, 01)));
         originalTodo->setRelatedTo("my-uid");
+        KCalCore::Attendee::Ptr originalAttendee(new KCalCore::Attendee("John Doe",
+                                                                        "j@d.com",
+                                                                        true,
+                                                                        KCalCore::Attendee::Delegated));
+        originalTodo->addAttendee(originalAttendee);
 
         // ... as payload of an item...
         Akonadi::Item originalItem;
@@ -434,6 +703,8 @@ private slots:
         QFETCH(QDateTime, updatedStartDate);
         QFETCH(QDateTime, updatedDueDate);
         QFETCH(QString, updatedRelated);
+        QFETCH(QString, updatedDelegateName);
+        QFETCH(QString, updatedDelegateEmail);
 
         // ... in a new todo...
         KCalCore::Todo::Ptr updatedTodo(new KCalCore::Todo);
@@ -443,6 +714,13 @@ private slots:
         updatedTodo->setDtStart(KDateTime(updatedStartDate));
         updatedTodo->setDtDue(KDateTime(updatedDueDate));
         updatedTodo->setRelatedTo(updatedRelated);
+        if (!updatedDelegateName.isEmpty() || !updatedDelegateEmail.isEmpty()) {
+            KCalCore::Attendee::Ptr updatedAttendee(new KCalCore::Attendee(updatedDelegateName,
+                                                                           updatedDelegateEmail,
+                                                                           true,
+                                                                           KCalCore::Attendee::Delegated));
+            updatedTodo->addAttendee(updatedAttendee);
+        }
 
         // ... as payload of a new item
         Akonadi::Item updatedItem;
@@ -460,6 +738,8 @@ private slots:
         QCOMPARE(task->property("todoUid").toString(), updatedTodo->uid());
         QCOMPARE(task->property("relatedUid").toString(), updatedTodo->relatedTo());
         QCOMPARE(task->property("itemId").toLongLong(), updatedItem.id());
+        QCOMPARE(task->delegate().name(), updatedDelegateName);
+        QCOMPARE(task->delegate().email(), updatedDelegateEmail);
     }
 
     void shouldNotUpdateTaskFromInvalidItem()
@@ -561,26 +841,33 @@ private slots:
         QTest::addColumn<QDateTime>("dueDate");
         QTest::addColumn<qint64>("itemId");
         QTest::addColumn<QString>("todoUid");
+        QTest::addColumn<Domain::Task::Delegate>("delegate");
 
         QTest::newRow("nominal case (no id)") << "summary" << "content" << false
                                               << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01))
-                                              << qint64(-1) << QString();
+                                              << qint64(-1) << QString()
+                                              << Domain::Task::Delegate("John Doe", "j@d.com");
         QTest::newRow("done case (no id)") << "summary" << "content" << true
                                            << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01))
-                                           << qint64(-1) << QString();
+                                           << qint64(-1) << QString()
+                                           << Domain::Task::Delegate("John Doe", "j@d.com");
         QTest::newRow("empty case (no id)") << QString() << QString() << false
                                             << QDateTime() << QDateTime()
-                                            << qint64(-1) << QString();
+                                            << qint64(-1) << QString()
+                                            << Domain::Task::Delegate();
 
         QTest::newRow("nominal case (with id)") << "summary" << "content" << false
                                                 << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01))
-                                                << qint64(42) << "my-uid";
+                                                << qint64(42) << "my-uid"
+                                                << Domain::Task::Delegate("John Doe", "j@d.com");
         QTest::newRow("done case (with id)") << "summary" << "content" << true
                                              << QDateTime(QDate(2013, 11, 24)) << QDateTime(QDate(2014, 03, 01))
-                                             << qint64(42) << "my-uid";
+                                             << qint64(42) << "my-uid"
+                                             << Domain::Task::Delegate("John Doe", "j@d.com");
         QTest::newRow("empty case (with id)") << QString() << QString() << false
                                               << QDateTime() << QDateTime()
-                                              << qint64(42) << "my-uid";
+                                              << qint64(42) << "my-uid"
+                                              << Domain::Task::Delegate();
     }
 
     void shouldCreateItemFromTask()
@@ -595,6 +882,7 @@ private slots:
         QFETCH(QDateTime, dueDate);
         QFETCH(qint64, itemId);
         QFETCH(QString, todoUid);
+        QFETCH(Domain::Task::Delegate, delegate);
 
         // ... stored in a task
         auto task = Domain::Task::Ptr::create();
@@ -603,6 +891,7 @@ private slots:
         task->setDone(isDone);
         task->setStartDate(startDate);
         task->setDueDate(dueDate);
+        task->setDelegate(delegate);
 
         if (itemId > 0)
             task->setProperty("itemId", itemId);
@@ -630,6 +919,13 @@ private slots:
         QCOMPARE(todo->isCompleted(), isDone);
         QCOMPARE(todo->dtStart().dateTime(), startDate);
         QCOMPARE(todo->dtDue().dateTime(), dueDate);
+
+        if (delegate.isValid()) {
+            auto attendee = todo->attendeeByMail(delegate.email());
+            QVERIFY(attendee);
+            QCOMPARE(attendee->name(), delegate.name());
+            QCOMPARE(attendee->email(), delegate.email());
+        }
 
         if (!todoUid.isEmpty()) {
             QCOMPARE(todo->uid(), todoUid);
@@ -1613,17 +1909,58 @@ private slots:
         QCOMPARE(context->property("tagId").toLongLong(), originalTag.id());
     }
 
-    void shouldCheckIfAnItemHasContextsOrTopics_data()
+    void shouldVerifyIfAnItemIsAContextChild_data()
+    {
+        QTest::addColumn<Domain::Context::Ptr>("context");
+        QTest::addColumn<Akonadi::Item>("item");
+        QTest::addColumn<bool>("isChild");
+
+        // Create a context
+        auto context = Domain::Context::Ptr::create();
+        context->setProperty("tagId", qint64(43));
+        Akonadi::Tag tag(Akonadi::Tag::Id(43));
+
+        Akonadi::Item unrelatedItem;
+        QTest::newRow("Unrelated item") << context << unrelatedItem << false;
+
+        Akonadi::Item relatedItem;
+        relatedItem.setTag(tag);
+        QTest::newRow("Related item") << context << relatedItem << true;
+
+        auto invalidContext = Domain::Context::Ptr::create();
+        QTest::newRow("Invalid context") << invalidContext << relatedItem << false;
+
+        Akonadi::Item invalidItem;
+        QTest::newRow("Invalid Item") << context << invalidItem << false;
+    }
+
+    void shouldVerifyIfAnItemIsAContextChild()
+    {
+        // GIVEN
+        QFETCH(Domain::Context::Ptr, context);
+        QFETCH(Akonadi::Item, item);
+        QFETCH(bool, isChild);
+
+        // WHEN
+        Akonadi::Serializer serializer;
+        bool value = serializer.isContextChild(context, item);
+
+        // THEN
+        QCOMPARE(value, isChild);
+    }
+
+    void shouldCheckIfAnItemHasContextsOrTags_data()
     {
         QTest::addColumn<Akonadi::Item>("item");
         QTest::addColumn<bool>("contextsExpected");
-        QTest::addColumn<bool>("topicsExpected");
+        QTest::addColumn<bool>("tagsExpected");
 
         Akonadi::Tag unrelatedTag("Foo");
+        unrelatedTag.setType("unrelated");
         Akonadi::Tag contextTag("Bar");
         contextTag.setType(Akonadi::Serializer::contextTagType());
-        Akonadi::Tag topicTag("Baz");
-        topicTag.setType(Akonadi::Serializer::topicTagType());
+        Akonadi::Tag akonadiTag("Baz");
+        akonadiTag.setType(Akonadi::Tag::PLAIN);
 
         Akonadi::Item item;
         QTest::newRow("no tags") << item << false << false;
@@ -1634,29 +1971,217 @@ private slots:
         item.setTags({ unrelatedTag, contextTag });
         QTest::newRow("has contexts") << item << true << false;
 
-        item.setTags({ unrelatedTag, topicTag });
-        QTest::newRow("has topics") << item << false << true;
+        item.setTags({ unrelatedTag, akonadiTag });
+        QTest::newRow("has tags") << item << false << true;
 
-        item.setTags({ unrelatedTag, contextTag, topicTag });
+        item.setTags({ unrelatedTag, contextTag, akonadiTag });
         QTest::newRow("has both") << item << true << true;
     }
 
-    void shouldCheckIfAnItemHasContextsOrTopics()
+    void shouldCheckIfAnItemHasContextsOrTags()
     {
         // GIVEN
         QFETCH(Akonadi::Item, item);
         QFETCH(bool, contextsExpected);
-        QFETCH(bool, topicsExpected);
+        QFETCH(bool, tagsExpected);
 
         Akonadi::Serializer serializer;
 
         // WHEN
         const bool hasContexts = serializer.hasContextTags(item);
-        const bool hasTopics = serializer.hasTopicTags(item);
+        const bool hasTags = serializer.hasAkonadiTags(item);
 
         // THEN
         QCOMPARE(hasContexts, contextsExpected);
-        QCOMPARE(hasTopics, topicsExpected);
+        QCOMPARE(hasTags, tagsExpected);
+    }
+
+    void shouldCreateTagFromContext_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<qint64>("tagId");
+        QTest::addColumn<QByteArray>("tagGid");
+
+        QString nameInternet = "Internet";
+
+        QTest::newRow("nominal case") << QString(nameInternet) << qint64(42) << nameInternet.toLatin1();
+        QTest::newRow("null name case") << QString() << qint64(42) << QByteArray();
+        QTest::newRow("null tagId case") << QString(nameInternet)<< qint64(-1) << nameInternet.toLatin1();
+        QTest::newRow("totally null context case") << QString() << qint64(-1) << QByteArray();
+    }
+
+    void shouldCreateTagFromContext()
+    {
+        // GIVEN
+        QFETCH(QString, name);
+        QFETCH(qint64, tagId);
+        QFETCH(QByteArray, tagGid);
+
+        // WHEN
+        auto context = Domain::Context::Ptr::create();
+        context->setProperty("tagId", tagId);
+        context->setName(name);
+
+        Akonadi::Serializer serializer;
+        Akonadi::Tag tag = serializer.createTagFromContext(context);
+
+        // THEN
+        QCOMPARE(tag.name(), name);
+        QCOMPARE(tag.isValid(), tagId > 0);
+
+        if (tagId > 0) {
+            QCOMPARE(tag.id(), tagId);
+            QCOMPARE(tag.gid(), tagGid);
+            QCOMPARE(tag.type(), Akonadi::SerializerInterface::contextTagType());
+        }
+    }
+
+    void shouldCreateTagFromAkonadiTag_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<qint64>("tagId");
+        QTest::addColumn<QByteArray>("type");
+
+        QString tagName = "Optional";
+        QByteArray plainType = Akonadi::Tag::PLAIN;
+
+        QTest::newRow("nominal case") << tagName << qint64(42) << plainType;
+        QTest::newRow("null name case") << QString() << qint64(42) << plainType;
+        QTest::newRow("null tagId case") << tagName << qint64(-1) << plainType;
+        QTest::newRow("totally null tag case") << QString() << qint64(-1) << plainType;
+    }
+
+    void shouldCreateTagFromAkonadiTag()
+    {
+        // GIVEN
+        QFETCH(QString, name);
+        QFETCH(qint64, tagId);
+        QFETCH(QByteArray, type);
+
+        auto akonadiTag = Akonadi::Tag();
+        akonadiTag.setName(name);
+        akonadiTag.setId(tagId);
+        akonadiTag.setType(type);
+
+        // WHEN
+        Akonadi::Serializer serializer;
+        Domain::Tag::Ptr resultTag = serializer.createTagFromAkonadiTag(akonadiTag);
+
+        // THEN
+        QCOMPARE(resultTag->name(), akonadiTag.name());
+        QCOMPARE(resultTag->property("tagId").toLongLong(), akonadiTag.id());
+    }
+
+    void shouldUpdateTagFromAkonadiTag_data()
+    {
+        shouldCreateTagFromAkonadiTag_data();
+    }
+
+    void shouldUpdateTagFromAkonadiTag()
+    {
+        // GIVEN
+        QFETCH(QString, name);
+        QFETCH(qint64, tagId);
+        QFETCH(QByteArray, type);
+
+        // ... stored as an Akonadi Tag
+        Akonadi::Tag akonadiTag(name);
+        akonadiTag.setId(tagId);
+        akonadiTag.setType(type);
+
+        // WHEN
+        Akonadi::Serializer serializer;
+        auto tag = Domain::Tag::Ptr::create();
+        tag->setName("tag42");
+
+        serializer.updateTagFromAkonadiTag(tag, akonadiTag);
+
+        // THEN
+        QCOMPARE(tag->name(), akonadiTag.name());
+        QCOMPARE(tag->property("tagId").toLongLong(), akonadiTag.id());
+    }
+
+    void shouldCreateAkonadiTagFromTag_data()
+    {
+        // GIVEN
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<qint64>("tagId");
+        QTest::addColumn<QByteArray>("tagGid");
+
+        const QByteArray namePhilo = "Philosophy";
+
+        QTest::newRow("nominal case") << QString(namePhilo) << qint64(42) << namePhilo;
+        QTest::newRow("null name case") << QString() << qint64(42) << QByteArray();
+        QTest::newRow("null tagId case") << QString(namePhilo) << qint64(-1) << namePhilo;
+        QTest::newRow("totally null tag case") << QString() << qint64(-1) << QByteArray();
+    }
+
+    void shouldCreateAkonadiTagFromTag()
+    {
+        // GIVEN
+        QFETCH(QString, name);
+        QFETCH(qint64, tagId);
+        QFETCH(QByteArray, tagGid);
+
+        // WHEN
+        auto tag = Domain::Tag::Ptr::create();
+        tag->setProperty("tagId", tagId);
+        tag->setName(name);
+
+        Akonadi::Serializer serializer;
+        Akonadi::Tag akonadiTag = serializer.createAkonadiTagFromTag(tag);
+
+        // THEN
+        QCOMPARE(akonadiTag.name(), name);
+        QCOMPARE(akonadiTag.isValid(), tagId > 0);
+
+        if (tagId > 0) {
+            QCOMPARE(akonadiTag.id(), tagId);
+            QCOMPARE(akonadiTag.gid(), tagGid);
+            QCOMPARE(akonadiTag.type(), QByteArray(Akonadi::Tag::PLAIN));
+        }
+    }
+
+    void shouldVerifyIfAnItemIsATagChild_data()
+    {
+        QTest::addColumn<Domain::Tag::Ptr>("tag");
+        QTest::addColumn<Akonadi::Item>("item");
+        QTest::addColumn<bool>("isChild");
+
+        // Create a Tag
+        auto tag = Domain::Tag::Ptr::create();
+        tag->setProperty("tagId", qint64(43));
+        Akonadi::Tag akonadiTag(Akonadi::Tag::Id(43));
+
+        Akonadi::Item unrelatedItem;
+        QTest::newRow("Unrelated item") << tag << unrelatedItem << false;
+
+        Akonadi::Item relatedItem;
+        relatedItem.setTag(akonadiTag);
+        QTest::newRow("Related item") << tag << relatedItem << true;
+
+        auto invalidTag = Domain::Tag::Ptr::create();
+        QTest::newRow("Invalid Tag") << invalidTag << relatedItem << false;
+
+        Akonadi::Item invalidItem;
+        QTest::newRow("Invalid Item") << tag << invalidItem << false;
+
+        QTest::newRow("both invalid") << invalidTag << invalidItem << false;
+    }
+
+    void shouldVerifyIfAnItemIsATagChild()
+    {
+        // GIVEN
+        QFETCH(Domain::Tag::Ptr, tag);
+        QFETCH(Akonadi::Item, item);
+        QFETCH(bool, isChild);
+
+        // WHEN
+        Akonadi::Serializer serializer;
+        bool value = serializer.isTagChild(tag, item);
+
+        // THEN
+        QCOMPARE(value, isChild);
     }
 };
 

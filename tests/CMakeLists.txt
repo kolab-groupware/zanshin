@@ -2,6 +2,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/3rdparty)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/testlib")
+
 MACRO(ZANSHIN_MANUAL_TESTS)
   FOREACH(_testname ${ARGN})
     kde4_add_executable(${_testname} TEST ${_testname}.cpp)
@@ -11,10 +13,10 @@ MACRO(ZANSHIN_MANUAL_TESTS)
       ${KDE4_KDEUI_LIBS}
       akonadi
       domain
-      pimlibs
       presentation
       utils
       widgets
+      ${KDEPIM_STATIC_LIBS}
     )
   ENDFOREACH(_testname)
 ENDMACRO(ZANSHIN_MANUAL_TESTS)
@@ -29,10 +31,10 @@ MACRO(ZANSHIN_AUTO_TESTS)
       testlib
       akonadi
       domain
-      pimlibs
       presentation
       utils
       widgets
+      ${KDEPIM_STATIC_LIBS}
     )
   ENDFOREACH(_testname)
 ENDMACRO(ZANSHIN_AUTO_TESTS)

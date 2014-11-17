@@ -25,6 +25,7 @@
 #define AKONADI_SERIALIZERINTERFACE_H
 
 #include "domain/datasource.h"
+#include "domain/tag.h"
 #include "domain/task.h"
 #include "domain/note.h"
 #include "domain/project.h"
@@ -43,17 +44,25 @@ class SerializerInterface
 public:
     typedef QSharedPointer<QObject> QObjectPtr;
 
+    enum DataSourceNameScheme {
+        FullPath,
+        BaseName
+    };
+
     SerializerInterface();
     virtual ~SerializerInterface();
 
     virtual bool representsCollection(QObjectPtr object, Akonadi::Collection collection) = 0;
     virtual bool representsItem(QObjectPtr object, Akonadi::Item item) = 0;
+    virtual bool representsAkonadiTag(Domain::Tag::Ptr tag, Akonadi::Tag akonadiTag) const = 0;
 
     virtual QString objectUid(QObjectPtr object) = 0;
 
-    virtual Domain::DataSource::Ptr createDataSourceFromCollection(Akonadi::Collection collection) = 0;
-    virtual void updateDataSourceFromCollection(Domain::DataSource::Ptr dataSource, Akonadi::Collection collection) = 0;
+    virtual Domain::DataSource::Ptr createDataSourceFromCollection(Akonadi::Collection collection, DataSourceNameScheme naming) = 0;
+    virtual void updateDataSourceFromCollection(Domain::DataSource::Ptr dataSource, Akonadi::Collection collection, DataSourceNameScheme naming) = 0;
     virtual Akonadi::Collection createCollectionFromDataSource(Domain::DataSource::Ptr dataSource) = 0;
+    virtual bool isListedCollection(Akonadi::Collection collection) = 0;
+    virtual bool isSelectedCollection(Akonadi::Collection collection) = 0;
     virtual bool isNoteCollection(Akonadi::Collection collection) = 0;
     virtual bool isTaskCollection(Akonadi::Collection collection) = 0;
 
@@ -83,14 +92,19 @@ public:
 
     virtual Domain::Context::Ptr createContextFromTag(Akonadi::Tag tag) = 0;
     virtual void updateContextFromTag(Domain::Context::Ptr context, Akonadi::Tag tag) = 0;
-    virtual bool isContextChild(const Domain::Context::Ptr &context, const Akonadi::Tag &tag) const = 0;
+    virtual Akonadi::Tag createTagFromContext(Domain::Context::Ptr context) = 0;
     virtual bool isContextTag(const Domain::Context::Ptr &context, const Akonadi::Tag &tag) const = 0;
+    virtual bool isContextChild(Domain::Context::Ptr context, Akonadi::Item item) const = 0;
+
+    virtual Domain::Tag::Ptr createTagFromAkonadiTag(Akonadi::Tag tag) = 0;
+    virtual void updateTagFromAkonadiTag(Domain::Tag::Ptr tag, Akonadi::Tag akonadiTag) = 0;
+    virtual Akonadi::Tag createAkonadiTagFromTag(Domain::Tag::Ptr tag) = 0;
+    virtual bool isTagChild(Domain::Tag::Ptr tag, Akonadi::Item item) = 0;
 
     virtual bool hasContextTags(Akonadi::Item item) const = 0;
-    virtual bool hasTopicTags(Akonadi::Item item) const = 0;
+    virtual bool hasAkonadiTags(Akonadi::Item item) const = 0;
 
     static QByteArray contextTagType();
-    static QByteArray topicTagType();
 };
 
 }

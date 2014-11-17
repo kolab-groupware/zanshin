@@ -6,7 +6,6 @@ add_subdirectory(core)
 add_subdirectory(gui)
 add_subdirectory(icons)
 add_subdirectory(reparentingmodel)
-add_subdirectory(runner)
 add_subdirectory(utils)
 
 ########### zanshin core ###############
@@ -53,10 +52,10 @@ kde4_add_app_icon(zanshin_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/icons/hi*-apps-zansh
 kde4_add_executable(zanshin ${zanshin_SRCS})
 target_link_libraries(zanshin ${KDE4_KDEUI_LIBS} ${zanshin_core_LIBS})
 
-install(TARGETS zanshin DESTINATION ${BIN_INSTALL_DIR})
-install(FILES app/zanshinui.rc DESTINATION ${DATA_INSTALL_DIR}/zanshin)
-install(FILES gui/itemeditor/editorui.rc DESTINATION ${DATA_INSTALL_DIR}/zanshin)
-install(PROGRAMS app/zanshin.desktop DESTINATION ${XDG_APPS_INSTALL_DIR})
+#install(TARGETS zanshin DESTINATION ${BIN_INSTALL_DIR})
+#install(FILES app/zanshinui.rc DESTINATION ${DATA_INSTALL_DIR}/zanshin)
+#install(FILES gui/itemeditor/editorui.rc DESTINATION ${DATA_INSTALL_DIR}/zanshin)
+#install(PROGRAMS app/zanshin.desktop DESTINATION ${XDG_APPS_INSTALL_DIR})
 
 ########### zanshin part ###############
 

@@ -29,6 +29,7 @@
 #include <mockitopp/mockitopp.hpp>
 #include "testlib/akonadimocks.h"
 
+#include "akonadi/akonadimessaginginterface.h"
 #include "akonadi/akonaditaskrepository.h"
 #include "akonadi/akonadiserializerinterface.h"
 #include "akonadi/akonadistorageinterface.h"
@@ -41,6 +42,13 @@ Q_DECLARE_METATYPE(MockItemFetchJob*)
 class AkonadiTaskRepositoryTest : public QObject
 {
     Q_OBJECT
+public:
+    explicit AkonadiTaskRepositoryTest(QObject *parent = 0)
+        : QObject(parent)
+    {
+        qRegisterMetaType<Domain::Task::Delegate>();
+    }
+
 private slots:
     void shouldCheckIfASourceIsDefaultFromSettings()
     {
@@ -62,7 +70,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
 
         // THEN
         QVERIFY(repository->isDefaultSource(source));
@@ -92,7 +101,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
 
         // THEN
         QVERIFY(!repository->isDefaultSource(source));
@@ -122,7 +132,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         repository->setDefaultSource(source);
 
         // THEN
@@ -157,7 +168,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         repository->create(task)->exec();
 
         // THEN
@@ -201,7 +213,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         repository->create(task)->exec();
 
         // THEN
@@ -240,7 +253,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         repository->createInProject(task, project)->exec();
 
         // THEN
@@ -248,6 +262,104 @@ private slots:
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::updateItemProject).when(taskItem, project).exactly(1));
         QVERIFY(storageMock(&Akonadi::StorageInterface::createItem).when(taskItem, col).exactly(1));
+    }
+
+    void shouldCreateNewItemsInContext()
+    {
+        // GIVEN
+        // a tag
+        Akonadi::Tag tag;
+        tag.setName("tag42");
+        tag.setId(42);
+
+        // the context related to the tag
+        auto context = Domain::Context::Ptr::create();
+
+        // a default collection
+        Akonadi::Collection defaultCollection(42);
+
+        // A task and its corresponding item not existing in storage yet
+        Akonadi::Item taskItem;
+        auto task = Domain::Task::Ptr::create();
+
+        // A mock create job
+        auto itemCreateJob = new MockAkonadiJob(this);
+
+        // serializer mock returning the item for the task
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+
+        serializerMock(&Akonadi::SerializerInterface::createTagFromContext).when(context).thenReturn(tag);
+        serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).thenReturn(taskItem);
+
+        // Storage mock returning the create job
+        mock_object<Akonadi::StorageInterface> storageMock;
+
+        storageMock(&Akonadi::StorageInterface::defaultTaskCollection).when().thenReturn(defaultCollection);
+        storageMock(&Akonadi::StorageInterface::createItem).when(taskItem, defaultCollection).thenReturn(itemCreateJob);
+
+        // WHEN
+        QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
+
+        repository->createInContext(task, context)->exec();
+
+        // THEN
+
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).exactly(1));
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createTagFromContext).when(context).exactly(1));
+
+        QVERIFY(storageMock(&Akonadi::StorageInterface::defaultTaskCollection).when().exactly(1));
+        QVERIFY(storageMock(&Akonadi::StorageInterface::createItem).when(taskItem, defaultCollection).exactly(1));
+    }
+
+    void shouldCreateNewItemsInTag()
+    {
+        // GIVEN
+        // a tag
+        Akonadi::Tag akonadiTag;
+        akonadiTag.setName("akonadiTag42");
+        akonadiTag.setId(42);
+
+        // the domain Tag related to the Akonadi Tag
+        auto tag = Domain::Tag::Ptr::create();
+
+        // a default collection
+        Akonadi::Collection defaultCollection(42);
+
+        // A task and its corresponding item not existing in storage yet
+        Akonadi::Item taskItem;
+        auto task = Domain::Task::Ptr::create();
+
+        // A mock create job
+        auto itemCreateJob = new MockAkonadiJob(this);
+
+        // serializer mock returning the item for the task
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+
+        serializerMock(&Akonadi::SerializerInterface::createAkonadiTagFromTag).when(tag).thenReturn(akonadiTag);
+        serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).thenReturn(taskItem);
+
+        // Storage mock returning the create job
+        mock_object<Akonadi::StorageInterface> storageMock;
+
+        storageMock(&Akonadi::StorageInterface::defaultTaskCollection).when().thenReturn(defaultCollection);
+        storageMock(&Akonadi::StorageInterface::createItem).when(taskItem, defaultCollection).thenReturn(itemCreateJob);
+
+        // WHEN
+        QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
+
+        repository->createInTag(task, tag)->exec();
+
+        // THEN
+
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).exactly(1));
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createAkonadiTagFromTag).when(tag).exactly(1));
+
+        QVERIFY(storageMock(&Akonadi::StorageInterface::defaultTaskCollection).when().exactly(1));
+        QVERIFY(storageMock(&Akonadi::StorageInterface::createItem).when(taskItem, defaultCollection).exactly(1));
     }
 
     void shouldUpdateExistingItems()
@@ -275,7 +387,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         repository->update(task)->exec();
 
         // THEN
@@ -283,32 +396,99 @@ private slots:
         QVERIFY(storageMock(&Akonadi::StorageInterface::updateItem).when(item, 0).exactly(1));
     }
 
+    void shouldRemoveATask_data()
+    {
+        QTest::addColumn<Akonadi::Item>("item");
+        QTest::addColumn<MockItemFetchJob*>("itemFetchJob1");
+        QTest::addColumn<MockItemFetchJob*>("itemFetchJob2");
+        QTest::addColumn<Akonadi::Item::List>("list");
+        QTest::addColumn<bool>("itemFetchJobSucceeded");
+        QTest::addColumn<bool>("collectionItemsFetchJobSucceeded");
+
+        Akonadi::Collection col(40);
+
+        Akonadi::Item item(42);
+        item.setParentCollection(col);
+        Akonadi::Item item2(43);
+
+        auto itemFetchJob1 = new MockItemFetchJob(this);
+        itemFetchJob1->setItems(Akonadi::Item::List() << item);
+        auto itemFetchJob2 = new MockItemFetchJob(this);
+
+        Akonadi::Item::List list;
+
+        QTest::newRow("nominal case") << item << itemFetchJob1 << itemFetchJob2 << list << true << true;
+
+        itemFetchJob1 = new MockItemFetchJob(this);
+        itemFetchJob1->setExpectedError(KJob::KilledJobError);
+        QTest::newRow("item job error with empty list") << item << itemFetchJob1 << itemFetchJob2 << list << false << false;
+
+        itemFetchJob1 = new MockItemFetchJob(this);
+        itemFetchJob1->setExpectedError(KJob::KilledJobError);
+        itemFetchJob1->setItems(Akonadi::Item::List() << item);
+        QTest::newRow("item job error with item") << item << itemFetchJob1 << itemFetchJob2 << list << false << false;
+
+        itemFetchJob1 = new MockItemFetchJob(this);
+        itemFetchJob1->setItems(Akonadi::Item::List() << item);
+        itemFetchJob2 = new MockItemFetchJob(this);
+        itemFetchJob2->setExpectedError(KJob::KilledJobError);
+        QTest::newRow("items job error with empty list") << item << itemFetchJob1 << itemFetchJob2 << list << true << false;
+
+        itemFetchJob1 = new MockItemFetchJob(this);
+        itemFetchJob1->setItems(Akonadi::Item::List() << item);
+        itemFetchJob2 = new MockItemFetchJob(this);
+        list << item2;
+        itemFetchJob2->setItems(list);
+        QTest::newRow("remove item and his child") << item << itemFetchJob1 << itemFetchJob2 << list << true << true;
+    }
+
     void shouldRemoveATask()
     {
         // GIVEN
-        Akonadi::Item item(42);
+        QFETCH(Akonadi::Item, item);
+        QFETCH(MockItemFetchJob*, itemFetchJob1);
+        QFETCH(MockItemFetchJob*, itemFetchJob2);
+        QFETCH(Akonadi::Item::List, list);
+        QFETCH(bool, itemFetchJobSucceeded);
+        QFETCH(bool, collectionItemsFetchJobSucceeded);
+
         Domain::Task::Ptr task(new Domain::Task);
+
+        Akonadi::Item::List removedList;
+        removedList << list << item;
 
         // A mock delete job
         auto itemDeleteJob = new MockAkonadiJob(this);
 
         // Storage mock returning the delete job
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::removeItem).when(item)
-                                                           .thenReturn(itemDeleteJob);
+        storageMock(&Akonadi::StorageInterface::fetchItem).when(item)
+                                                          .thenReturn(itemFetchJob1);
+        storageMock(&Akonadi::StorageInterface::fetchItems).when(item.parentCollection())
+                                                          .thenReturn(itemFetchJob2);
+        storageMock(&Akonadi::StorageInterface::removeItems).when(removedList, 0)
+                                                              .thenReturn(itemDeleteJob);
 
         // Serializer mock returning the item for the task
         mock_object<Akonadi::SerializerInterface> serializerMock;
         serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).thenReturn(item);
+        serializerMock(&Akonadi::SerializerInterface::filterDescendantItems).when(list, item).thenReturn(list);
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         repository->remove(task)->exec();
 
         // THEN
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).exactly(1));
-        QVERIFY(storageMock(&Akonadi::StorageInterface::removeItem).when(item).exactly(1));
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchItem).when(item).exactly(1));
+        if (itemFetchJobSucceeded) {
+            QVERIFY(storageMock(&Akonadi::StorageInterface::fetchItems).when(item.parentCollection()).exactly(1));
+            if (collectionItemsFetchJobSucceeded) {
+                QVERIFY(storageMock(&Akonadi::StorageInterface::removeItems).when(removedList, 0).exactly(1));
+            }
+        }
     }
 
     void shouldAssociateATaskToAnother_data()
@@ -439,7 +619,8 @@ private slots:
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
         auto associateJob = repository->associate(parent, child);
         if (execJob)
             associateJob->exec();
@@ -466,63 +647,37 @@ private slots:
         }
     }
 
-    void shouldDissociateATaskFromHisParent_data()
+    void shouldDissociateATaskFromItsParent_data()
     {
         QTest::addColumn<Domain::Task::Ptr>("child");
-        QTest::addColumn<Domain::Task::Ptr>("parent");
         QTest::addColumn<Akonadi::Item>("childItem");
-        QTest::addColumn<Akonadi::Item>("parentItem");
-        QTest::addColumn<MockItemFetchJob*>("itemFetchJob1");
-        QTest::addColumn<MockItemFetchJob*>("itemFetchJob2");
-        QTest::addColumn<bool>("parentJobFailed");
+        QTest::addColumn<MockItemFetchJob*>("itemFetchJob");
         QTest::addColumn<bool>("childJobFailed");
 
         Domain::Task::Ptr child(new Domain::Task);
-        Domain::Task::Ptr parent(new Domain::Task);
-
         Akonadi::Item childItem(42);
-        Akonadi::Item parentItem(41);
 
-        auto itemFetchJob1 = new MockItemFetchJob(this);
-        itemFetchJob1->setItems(Akonadi::Item::List() << childItem);
-        auto itemFetchJob2 = new MockItemFetchJob(this);
-        itemFetchJob2->setItems(Akonadi::Item::List() << parentItem);
+        auto itemFetchJob = new MockItemFetchJob(this);
+        itemFetchJob->setItems(Akonadi::Item::List() << childItem);
 
-        QTest::newRow("nominal case") << child << parent << childItem << parentItem << itemFetchJob1 << itemFetchJob2 <<  false << false;
+        QTest::newRow("nominal case") << child << childItem << itemFetchJob << false;
 
-        itemFetchJob2 = new MockItemFetchJob(this);
-        itemFetchJob2->setExpectedError(KJob::KilledJobError);
-        QTest::newRow("parent job error with empty list") << child << parent << childItem << parentItem << itemFetchJob1 << itemFetchJob2 << true << false;
+        itemFetchJob = new MockItemFetchJob(this);
+        itemFetchJob->setExpectedError(KJob::KilledJobError);
+        QTest::newRow("child job error with empty list") << child << childItem << itemFetchJob << true;
 
-        itemFetchJob2 = new MockItemFetchJob(this);
-        itemFetchJob2->setExpectedError(KJob::KilledJobError);
-        itemFetchJob2->setItems(Akonadi::Item::List() << parentItem);
-        QTest::newRow("parent job error with item") << child << parent << childItem << parentItem << itemFetchJob1 << itemFetchJob2 << true << false;
-
-        itemFetchJob2 = new MockItemFetchJob(this);
-        itemFetchJob2->setItems(Akonadi::Item::List() << parentItem);
-        itemFetchJob1 = new MockItemFetchJob(this);
-        itemFetchJob1->setExpectedError(KJob::KilledJobError);
-        QTest::newRow("child job error with empty list") << child << parent << childItem << parentItem << itemFetchJob1 << itemFetchJob2 << false << true;
-
-        itemFetchJob2 = new MockItemFetchJob(this);
-        itemFetchJob2->setItems(Akonadi::Item::List() << parentItem);
-        itemFetchJob1 = new MockItemFetchJob(this);
-        itemFetchJob1->setExpectedError(KJob::KilledJobError);
-        itemFetchJob1->setItems(Akonadi::Item::List() <<childItem);
-        QTest::newRow("child job error with item") << child << parent << childItem << parentItem << itemFetchJob1 << itemFetchJob2 << false << true;
+        itemFetchJob = new MockItemFetchJob(this);
+        itemFetchJob->setExpectedError(KJob::KilledJobError);
+        itemFetchJob->setItems(Akonadi::Item::List() << childItem);
+        QTest::newRow("child job error with item") << child << childItem << itemFetchJob << true;
     }
 
-    void shouldDissociateATaskFromHisParent()
+    void shouldDissociateATaskFromItsParent()
     {
         // GIVEN
         QFETCH(Domain::Task::Ptr, child);
-        QFETCH(Domain::Task::Ptr, parent);
         QFETCH(Akonadi::Item, childItem);
-        QFETCH(Akonadi::Item, parentItem);
-        QFETCH(MockItemFetchJob*, itemFetchJob1);
-        QFETCH(MockItemFetchJob*, itemFetchJob2);
-        QFETCH(bool, parentJobFailed);
+        QFETCH(MockItemFetchJob*, itemFetchJob);
         QFETCH(bool, childJobFailed);
 
         auto itemModifyJob = new MockAkonadiJob(this);
@@ -532,34 +687,59 @@ private slots:
         storageMock(&Akonadi::StorageInterface::updateItem).when(childItem, 0)
                                                            .thenReturn(itemModifyJob);
         storageMock(&Akonadi::StorageInterface::fetchItem).when(childItem)
-                                                          .thenReturn(itemFetchJob1);
-        storageMock(&Akonadi::StorageInterface::fetchItem).when(parentItem)
-                                                          .thenReturn(itemFetchJob2);
+                                                          .thenReturn(itemFetchJob);
 
         // Serializer mock returning the item for the task
         mock_object<Akonadi::SerializerInterface> serializerMock;
-        serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(parent).thenReturn(parentItem);
         serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(child).thenReturn(childItem);
         serializerMock(&Akonadi::SerializerInterface::removeItemParent).when(childItem).thenReturn();
-        serializerMock(&Akonadi::SerializerInterface::isTaskChild).when(child, parentItem).thenReturn(true);
 
         // WHEN
         QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(&storageMock.getInstance(),
-                                                                                       &serializerMock.getInstance()));
-        repository->dissociate(parent, child)->exec();
+                                                                                       &serializerMock.getInstance(),
+                                                                                       0));
+        repository->dissociate(child)->exec();
 
         // THEN
-        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(parent).exactly(1));
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchItem).when(parentItem).exactly(1));
-        if (!parentJobFailed) {
-            QVERIFY(serializerMock(&Akonadi::SerializerInterface::isTaskChild).when(child, parentItem).exactly(1));
-            QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(child).exactly(1));
-            QVERIFY(storageMock(&Akonadi::StorageInterface::fetchItem).when(childItem).exactly(1));
-            if (!childJobFailed) {
-                QVERIFY(serializerMock(&Akonadi::SerializerInterface::removeItemParent).when(childItem).exactly(1));;
-                QVERIFY(storageMock(&Akonadi::StorageInterface::updateItem).when(childItem, 0).exactly(1));
-            }
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(child).exactly(1));
+        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchItem).when(childItem).exactly(1));
+        if (!childJobFailed) {
+            QVERIFY(serializerMock(&Akonadi::SerializerInterface::removeItemParent).when(childItem).exactly(1));;
+            QVERIFY(storageMock(&Akonadi::StorageInterface::updateItem).when(childItem, 0).exactly(1));
         }
+    }
+
+    void shouldSendDelegationMessage()
+    {
+        // GIVEN
+        auto oldDelegate = Domain::Task::Delegate("John Smith", "john@smith.com");
+        auto newDelegate = Domain::Task::Delegate("John Doe", "john@doe.com");
+
+        auto task = Domain::Task::Ptr::create();
+        task->setDelegate(oldDelegate);
+
+        QSignalSpy spy(task.data(), SIGNAL(delegateChanged(Domain::Task::Delegate)));
+
+        auto item = Akonadi::Item(42);
+
+        mock_object<Akonadi::SerializerInterface> serializerMock;
+        serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).thenReturn(item);
+
+        mock_object<Akonadi::MessagingInterface> messagingMock;
+        messagingMock(&Akonadi::MessagingInterface::sendDelegationMessage).when(item).thenReturn();
+
+        // WHEN
+        QScopedPointer<Akonadi::TaskRepository> repository(new Akonadi::TaskRepository(0,
+                                                                                       &serializerMock.getInstance(),
+                                                                                       &messagingMock.getInstance()));
+        repository->delegate(task, newDelegate);
+
+        // THEN
+        QVERIFY(serializerMock(&Akonadi::SerializerInterface::createItemFromTask).when(task).exactly(1));
+        QVERIFY(messagingMock(&Akonadi::MessagingInterface::sendDelegationMessage).when(item).exactly(1));
+
+        QCOMPARE(task->delegate(), oldDelegate);
+        QVERIFY(spy.isEmpty());
     }
 };
 

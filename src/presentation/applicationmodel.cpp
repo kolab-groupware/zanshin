@@ -25,12 +25,20 @@
 #include "applicationmodel.h"
 
 #include "domain/artifactqueries.h"
+#include "domain/contextqueries.h"
+#include "domain/contextrepository.h"
+#include "domain/projectqueries.h"
+#include "domain/projectrepository.h"
 #include "domain/noterepository.h"
+#include "domain/tagqueries.h"
+#include "domain/tagrepository.h"
 #include "domain/taskqueries.h"
 #include "domain/taskrepository.h"
+#include "domain/datasourcerepository.h"
 
 #include "presentation/artifacteditormodel.h"
 #include "presentation/availablepagesmodel.h"
+#include "presentation/availablesourcesmodel.h"
 #include "presentation/datasourcelistmodel.h"
 
 #include "utils/dependencymanager.h"
@@ -39,18 +47,24 @@ using namespace Presentation;
 
 ApplicationModel::ApplicationModel(QObject *parent)
     : QObject(parent),
+      m_availableSources(0),
       m_availablePages(0),
       m_currentPage(0),
       m_editor(0),
       m_artifactQueries(Utils::DependencyManager::globalInstance().create<Domain::ArtifactQueries>()),
       m_projectQueries(Utils::DependencyManager::globalInstance().create<Domain::ProjectQueries>()),
       m_projectRepository(Utils::DependencyManager::globalInstance().create<Domain::ProjectRepository>()),
+      m_contextQueries(Utils::DependencyManager::globalInstance().create<Domain::ContextQueries>()),
+      m_contextRepository(Utils::DependencyManager::globalInstance().create<Domain::ContextRepository>()),
       m_sourceQueries(Utils::DependencyManager::globalInstance().create<Domain::DataSourceQueries>()),
+      m_sourceRepository(Utils::DependencyManager::globalInstance().create<Domain::DataSourceRepository>()),
       m_taskQueries(Utils::DependencyManager::globalInstance().create<Domain::TaskQueries>()),
       m_taskRepository(Utils::DependencyManager::globalInstance().create<Domain::TaskRepository>()),
       m_taskSourcesModel(0),
       m_noteRepository(Utils::DependencyManager::globalInstance().create<Domain::NoteRepository>()),
       m_noteSourcesModel(0),
+      m_tagQueries(Utils::DependencyManager::globalInstance().create<Domain::TagQueries>()),
+      m_tagRepository(Utils::DependencyManager::globalInstance().create<Domain::TagRepository>()),
       m_ownInterface(true)
 {
     MetaTypes::registerAll();
@@ -59,24 +73,35 @@ ApplicationModel::ApplicationModel(QObject *parent)
 ApplicationModel::ApplicationModel(Domain::ArtifactQueries *artifactQueries,
                                    Domain::ProjectQueries *projectQueries,
                                    Domain::ProjectRepository *projectRepository,
+                                   Domain::ContextQueries *contextQueries,
+                                   Domain::ContextRepository *contextRepository,
                                    Domain::DataSourceQueries *sourceQueries,
+                                   Domain::DataSourceRepository *sourceRepository,
                                    Domain::TaskQueries *taskQueries,
                                    Domain::TaskRepository *taskRepository,
                                    Domain::NoteRepository *noteRepository,
+                                   Domain::TagQueries *tagQueries,
+                                   Domain::TagRepository *tagRepository,
                                    QObject *parent)
     : QObject(parent),
+      m_availableSources(0),
       m_availablePages(0),
       m_currentPage(0),
       m_editor(0),
       m_artifactQueries(artifactQueries),
       m_projectQueries(projectQueries),
       m_projectRepository(projectRepository),
+      m_contextQueries(contextQueries),
+      m_contextRepository(contextRepository),
       m_sourceQueries(sourceQueries),
+      m_sourceRepository(sourceRepository),
       m_taskQueries(taskQueries),
       m_taskRepository(taskRepository),
       m_taskSourcesModel(0),
       m_noteRepository(noteRepository),
       m_noteSourcesModel(0),
+      m_tagQueries(tagQueries),
+      m_tagRepository(tagRepository),
       m_ownInterface(false)
 {
     MetaTypes::registerAll();
@@ -86,10 +111,17 @@ ApplicationModel::~ApplicationModel()
 {
     if (m_ownInterface) {
         delete m_artifactQueries;
+        delete m_projectQueries;
+        delete m_projectRepository;
+        delete m_contextQueries;
+        delete m_contextRepository;
         delete m_sourceQueries;
+        delete m_sourceRepository;
         delete m_taskQueries;
         delete m_taskRepository;
         delete m_noteRepository;
+        delete m_tagQueries;
+        delete m_tagRepository;
     }
 }
 
@@ -165,15 +197,29 @@ Domain::DataSource::Ptr ApplicationModel::defaultTaskDataSource()
         return sources.first();
 }
 
+QObject *ApplicationModel::availableSources()
+{
+    if (!m_availableSources) {
+        m_availableSources = new AvailableSourcesModel(m_sourceQueries,
+                                                       m_sourceRepository,
+                                                       this);
+    }
+    return m_availableSources;
+}
+
 QObject *ApplicationModel::availablePages()
 {
     if (!m_availablePages) {
         m_availablePages = new AvailablePagesModel(m_artifactQueries,
                                                    m_projectQueries,
                                                    m_projectRepository,
+                                                   m_contextQueries,
+                                                   m_contextRepository,
                                                    m_taskQueries,
                                                    m_taskRepository,
                                                    m_noteRepository,
+                                                   m_tagQueries,
+                                                   m_tagRepository,
                                                    this);
     }
     return m_availablePages;

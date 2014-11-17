@@ -39,8 +39,12 @@ namespace Domain {
     class NoteRepository;
     class ProjectQueries;
     class ProjectRepository;
+    class ContextQueries;
+    class ContextRepository;
     class TaskQueries;
     class TaskRepository;
+    class TagQueries;
+    class TagRepository;
 }
 
 namespace Presentation {
@@ -53,9 +57,13 @@ public:
     explicit AvailablePagesModel(Domain::ArtifactQueries *artifactQueries,
                                  Domain::ProjectQueries *projectQueries,
                                  Domain::ProjectRepository *projectRepository,
+                                 Domain::ContextQueries *contextQueries,
+                                 Domain::ContextRepository *contextRepository,
                                  Domain::TaskQueries *taskQueries,
                                  Domain::TaskRepository *taskRepository,
                                  Domain::NoteRepository *noteRepository,
+                                 Domain::TagQueries *tagQueries,
+                                 Domain::TagRepository *tagRepository,
                                  QObject *parent = 0);
     ~AvailablePagesModel();
 
@@ -65,6 +73,9 @@ public:
 
 public slots:
     void addProject(const QString &name, const Domain::DataSource::Ptr &source);
+    void addContext(const QString &name);
+    void addTag(const QString &name);
+    void removeItem(const QModelIndex &index);
 
 private:
     QAbstractItemModel *createPageListModel();
@@ -76,14 +87,22 @@ private:
     Domain::ProjectQueries *m_projectQueries;
     Domain::ProjectRepository *m_projectRepository;
 
+    Domain::ContextQueries *m_contextQueries;
+    Domain::ContextRepository *m_contextRepository;
+
     Domain::TaskQueries *m_taskQueries;
     Domain::TaskRepository *m_taskRepository;
 
     Domain::NoteRepository *m_noteRepository;
 
+    Domain::TagQueries *m_tagQueries;
+    Domain::TagRepository *m_tagRepository;
+
     Domain::QueryResultProvider<QObjectPtr>::Ptr m_rootsProvider;
     QObjectPtr m_inboxObject;
     QObjectPtr m_projectsObject;
+    QObjectPtr m_contextsObject;
+    QObjectPtr m_tagsObject;
 };
 
 }

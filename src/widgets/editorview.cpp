@@ -28,43 +28,67 @@
 #include <QCheckBox>
 #include <QLabel>
 #include <QPlainTextEdit>
+#include <QPushButton>
+#include "kdateedit.h"
+#include "addressline/addresseelineedit.h"
 
 #include "domain/artifact.h"
 
-#include "pimlibs/kdateedit.h"
 
 using namespace Widgets;
 
 EditorView::EditorView(QWidget *parent)
     : QWidget(parent),
       m_model(0),
+      m_delegateLabel(new QLabel(this)),
       m_textEdit(new QPlainTextEdit(this)),
       m_taskGroup(new QWidget(this)),
       m_startDateEdit(new KPIM::KDateEdit(m_taskGroup)),
       m_dueDateEdit(new KPIM::KDateEdit(m_taskGroup)),
-      m_doneButton(new QCheckBox(tr("Done"), m_taskGroup))
+      m_startTodayButton(new QPushButton(tr("Start today"), m_taskGroup)),
+      m_doneButton(new QCheckBox(tr("Done"), m_taskGroup)),
+      m_delegateEdit(0)
 {
+    // To avoid having unit tests talking to akonadi
+    // while we don't need the completion for them
+    if (qgetenv("ZANSHIN_UNIT_TEST_RUN").isEmpty())
+        m_delegateEdit = new KPIM::AddresseeLineEdit(this);
+    else
+        m_delegateEdit = new KLineEdit(this);
+
+    m_delegateLabel->setObjectName("delegateLabel");
+    m_delegateEdit->setObjectName("delegateEdit");
     m_textEdit->setObjectName("textEdit");
     m_startDateEdit->setObjectName("startDateEdit");
     m_dueDateEdit->setObjectName("dueDateEdit");
     m_doneButton->setObjectName("doneButton");
+    m_startTodayButton->setObjectName("startTodayButton");
 
     m_startDateEdit->setMinimumContentsLength(10);
     m_dueDateEdit->setMinimumContentsLength(10);
 
     QVBoxLayout *layout = new QVBoxLayout;
+    layout->addWidget(m_delegateLabel);
     layout->addWidget(m_textEdit);
     layout->addWidget(m_taskGroup);
     setLayout(layout);
 
     QVBoxLayout *vbox = new QVBoxLayout;
-    QHBoxLayout *hbox = new QHBoxLayout;
-    hbox->addWidget(new QLabel(tr("Start date"), m_taskGroup));
-    hbox->addWidget(m_startDateEdit, 1);
-    hbox->addWidget(new QLabel(tr("Due date"), m_taskGroup));
-    hbox->addWidget(m_dueDateEdit, 1);
-    vbox->addLayout(hbox);
-    vbox->addWidget(m_doneButton);
+    auto delegateHBox = new QHBoxLayout;
+    delegateHBox->addWidget(new QLabel(tr("Delegate to"), m_taskGroup));
+    delegateHBox->addWidget(m_delegateEdit);
+    vbox->addLayout(delegateHBox);
+    QHBoxLayout *datesHBox = new QHBoxLayout;
+    datesHBox->addWidget(new QLabel(tr("Start date"), m_taskGroup));
+    datesHBox->addWidget(m_startDateEdit, 1);
+    datesHBox->addWidget(new QLabel(tr("Due date"), m_taskGroup));
+    datesHBox->addWidget(m_dueDateEdit, 1);
+    vbox->addLayout(datesHBox);
+    QHBoxLayout *bottomHBox = new QHBoxLayout;
+    bottomHBox->addWidget(m_startTodayButton);
+    bottomHBox->addWidget(m_doneButton);
+    bottomHBox->addStretch();
+    vbox->addLayout(bottomHBox);
     m_taskGroup->setLayout(vbox);
 
     // Make sure our minimum width is always the one with
@@ -72,12 +96,15 @@ EditorView::EditorView(QWidget *parent)
     layout->activate();
     setMinimumWidth(minimumSizeHint().width());
 
+    m_delegateLabel->setVisible(false);
     m_taskGroup->setVisible(false);
 
     connect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
     connect(m_startDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onStartEditEntered(QDate)));
     connect(m_dueDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onDueEditEntered(QDate)));
     connect(m_doneButton, SIGNAL(toggled(bool)), this, SLOT(onDoneButtonChanged(bool)));
+    connect(m_startTodayButton, SIGNAL(clicked()), this, SLOT(onStartTodayClicked()));
+    connect(m_delegateEdit, SIGNAL(returnPressed()), this, SLOT(onDelegateEntered()));
 
     setEnabled(false);
 }
@@ -105,6 +132,7 @@ void EditorView::setModel(QObject *model)
     onStartDateChanged();
     onDueDateChanged();
     onDoneChanged();
+    onDelegateTextChanged();
 
     connect(m_model, SIGNAL(artifactChanged(Domain::Artifact::Ptr)),
             this, SLOT(onArtifactChanged()));
@@ -115,6 +143,7 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(startDateChanged(QDateTime)), this, SLOT(onStartDateChanged()));
     connect(m_model, SIGNAL(dueDateChanged(QDateTime)), this, SLOT(onDueDateChanged()));
     connect(m_model, SIGNAL(doneChanged(bool)), this, SLOT(onDoneChanged()));
+    connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
 
     connect(this, SIGNAL(titleChanged(QString)), m_model, SLOT(setTitle(QString)));
     connect(this, SIGNAL(textChanged(QString)), m_model, SLOT(setText(QString)));
@@ -159,6 +188,16 @@ void EditorView::onDoneChanged()
     m_doneButton->setChecked(m_model->property("done").toBool());
 }
 
+void EditorView::onDelegateTextChanged()
+{
+    const auto delegateText = m_model->property("delegateText").toString();
+    const auto labelText = delegateText.isEmpty() ? QString()
+                         : tr("Delegated to: <b>%1</b>").arg(delegateText);
+
+    m_delegateLabel->setVisible(!labelText.isEmpty());
+    m_delegateLabel->setText(labelText);
+}
+
 void EditorView::onTextEditChanged()
 {
     const QString plainText = m_textEdit->toPlainText();
@@ -182,4 +221,37 @@ void EditorView::onDueEditEntered(const QDate &due)
 void EditorView::onDoneButtonChanged(bool checked)
 {
     emit doneChanged(checked);
+}
+
+void EditorView::onStartTodayClicked()
+{
+    QDate today(QDate::currentDate());
+    m_startDateEdit->setDate(today);
+    emit startDateChanged(QDateTime(today));
+}
+
+void EditorView::onDelegateEntered()
+{
+    const auto input = m_delegateEdit->text();
+    auto name = QString();
+    auto email = QString();
+    auto gotMatch = false;
+
+    QRegExp fullRx("\\s*(.*) <([\\w\\.]+@[\\w\\.]+)>\\s*");
+    QRegExp emailOnlyRx("\\s*<?([\\w\\.]+@[\\w\\.]+)>?\\s*");
+
+    if (input.contains(fullRx)) {
+        name = fullRx.cap(1);
+        email = fullRx.cap(2);
+        gotMatch = true;
+    } else if (input.contains(emailOnlyRx)) {
+        email = emailOnlyRx.cap(1);
+        gotMatch = true;
+    }
+
+    if (gotMatch) {
+        QMetaObject::invokeMethod(m_model, "delegate",
+                                  Q_ARG(QString, name),
+                                  Q_ARG(QString, email));
+    }
 }

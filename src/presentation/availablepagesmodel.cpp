@@ -27,31 +27,49 @@
 #include <QIcon>
 #include <QMimeData>
 
+#include "domain/contextqueries.h"
+#include "domain/contextrepository.h"
 #include "domain/projectqueries.h"
 #include "domain/projectrepository.h"
+#include "domain/tag.h"
+#include "domain/tagqueries.h"
+#include "domain/tagrepository.h"
+#include "domain/taskrepository.h"
 
+#include "presentation/contextpagemodel.h"
 #include "presentation/inboxpagemodel.h"
 #include "presentation/metatypes.h"
 #include "presentation/projectpagemodel.h"
 #include "presentation/querytreemodel.h"
+#include "presentation/tagpagemodel.h"
+
+#include "utils/jobhandler.h"
 
 using namespace Presentation;
 
 AvailablePagesModel::AvailablePagesModel(Domain::ArtifactQueries *artifactQueries,
                                          Domain::ProjectQueries *projectQueries,
                                          Domain::ProjectRepository *projectRepository,
+                                         Domain::ContextQueries *contextQueries,
+                                         Domain::ContextRepository *contextRepository,
                                          Domain::TaskQueries *taskQueries,
                                          Domain::TaskRepository *taskRepository,
                                          Domain::NoteRepository *noteRepository,
+                                         Domain::TagQueries *tagQueries,
+                                         Domain::TagRepository *tagRepository,
                                          QObject *parent)
     : QObject(parent),
       m_pageListModel(0),
       m_artifactQueries(artifactQueries),
       m_projectQueries(projectQueries),
       m_projectRepository(projectRepository),
+      m_contextQueries(contextQueries),
+      m_contextRepository(contextRepository),
       m_taskQueries(taskQueries),
       m_taskRepository(taskRepository),
-      m_noteRepository(noteRepository)
+      m_noteRepository(noteRepository),
+      m_tagQueries(tagQueries),
+      m_tagRepository(tagRepository)
 {
 }
 
@@ -82,6 +100,20 @@ QObject *AvailablePagesModel::createPageForIndex(const QModelIndex &index)
                                     m_taskQueries, m_taskRepository,
                                     m_noteRepository,
                                     this);
+    } else if (auto context = object.objectCast<Domain::Context>()) {
+        return new ContextPageModel(context,
+                                    m_contextQueries,
+                                    m_taskQueries,
+                                    m_taskRepository,
+                                    m_noteRepository,
+                                    this);
+    } else if (auto tag = object.objectCast<Domain::Tag>()) {
+        return new TagPageModel(tag,
+                                m_tagQueries,
+                                m_taskQueries,
+                                m_taskRepository,
+                                m_noteRepository,
+                                this);
     }
 
     return 0;
@@ -94,22 +126,60 @@ void AvailablePagesModel::addProject(const QString &name, const Domain::DataSour
     m_projectRepository->create(project, source);
 }
 
+void AvailablePagesModel::addContext(const QString &name)
+{
+    auto context = Domain::Context::Ptr::create();
+    context->setName(name);
+    m_contextRepository->create(context);
+}
+
+void AvailablePagesModel::addTag(const QString &name)
+{
+    auto tag = Domain::Tag::Ptr::create();
+    tag->setName(name);
+    m_tagRepository->create(tag);
+}
+
+void AvailablePagesModel::removeItem(const QModelIndex &index)
+{
+    QObjectPtr object = index.data(QueryTreeModelBase::ObjectRole).value<QObjectPtr>();
+    if (auto project = object.objectCast<Domain::Project>()) {
+        m_projectRepository->remove(project);
+    } else if (auto context = object.objectCast<Domain::Context>()) {
+        m_contextRepository->remove(context);
+    } else if (auto tag = object.objectCast<Domain::Tag>()) {
+        m_tagRepository->remove(tag);
+    } else {
+        Q_ASSERT(false);
+    }
+}
+
 QAbstractItemModel *AvailablePagesModel::createPageListModel()
 {
     m_inboxObject = QObjectPtr::create();
     m_inboxObject->setProperty("name", tr("Inbox"));
     m_projectsObject = QObjectPtr::create();
     m_projectsObject->setProperty("name", tr("Projects"));
+    m_contextsObject = QObjectPtr::create();
+    m_contextsObject->setProperty("name", tr("Contexts"));
+    m_tagsObject = QObjectPtr::create();
+    m_tagsObject->setProperty("name", tr("Tags"));
 
     m_rootsProvider = Domain::QueryResultProvider<QObjectPtr>::Ptr::create();
     m_rootsProvider->append(m_inboxObject);
     m_rootsProvider->append(m_projectsObject);
+    m_rootsProvider->append(m_contextsObject);
+    m_rootsProvider->append(m_tagsObject);
 
     auto query = [this](const QObjectPtr &object) -> Domain::QueryResultInterface<QObjectPtr>::Ptr {
         if (!object)
             return Domain::QueryResult<QObjectPtr>::create(m_rootsProvider);
         else if (object == m_projectsObject)
             return Domain::QueryResult<Domain::Project::Ptr, QObjectPtr>::copy(m_projectQueries->findAll());
+        else if (object == m_contextsObject)
+            return Domain::QueryResult<Domain::Context::Ptr, QObjectPtr>::copy(m_contextQueries->findAll());
+        else if (object == m_tagsObject)
+            return Domain::QueryResult<Domain::Tag::Ptr, QObjectPtr>::copy(m_tagQueries->findAll());
         else
             return Domain::QueryResult<QObjectPtr>::Ptr();
     };
@@ -120,11 +190,13 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
                                          | Qt::ItemIsEditable
                                          | Qt::ItemIsDropEnabled;
         const Qt::ItemFlags immutableNodeFlags = Qt::ItemIsSelectable
-                                               | Qt::ItemIsEnabled;
+                                               | Qt::ItemIsEnabled
+                                               | Qt::ItemIsDropEnabled;
         const Qt::ItemFlags structureNodeFlags = Qt::NoItemFlags;
 
-
         return object.objectCast<Domain::Project>() ? defaultFlags
+             : object.objectCast<Domain::Context>() ? defaultFlags
+             : object.objectCast<Domain::Tag>() ? defaultFlags
              : object == m_inboxObject ? immutableNodeFlags
              : structureNodeFlags;
     };
@@ -138,7 +210,10 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
         }
 
         if (role == Qt::EditRole
-         && (object == m_inboxObject || object == m_projectsObject)) {
+         && (object == m_inboxObject
+          || object == m_projectsObject
+          || object == m_contextsObject
+          || object == m_tagsObject)) {
             return QVariant();
         }
 
@@ -146,7 +221,9 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
             return object->property("name").toString();
         } else if (role == Qt::DecorationRole || role == QueryTreeModelBase::IconNameRole) {
             const QString iconName = object == m_inboxObject ? "mail-folder-inbox"
-                                   : object == m_projectsObject ? "folder"
+                                   : (object == m_projectsObject) ? "folder"
+                                   : (object == m_contextsObject) ? "folder"
+                                   : (object == m_tagsObject)     ? "folder"
                                    : "view-pim-tasks";
 
             if (role == Qt::DecorationRole)
@@ -163,34 +240,71 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
             return false;
         }
 
-        if (object == m_inboxObject || object == m_projectsObject) {
+        if (object == m_inboxObject
+         || object == m_projectsObject
+         || object == m_contextsObject
+         || object == m_tagsObject) {
             return false;
         }
 
-        auto project = object.objectCast<Domain::Project>();
-        Q_ASSERT(project);
-        project->setName(value.toString());
-        m_projectRepository->update(project);
+        if (auto project = object.objectCast<Domain::Project>()) {
+            project->setName(value.toString());
+            m_projectRepository->update(project);
+        } else if (auto context = object.objectCast<Domain::Context>()) {
+            context->setName(value.toString());
+            m_contextRepository->update(context);
+        } else if (object.objectCast<Domain::Tag>()) {
+            return false; // Tag renaming is NOT allowed
+        } else {
+            Q_ASSERT(false);
+        }
+
         return true;
     };
 
     auto drop = [this](const QMimeData *mimeData, Qt::DropAction, const QObjectPtr &object) {
-        auto project = object.objectCast<Domain::Project>();
-        if (!project)
-            return false;
-
         if (!mimeData->hasFormat("application/x-zanshin-object"))
             return false;
 
-        auto artifact = mimeData->property("object").value<Domain::Artifact::Ptr>();
-        if (!artifact)
+        auto droppedArtifacts = mimeData->property("objects").value<Domain::Artifact::List>();
+        if (droppedArtifacts.isEmpty())
             return false;
 
-        m_projectRepository->associate(project, artifact);
-        return true;
+        auto project = object.objectCast<Domain::Project>();
+        if (project) {
+            foreach (const auto &droppedArtifact, droppedArtifacts) {
+                m_projectRepository->associate(project, droppedArtifact);
+            }
+            return true;
+        } else if (auto context = object.objectCast<Domain::Context>()) {
+            if (std::any_of(droppedArtifacts.begin(), droppedArtifacts.end(),
+                            [](const Domain::Artifact::Ptr &droppedArtifact) {
+                                return !droppedArtifact.objectCast<Domain::Task>();
+                            })) {
+                return false;
+            }
+
+            foreach (const auto &droppedArtifact, droppedArtifacts) {
+                auto task = droppedArtifact.staticCast<Domain::Task>();
+                m_contextRepository->associate(context, task);
+            }
+            return true;
+        } else if (object == m_inboxObject) {
+            foreach (const auto &droppedArtifact, droppedArtifacts) {
+                auto job = m_projectRepository->dissociate(droppedArtifact);
+                if (auto task = droppedArtifact.objectCast<Domain::Task>()) {
+                    Utils::JobHandler::install(job, [this, task] {
+                        m_taskRepository->dissociate(task);
+                    });
+                }
+            }
+            return true;
+        }
+
+        return false;
     };
 
-    auto drag = [](const QObjectPtr &) -> QMimeData* {
+    auto drag = [](const QObjectPtrList &) -> QMimeData* {
         return 0;
     };
 

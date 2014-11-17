@@ -25,14 +25,18 @@
 #include <QBoxLayout>
 #include <QDockWidget>
 #include <QMenu>
+#include <QProcess>
 #include <QToolBar>
 #include <QToolButton>
 
-#include <KDE/KConfigGroup>
-#include <KDE/KMainWindow>
+#include <KConfigGroup>
+#include <KSharedConfig>
+#include <KComponentData>
+#include <KMainWindow>
 
 #include "widgets/applicationcomponents.h"
 #include "widgets/availablepagesview.h"
+#include "widgets/availablesourcesview.h"
 #include "widgets/datasourcecombobox.h"
 #include "widgets/editorview.h"
 #include "widgets/pageview.h"
@@ -41,11 +45,25 @@
 
 #include "dependencies.h"
 
+#include <iostream>
+
 int main(int argc, char **argv)
 {
     App::initializeDependencies();
 
     QApplication app(argc, argv);
+
+    KComponentData mainComponentData("zanshin");
+
+    KSharedConfig::Ptr config = KSharedConfig::openConfig("zanshin-migratorrc");
+    KConfigGroup group = config->group("Migrations");
+    if (!group.readEntry("Migrated021Projects", false)) {
+        std::cerr << "Migrating data from zanshin 0.2, please wait..." << std::endl;
+        QProcess proc;
+        proc.start("zanshin-migrator");
+        proc.waitForFinished();
+        std::cerr << "Migration done" << std::endl;
+    }
 
     auto widget = new QWidget;
     auto components = new Widgets::ApplicationComponents(widget);
@@ -61,6 +79,10 @@ int main(int argc, char **argv)
     layout->addWidget(components->pageView());
 
     widget->setLayout(layout);
+
+    auto sourcesDock = new QDockWidget(QObject::tr("Sources"));
+    sourcesDock->setObjectName("sourcesDock");
+    sourcesDock->setWidget(components->availableSourcesView());
 
     auto pagesDock = new QDockWidget(QObject::tr("Pages"));
     pagesDock->setObjectName("pagesDock");
@@ -93,6 +115,7 @@ int main(int argc, char **argv)
 
     window->addDockWidget(Qt::RightDockWidgetArea, editorDock);
     window->addDockWidget(Qt::LeftDockWidgetArea, pagesDock);
+    window->addDockWidget(Qt::LeftDockWidgetArea, sourcesDock);
 
     window->show();
 

@@ -1,7 +1,9 @@
 zanshin_auto_tests(
   applicationcomponentstest
   availablepagesviewtest
+  availablesourcesviewtest
   datasourcecomboboxtest
+  datasourcedelegatetest
   editorviewtest
   filterwidgettest
   newpagedialogtest

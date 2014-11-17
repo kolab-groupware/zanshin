@@ -27,6 +27,7 @@
 
 #include <QObject>
 
+#include "domain/livequery.h"
 #include "domain/notequeries.h"
 
 namespace Akonadi {
@@ -40,18 +41,15 @@ class NoteQueries : public QObject, public Domain::NoteQueries
 {
     Q_OBJECT
 public:
+    typedef Domain::LiveQuery<Akonadi::Item, Domain::Note::Ptr> NoteQuery;
     typedef Domain::QueryResultProvider<Domain::Note::Ptr> NoteProvider;
     typedef Domain::QueryResult<Domain::Note::Ptr> NoteResult;
-
-    typedef Domain::QueryResultProvider<Domain::Topic::Ptr> TopicProvider;
-    typedef Domain::QueryResult<Domain::Topic::Ptr> TopicResult;
 
     NoteQueries();
     NoteQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor);
     virtual ~NoteQueries();
 
     NoteResult::Ptr findAll() const;
-    TopicResult::Ptr findTopics(Domain::Note::Ptr note) const;
 
 private slots:
     void onItemAdded(const Akonadi::Item &item);
@@ -59,15 +57,15 @@ private slots:
     void onItemChanged(const Akonadi::Item &item);
 
 private:
-    bool isNoteItem(const Domain::Note::Ptr &note, const Item &item) const;
-    Domain::Note::Ptr deserializeNote(const Item &item) const;
+    NoteQuery::Ptr createNoteQuery();
 
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
     MonitorInterface *m_monitor;
     bool m_ownInterfaces;
 
-    mutable NoteProvider::WeakPtr m_noteProvider;
+    NoteQuery::Ptr m_findAll;
+    NoteQuery::List m_noteQueries;
 };
 
 }

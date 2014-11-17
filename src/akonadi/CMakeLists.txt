@@ -1,9 +1,15 @@
 set(akonadi_SRCS
+    akonadiapplicationselectedattribute.cpp
     akonadiartifactqueries.cpp
     akonadicollectionfetchjobinterface.cpp
+    akonadicollectionsearchjobinterface.cpp
     akonadicontextqueries.cpp
+    akonadicontextrepository.cpp
     akonadidatasourcequeries.cpp
+    akonadidatasourcerepository.cpp
     akonadiitemfetchjobinterface.cpp
+    akonadimessaging.cpp
+    akonadimessaginginterface.cpp
     akonadimonitorimpl.cpp
     akonadimonitorinterface.cpp
     akonadinotequeries.cpp
@@ -16,12 +22,16 @@ set(akonadi_SRCS
     akonadistorageinterface.cpp
     akonadistoragesettings.cpp
     akonaditagfetchjobinterface.cpp
+    akonaditagqueries.cpp
+    akonaditagrepository.cpp
     akonaditaskqueries.cpp
     akonaditaskrepository.cpp
+    akonaditimestampattribute.cpp
 )
 
 kde4_add_library(akonadi STATIC ${akonadi_SRCS})
 target_link_libraries(akonadi
+    ${KDEPIMLIBS_AKONADI_CALENDAR_LIBS}
     ${KDEPIMLIBS_AKONADI_LIBS}
     ${KDEPIMLIBS_AKONADI_NOTES_LIBS}
     ${KDEPIMLIBS_KCALCORE_LIBS}

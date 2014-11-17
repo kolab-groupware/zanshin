@@ -26,6 +26,7 @@
 
 #include <QFlags>
 #include <Akonadi/Item>
+#include <Akonadi/Tag>
 
 class KJob;
 class QObject;
@@ -35,6 +36,7 @@ namespace Akonadi {
 
 class Collection;
 class CollectionFetchJobInterface;
+class CollectionSearchJobInterface;
 class ItemFetchJobInterface;
 class TagFetchJobInterface;
 
@@ -63,13 +65,23 @@ public:
     virtual KJob *createItem(Akonadi::Item item, Akonadi::Collection collection) = 0;
     virtual KJob *updateItem(Akonadi::Item item, QObject *parent = 0) = 0;
     virtual KJob *removeItem(Akonadi::Item item) = 0;
+    virtual KJob *removeItems(Item::List items, QObject *parent = 0) = 0;
     virtual KJob *moveItem(Item item, Collection collection, QObject *parent = 0) = 0;
     virtual KJob *moveItems(Item::List item, Collection collection, QObject *parent = 0) = 0;
+
+    virtual KJob *updateCollection(Collection collection, QObject *parent = 0) = 0;
+
     virtual KJob *createTransaction() = 0;
 
+    virtual KJob *createTag(Akonadi::Tag tag) = 0;
+    virtual KJob *updateTag(Akonadi::Tag tag) = 0;
+    virtual KJob *removeTag(Akonadi::Tag tag) = 0;
+
     virtual CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types) = 0;
+    virtual CollectionSearchJobInterface *searchCollections(QString collectionName) = 0;
     virtual ItemFetchJobInterface *fetchItems(Akonadi::Collection collection) = 0;
     virtual ItemFetchJobInterface *fetchItem(Akonadi::Item item) = 0;
+    virtual ItemFetchJobInterface *fetchTagItems(Akonadi::Tag tag) = 0;
     virtual TagFetchJobInterface *fetchTags() = 0;
 };
 

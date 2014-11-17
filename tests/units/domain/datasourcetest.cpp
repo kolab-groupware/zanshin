@@ -30,12 +30,23 @@ using namespace Domain;
 class DataSourceTest : public QObject
 {
     Q_OBJECT
+public:
+    explicit DataSourceTest(QObject *parent = 0)
+        : QObject(parent)
+    {
+        qRegisterMetaType<DataSource::ContentTypes>();
+        qRegisterMetaType<DataSource::ListStatus>();
+    }
+
 private slots:
     void shouldHaveEmptyPropertiesByDefault()
     {
         DataSource ds;
         QCOMPARE(ds.name(), QString());
         QCOMPARE(ds.iconName(), QString());
+        QCOMPARE(ds.contentTypes(), DataSource::NoContent);
+        QCOMPARE(ds.listStatus(), DataSource::Unlisted);
+        QVERIFY(!ds.isSelected());
     }
 
     void shouldNotifyNameChanges()
@@ -71,6 +82,61 @@ private slots:
         ds.setIconName("Foo");
         QSignalSpy spy(&ds, SIGNAL(iconNameChanged(QString)));
         ds.setIconName("Foo");
+        QCOMPARE(spy.count(), 0);
+    }
+
+    void shouldNotifyContentTypesChanges()
+    {
+        DataSource ds;
+        QSignalSpy spy(&ds, SIGNAL(contentTypesChanged(Domain::DataSource::ContentTypes)));
+        ds.setContentTypes(Domain::DataSource::Notes);
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.first().first().value<Domain::DataSource::ContentTypes>(),
+                 Domain::DataSource::Notes);
+    }
+
+    void shouldNotNotifyIdenticalContentTypesChanges()
+    {
+        DataSource ds;
+        ds.setContentTypes(Domain::DataSource::Notes);
+        QSignalSpy spy(&ds, SIGNAL(contentTypesChanged(Domain::DataSource::ContentTypes)));
+        ds.setContentTypes(Domain::DataSource::Notes);
+        QCOMPARE(spy.count(), 0);
+    }
+
+    void shouldNotifySelectedChanges()
+    {
+        DataSource ds;
+        QSignalSpy spy(&ds, SIGNAL(selectedChanged(bool)));
+        ds.setSelected(true);
+        QCOMPARE(spy.count(), 1);
+        QVERIFY(spy.first().first().toBool());
+    }
+
+    void shouldNotNotifyIdenticalSelectedChanges()
+    {
+        DataSource ds;
+        ds.setSelected(true);
+        QSignalSpy spy(&ds, SIGNAL(selectedChanged(bool)));
+        ds.setSelected(true);
+        QCOMPARE(spy.count(), 0);
+    }
+
+    void shouldNotifyListStatusChanges()
+    {
+        DataSource ds;
+        QSignalSpy spy(&ds, SIGNAL(listStatusChanged(Domain::DataSource::ListStatus)));
+        ds.setListStatus(DataSource::Bookmarked);
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.first().first().value<DataSource::ListStatus>(), DataSource::Bookmarked);
+    }
+
+    void shouldNotNotifyIdenticalListStatusChanges()
+    {
+        DataSource ds;
+        ds.setListStatus(DataSource::Bookmarked);
+        QSignalSpy spy(&ds, SIGNAL(listStatusChanged(Domain::DataSource::ListStatus)));
+        ds.setListStatus(DataSource::Bookmarked);
         QCOMPARE(spy.count(), 0);
     }
 };

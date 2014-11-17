@@ -24,13 +24,18 @@
 #include <QtTestGui>
 
 #include <QAbstractButton>
+#include <QLabel>
 #include <QPlainTextEdit>
 
 #include "domain/note.h"
 #include "domain/task.h"
 
-#include "pimlibs/kdateedit.h"
 #include "widgets/editorview.h"
+
+#include "addressline/addresseelineedit.h"
+#include "kdateedit.h"
+#include <kglobal.h>
+#include <klocale.h>
 
 class EditorModelStub : public QObject
 {
@@ -54,6 +59,8 @@ public:
             emit startDateChanged(value.toDateTime());
         else if (name == "dueDate")
             emit dueDateChanged(value.toDateTime());
+        else if (name == "delegateText")
+            emit delegateTextChanged(value.toString());
         else if (name == "hasTaskProperties")
             emit hasTaskPropertiesChanged(value.toBool());
         else
@@ -67,6 +74,14 @@ public slots:
     void setDone(bool done) { setPropertyAndSignal("done", done); }
     void setStartDate(const QDateTime &start) { setPropertyAndSignal("startDate", start); }
     void setDueDate(const QDateTime &due) { setPropertyAndSignal("dueDate", due); }
+    void setDelegateText(const QString &text) { setPropertyAndSignal("delegateText", text); }
+    void makeTaskAvailable() { setArtifact(Domain::Artifact::Ptr(new Domain::Task)); }
+
+    void delegate(const QString &name, const QString &email)
+    {
+        delegateNames << name;
+        delegateEmails << email;
+    }
 
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);
@@ -76,11 +91,23 @@ signals:
     void doneChanged(bool done);
     void startDateChanged(const QDateTime &date);
     void dueDateChanged(const QDateTime &due);
+    void delegateTextChanged(const QString &delegateText);
+
+public:
+    QStringList delegateNames;
+    QStringList delegateEmails;
 };
 
 class EditorViewTest : public QObject
 {
     Q_OBJECT
+public:
+    explicit EditorViewTest(QObject *parent = 0)
+        : QObject(parent)
+    {
+        qputenv("ZANSHIN_UNIT_TEST_RUN", "1");
+    }
+
 private slots:
     void shouldHaveDefaultState()
     {
@@ -103,6 +130,14 @@ private slots:
         auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
         QVERIFY(doneButton);
         QVERIFY(!doneButton->isVisibleTo(&editor));
+
+        auto delegateLabel = editor.findChild<QLabel*>("delegateLabel");
+        QVERIFY(delegateLabel);
+        QVERIFY(!delegateLabel->isVisibleTo(&editor));
+
+        auto delegateEdit = editor.findChild<KLineEdit*>("delegateEdit");
+        QVERIFY(delegateEdit);
+        QVERIFY(!delegateEdit->isVisibleTo(&editor));
     }
 
     void shouldShowTaskPropertiesEditorsOnlyForTasks()
@@ -121,6 +156,12 @@ private slots:
         auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
         QVERIFY(!doneButton->isVisibleTo(&editor));
 
+        auto delegateLabel = editor.findChild<QLabel*>("delegateLabel");
+        QVERIFY(!delegateLabel->isVisibleTo(&editor));
+
+        auto delegateEdit = editor.findChild<KLineEdit*>("delegateEdit");
+        QVERIFY(!delegateEdit->isVisibleTo(&editor));
+
         // WHEN
         editor.setModel(&model);
 
@@ -128,6 +169,28 @@ private slots:
         QVERIFY(startDateEdit->isVisibleTo(&editor));
         QVERIFY(dueDateEdit->isVisibleTo(&editor));
         QVERIFY(doneButton->isVisibleTo(&editor));
+        QVERIFY(!delegateLabel->isVisibleTo(&editor));
+        QVERIFY(delegateEdit->isVisibleTo(&editor));
+    }
+
+    void shouldDisplayDelegateLabelOnlyWhenNeeded()
+    {
+        // GIVEN
+        Widgets::EditorView editor;
+        EditorModelStub model;
+        model.makeTaskAvailable();
+        model.setDelegateText("John Doe");
+
+        auto delegateLabel = editor.findChild<QLabel*>("delegateLabel");
+        QVERIFY(!delegateLabel->isVisibleTo(&editor));
+
+        // WHEN
+        editor.setModel(&model);
+
+        // THEN
+        auto expectedText = tr("Delegated to: <b>%1</b>").arg(model.property("delegateText").toString());
+        QVERIFY(delegateLabel->isVisibleTo(&editor));
+        QCOMPARE(delegateLabel->text(), expectedText);
     }
 
     void shouldBeEnabledOnlyWhenAnArtifactIsAvailable()
@@ -143,6 +206,7 @@ private slots:
         QVERIFY(!editor.isEnabled());
 
         // WHEN
+        // like model.makeTaskAvailable() does:
         Domain::Artifact::Ptr artifact(new Domain::Task);
         model.setPropertyAndSignal("artifact", QVariant::fromValue(artifact));
 
@@ -173,6 +237,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         editor.setModel(&model);
 
         auto startDateEdit = editor.findChild<KPIM::KDateEdit*>("startDateEdit");
@@ -198,6 +263,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         model.setProperty("hasTaskProperties", true);
         model.setProperty("title", "My title");
         model.setProperty("text", "\nMy text");
@@ -227,6 +293,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         model.setProperty("title", "My title");
         model.setProperty("text", "\nMy text");
         model.setProperty("startDate", QDateTime::currentDateTime());
@@ -250,6 +317,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         model.setProperty("title", "My title");
         model.setProperty("text", "\nMy text");
         model.setProperty("startDate", QDateTime::currentDateTime());
@@ -273,6 +341,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         editor.setModel(&model);
 
         auto textEdit = editor.findChild<QPlainTextEdit*>("textEdit");
@@ -290,6 +359,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         model.setProperty("title", "My title");
         model.setProperty("text", "\nMy text");
         model.setProperty("startDate", QDateTime::currentDateTime());
@@ -312,6 +382,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         editor.setModel(&model);
 
         auto doneButton = editor.findChild<QAbstractButton*>("doneButton");
@@ -328,6 +399,7 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         model.setProperty("title", "My title");
         model.setProperty("text", "\nMy text");
         model.setProperty("startDate", QDateTime::currentDateTime());
@@ -349,13 +421,14 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         editor.setModel(&model);
 
         auto startDateEdit = editor.findChild<KPIM::KDateEdit*>("startDateEdit");
         auto today = QDate::currentDate();
 
         // WHEN
-        startDateEdit->setEditText(today.toString(Qt::ISODate));
+        startDateEdit->setEditText(today.toString(Qt::ISODate)); // ### ISO? really? this only works because KLocale::readDate is clever, but it's not what the user would type
         QTest::keyClick(startDateEdit, Qt::Key_Enter);
 
         // THEN
@@ -388,17 +461,107 @@ private slots:
         // GIVEN
         Widgets::EditorView editor;
         EditorModelStub model;
+        model.makeTaskAvailable();
         editor.setModel(&model);
 
         auto dueDateEdit = editor.findChild<KPIM::KDateEdit*>("dueDateEdit");
         auto today = QDate::currentDate();
 
         // WHEN
+        QVERIFY(dueDateEdit->isEnabled());
         dueDateEdit->setEditText(today.toString(Qt::ISODate));
         QTest::keyClick(dueDateEdit, Qt::Key_Enter);
 
         // THEN
         QCOMPARE(model.property("dueDate").toDateTime().date(), today);
+    }
+
+    void shouldApplyStartTodayChanges()
+    {
+        // GIVEN
+        Widgets::EditorView editor;
+        EditorModelStub model;
+        model.makeTaskAvailable();
+        editor.setModel(&model);
+
+        QAbstractButton *startTodayButton = editor.findChild<QAbstractButton *>("startTodayButton");
+        QVERIFY(startTodayButton);
+        auto startDateEdit = editor.findChild<KPIM::KDateEdit*>("startDateEdit");
+        auto today = QDate::currentDate();
+
+        // WHEN
+        QVERIFY(startTodayButton->isEnabled());
+        startTodayButton->click();
+
+        // THEN
+        QCOMPARE(startDateEdit->currentText(), KGlobal::locale()->formatDate(today, KLocale::ShortDate));
+        QCOMPARE(model.property("startDate").toDateTime().date(), today);
+    }
+
+    void shouldReactToDelegateTextChanges()
+    {
+        // GIVEN
+        Widgets::EditorView editor;
+        EditorModelStub model;
+        model.makeTaskAvailable();
+        model.setDelegateText("John Doe");
+        editor.setModel(&model);
+
+        auto delegateLabel = editor.findChild<QLabel*>("delegateLabel");
+
+        // WHEN
+        model.setDelegateText("John Smith");
+
+        // THEN
+        auto expectedText = tr("Delegated to: <b>%1</b>").arg(model.property("delegateText").toString());
+        QCOMPARE(delegateLabel->text(), expectedText);
+    }
+
+    void shouldRequestDelegationOnInput_data()
+    {
+        QTest::addColumn<QString>("userInput");
+        QTest::addColumn<QString>("expectedName");
+        QTest::addColumn<QString>("expectedEmail");
+        QTest::addColumn<bool>("expectedCall");
+
+        QTest::newRow("nominal case") << "John Doe <john@doe.com>" << "John Doe" << "john@doe.com" << true;
+        QTest::newRow("nominal case") << "John Doe <j.doe@some.server.com>" << "John Doe" << "j.doe@some.server.com" << true;
+        QTest::newRow("only name") << "John Doe" << QString() << QString() << false;
+        QTest::newRow("only email") << "john@doe.com" << QString() << "john@doe.com" << true;
+        QTest::newRow("only email again") << "<john@doe.com>" << QString() << "john@doe.com" << true;
+        QTest::newRow("nonsense case") << "bleh" << QString() << QString() << false;
+    }
+
+    void shouldRequestDelegationOnInput()
+    {
+        // GIVEN
+        QFETCH(QString, userInput);
+        QFETCH(QString, expectedName);
+        QFETCH(QString, expectedEmail);
+        QFETCH(bool, expectedCall);
+
+        Widgets::EditorView editor;
+        EditorModelStub model;
+        model.makeTaskAvailable();
+        editor.setModel(&model);
+
+        auto delegateEdit = editor.findChild<KLineEdit*>("delegateEdit");
+
+        // WHEN
+        QVERIFY(delegateEdit->isEnabled());
+        delegateEdit->setText(userInput);
+        QTest::keyClick(delegateEdit, Qt::Key_Enter);
+
+        // THEN
+        if (expectedCall) {
+            QCOMPARE(model.delegateNames.size(), 1);
+            QCOMPARE(model.delegateNames.first(), expectedName);
+            QCOMPARE(model.delegateEmails.size(), 1);
+            QCOMPARE(model.delegateEmails.first(), expectedEmail);
+        } else {
+            QCOMPARE(model.delegateNames.size(), 0);
+            QCOMPARE(model.delegateEmails.size(), 0);
+        }
     }
 };
 

@@ -28,6 +28,7 @@
 #include <Akonadi/Item>
 
 #include "domain/artifactqueries.h"
+#include "domain/livequery.h"
 
 class KJob;
 
@@ -42,31 +43,36 @@ class ArtifactQueries : public QObject, public Domain::ArtifactQueries
 {
     Q_OBJECT
 public:
+    typedef Domain::LiveQuery<Akonadi::Item, Domain::Artifact::Ptr> ArtifactQuery;
     typedef Domain::QueryResultProvider<Domain::Artifact::Ptr> ArtifactProvider;
     typedef Domain::QueryResult<Domain::Artifact::Ptr> ArtifactResult;
+
+    typedef Domain::QueryResultProvider<Domain::Tag::Ptr> TagProvider;
+    typedef Domain::QueryResult<Domain::Tag::Ptr> TagResult;
 
     explicit ArtifactQueries(QObject *parent = 0);
     ArtifactQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor);
     virtual ~ArtifactQueries();
 
     ArtifactResult::Ptr findInboxTopLevel() const;
+    TagResult::Ptr findTags(Domain::Artifact::Ptr artifact) const;
 
 private slots:
     void onItemAdded(const Akonadi::Item &item);
     void onItemRemoved(const Akonadi::Item &item);
     void onItemChanged(const Akonadi::Item &item);
+    void onCollectionSelectionChanged();
 
 private:
-    bool isInboxItem(const Item &item) const;
-    bool isArtifactItem(const Domain::Artifact::Ptr &artifact, const Item &item) const;
-    Domain::Artifact::Ptr deserializeArtifact(const Item &item) const;
+    ArtifactQuery::Ptr createArtifactQuery();
 
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
     MonitorInterface *m_monitor;
     bool m_ownInterfaces;
 
-    mutable ArtifactProvider::WeakPtr m_inboxProvider;
+    ArtifactQuery::Ptr m_findInbox;
+    ArtifactQuery::List m_artifactQueries;
 };
 
 }

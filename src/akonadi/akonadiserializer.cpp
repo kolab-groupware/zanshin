@@ -1,6 +1,7 @@
 /* This file is part of Zanshin
 
    Copyright 2014 Kevin Ottens <ervin@kde.org>
+   Copyright 2014 Rémi Benoit <r3m1.benoit@gmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -31,6 +32,9 @@
 #include <KCalCore/Todo>
 #include <KMime/Message>
 
+#include "akonadi/akonadiapplicationselectedattribute.h"
+#include "akonadi/akonaditimestampattribute.h"
+
 using namespace Akonadi;
 
 Serializer::Serializer()
@@ -51,40 +55,69 @@ bool Serializer::representsItem(QObjectPtr object, Item item)
     return object->property("itemId").toLongLong() == item.id();
 }
 
+bool Serializer::representsAkonadiTag(Domain::Tag::Ptr tag, Tag akonadiTag) const
+{
+    return tag->property("tagId").toLongLong() == akonadiTag.id();
+}
+
 QString Serializer::objectUid(SerializerInterface::QObjectPtr object)
 {
     return object->property("todoUid").toString();
 }
 
-Domain::DataSource::Ptr Serializer::createDataSourceFromCollection(Collection collection)
+Domain::DataSource::Ptr Serializer::createDataSourceFromCollection(Collection collection, DataSourceNameScheme naming)
 {
     if (!collection.isValid())
         return Domain::DataSource::Ptr();
 
     auto dataSource = Domain::DataSource::Ptr::create();
-    updateDataSourceFromCollection(dataSource, collection);
+    updateDataSourceFromCollection(dataSource, collection, naming);
     return dataSource;
 }
 
-void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSource, Collection collection)
+void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSource, Collection collection, DataSourceNameScheme naming)
 {
     if (!collection.isValid())
         return;
 
     QString name = collection.displayName();
 
-    auto parent = collection.parentCollection();
-    while (parent.isValid() && parent != Akonadi::Collection::root()) {
-        name = parent.displayName() + "/" + name;
-        parent = parent.parentCollection();
+    if (naming == FullPath) {
+        auto parent = collection.parentCollection();
+        while (parent.isValid() && parent != Akonadi::Collection::root()) {
+            name = parent.displayName() + "/" + name;
+            parent = parent.parentCollection();
+        }
     }
 
     dataSource->setName(name);
+
+    const auto mimeTypes = collection.contentMimeTypes();
+    auto types = Domain::DataSource::ContentTypes();
+    if (mimeTypes.contains(NoteUtils::noteMimeType()))
+        types |= Domain::DataSource::Notes;
+    if (mimeTypes.contains(KCalCore::Todo::todoMimeType()))
+        types |= Domain::DataSource::Tasks;
+    dataSource->setContentTypes(types);
 
     if (collection.hasAttribute<Akonadi::EntityDisplayAttribute>()) {
         auto iconName = collection.attribute<Akonadi::EntityDisplayAttribute>()->iconName();
         dataSource->setIconName(iconName);
     }
+
+    if (!collection.hasAttribute<Akonadi::ApplicationSelectedAttribute>()) {
+        dataSource->setSelected(true);
+    } else {
+        auto isSelected = collection.attribute<Akonadi::ApplicationSelectedAttribute>()->isSelected();
+        dataSource->setSelected(isSelected);
+    }
+
+    if (collection.enabled())
+        dataSource->setListStatus(Domain::DataSource::Bookmarked);
+    else if (collection.referenced())
+        dataSource->setListStatus(Domain::DataSource::Listed);
+    else
+        dataSource->setListStatus(Domain::DataSource::Unlisted);
 
     dataSource->setProperty("collectionId", collection.id());
 }
@@ -92,7 +125,51 @@ void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSour
 Collection Serializer::createCollectionFromDataSource(Domain::DataSource::Ptr dataSource)
 {
     const auto id = dataSource->property("collectionId").value<Collection::Id>();
-    return Collection(id);
+    auto collection = Collection(id);
+
+    collection.attribute<Akonadi::TimestampAttribute>(Akonadi::Collection::AddIfMissing);
+
+    auto selectedAttribute = collection.attribute<Akonadi::ApplicationSelectedAttribute>(Akonadi::Collection::AddIfMissing);
+    selectedAttribute->setSelected(dataSource->isSelected());
+
+    switch (dataSource->listStatus()) {
+    case Domain::DataSource::Unlisted:
+        collection.setReferenced(false);
+        collection.setEnabled(false);
+        break;
+    case Domain::DataSource::Listed:
+        collection.setReferenced(true);
+        collection.setEnabled(false);
+        break;
+    case Domain::DataSource::Bookmarked:
+        collection.setReferenced(false);
+        collection.setEnabled(true);
+        break;
+    default:
+        qFatal("Shouldn't happen");
+        break;
+    }
+
+    return collection;
+}
+
+bool Serializer::isListedCollection(Collection collection)
+{
+    return collection.enabled() || collection.referenced();
+}
+
+bool Serializer::isSelectedCollection(Collection collection)
+{
+    if (!isListedCollection(collection))
+        return false;
+
+    if (!isNoteCollection(collection) && !isTaskCollection(collection))
+        return false;
+
+    if (!collection.hasAttribute<Akonadi::ApplicationSelectedAttribute>())
+        return true;
+
+    return collection.attribute<Akonadi::ApplicationSelectedAttribute>()->isSelected();
 }
 
 bool Akonadi::Serializer::isNoteCollection(Akonadi::Collection collection)
@@ -139,6 +216,17 @@ void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
     task->setProperty("itemId", item.id());
     task->setProperty("todoUid", todo->uid());
     task->setProperty("relatedUid", todo->relatedTo());
+
+    if (todo->attendeeCount() > 0) {
+        const auto attendees = todo->attendees();
+        const auto delegate = std::find_if(attendees.begin(), attendees.end(),
+                                           [] (const KCalCore::Attendee::Ptr &attendee) {
+                                               return attendee->status() == KCalCore::Attendee::Delegated;
+                                           });
+        if (delegate != attendees.end()) {
+            task->setDelegate(Domain::Task::Delegate((*delegate)->name(), (*delegate)->email()));
+        }
+    }
 }
 
 bool Serializer::isTaskChild(Domain::Task::Ptr task, Akonadi::Item item)
@@ -169,6 +257,14 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
 
     if (task->property("relatedUid").isValid()) {
         todo->setRelatedTo(task->property("relatedUid").toString());
+    }
+
+    if (task->delegate().isValid()) {
+        KCalCore::Attendee::Ptr attendee(new KCalCore::Attendee(task->delegate().name(),
+                                                                task->delegate().email(),
+                                                                true,
+                                                                KCalCore::Attendee::Delegated));
+        todo->addAttendee(attendee);
     }
 
     Akonadi::Item item;
@@ -395,6 +491,19 @@ Domain::Context::Ptr Serializer::createContextFromTag(Akonadi::Tag tag)
     return context;
 }
 
+Akonadi::Tag Serializer::createTagFromContext(Domain::Context::Ptr context)
+{
+    auto tag = Akonadi::Tag();
+    tag.setName(context->name());
+    tag.setType(Akonadi::SerializerInterface::contextTagType());
+    tag.setGid(QByteArray(context->name().toLatin1()));
+
+    if (context->property("tagId").isValid())
+        tag.setId(context->property("tagId").value<Akonadi::Tag::Id>());
+
+    return tag;
+}
+
 void Serializer::updateContextFromTag(Domain::Context::Ptr context, Akonadi::Tag tag)
 {
     if (!isContext(tag))
@@ -412,12 +521,12 @@ bool Serializer::hasContextTags(Item item) const
                        std::bind(std::mem_fn(&Serializer::isContext), this, _1));
 }
 
-bool Serializer::hasTopicTags(Item item) const
+bool Serializer::hasAkonadiTags(Item item) const
 {
     using namespace std::placeholders;
     Tag::List tags = item.tags();
     return std::any_of(tags.constBegin(), tags.constEnd(),
-                       std::bind(std::mem_fn(&Serializer::isTopic), this, _1));
+                       std::bind(std::mem_fn(&Serializer::isAkonadiTag), this, _1));
 }
 
 bool Serializer::isContext(const Akonadi::Tag &tag) const
@@ -425,9 +534,9 @@ bool Serializer::isContext(const Akonadi::Tag &tag) const
     return (tag.type() == Akonadi::SerializerInterface::contextTagType());
 }
 
-bool Serializer::isTopic(const Tag &tag) const
+bool Serializer::isAkonadiTag(const Tag &tag) const
 {
-    return (tag.type() == Akonadi::SerializerInterface::topicTagType());
+    return tag.type() == Akonadi::Tag::PLAIN;
 }
 
 bool Serializer::isContextTag(const Domain::Context::Ptr &context, const Akonadi::Tag &tag) const
@@ -435,10 +544,57 @@ bool Serializer::isContextTag(const Domain::Context::Ptr &context, const Akonadi
     return (context->property("tagId").value<Akonadi::Tag::Id>() == tag.id());
 }
 
-bool Serializer::isContextChild(const Domain::Context::Ptr &context, const Tag &tag) const
+bool Serializer::isContextChild(Domain::Context::Ptr context, Item item) const
 {
-    // NOTE : Hierarchy support will be done later, waiting for a proper support of tag Parent()
-    Q_UNUSED(context);
-    Q_UNUSED(tag);
-    return false;
+    if (!context->property("tagId").isValid())
+        return false;
+
+    auto tagId = context->property("tagId").value<Akonadi::Tag::Id>();
+    Akonadi::Tag tag(tagId);
+
+    return item.hasTag(tag);
+}
+
+Domain::Tag::Ptr Serializer::createTagFromAkonadiTag(Akonadi::Tag akonadiTag)
+{
+    if (!isAkonadiTag(akonadiTag))
+        return Domain::Tag::Ptr();
+
+    auto tag = Domain::Tag::Ptr::create();
+    updateTagFromAkonadiTag(tag, akonadiTag);
+    return tag;
+}
+
+void Serializer::updateTagFromAkonadiTag(Domain::Tag::Ptr tag, Akonadi::Tag akonadiTag)
+{
+    if (!isAkonadiTag(akonadiTag))
+        return;
+
+    tag->setProperty("tagId", akonadiTag.id());
+    tag->setName(akonadiTag.name());
+}
+
+Akonadi::Tag Serializer::createAkonadiTagFromTag(Domain::Tag::Ptr tag)
+{
+    auto akonadiTag = Akonadi::Tag();
+    akonadiTag.setName(tag->name());
+    akonadiTag.setType(Akonadi::Tag::PLAIN);
+    akonadiTag.setGid(QByteArray(tag->name().toLatin1()));
+
+    const auto tagProperty = tag->property("tagId");
+    if (tagProperty.isValid())
+        akonadiTag.setId(tagProperty.value<Akonadi::Tag::Id>());
+
+    return akonadiTag;
+}
+
+bool Serializer::isTagChild(Domain::Tag::Ptr tag, Akonadi::Item item)
+{
+    if (!tag->property("tagId").isValid())
+        return false;
+
+    auto tagId = tag->property("tagId").value<Akonadi::Tag::Id>();
+    Akonadi::Tag akonadiTag(tagId);
+
+    return item.hasTag(akonadiTag);
 }

@@ -33,9 +33,14 @@
 
 namespace Domain {
     class ArtifactQueries;
+    class DataSourceRepository;
     class NoteRepository;
     class ProjectQueries;
     class ProjectRepository;
+    class ContextQueries;
+    class ContextRepository;
+    class TagQueries;
+    class TagRepository;
     class TaskQueries;
     class TaskRepository;
 }
@@ -49,6 +54,7 @@ class ApplicationModel : public QObject
     Q_PROPERTY(Domain::DataSource::Ptr defaultNoteDataSource READ defaultNoteDataSource WRITE setDefaultNoteDataSource)
     Q_PROPERTY(QAbstractItemModel* taskSourcesModel READ taskSourcesModel)
     Q_PROPERTY(Domain::DataSource::Ptr defaultTaskDataSource READ defaultTaskDataSource WRITE setDefaultTaskDataSource)
+    Q_PROPERTY(QObject* availableSources READ availableSources)
     Q_PROPERTY(QObject* availablePages READ availablePages)
     Q_PROPERTY(QObject* currentPage READ currentPage WRITE setCurrentPage NOTIFY currentPageChanged)
     Q_PROPERTY(QObject* editor READ editor)
@@ -58,10 +64,15 @@ public:
     explicit ApplicationModel(Domain::ArtifactQueries *artifactQueries,
                               Domain::ProjectQueries *projectQueries,
                               Domain::ProjectRepository *projectRepository,
+                              Domain::ContextQueries *contextQueries,
+                              Domain::ContextRepository *contextRepository,
                               Domain::DataSourceQueries *sourceQueries,
+                              Domain::DataSourceRepository *sourceRepository,
                               Domain::TaskQueries *taskQueries,
                               Domain::TaskRepository *taskRepository,
                               Domain::NoteRepository *noteRepository,
+                              Domain::TagQueries *tagQueries,
+                              Domain::TagRepository *tagRepository,
                               QObject *parent = 0);
     ~ApplicationModel();
 
@@ -71,6 +82,7 @@ public:
     QAbstractItemModel *taskSourcesModel();
     Domain::DataSource::Ptr defaultTaskDataSource();
 
+    QObject *availableSources();
     QObject *availablePages();
     QObject *currentPage();
     QObject *editor();
@@ -87,6 +99,7 @@ private:
     Domain::QueryResult<Domain::DataSource::Ptr>::Ptr noteSources();
     Domain::QueryResult<Domain::DataSource::Ptr>::Ptr taskSources();
 
+    QObject *m_availableSources;
     QObject *m_availablePages;
     QObject *m_currentPage;
     QObject *m_editor;
@@ -96,16 +109,24 @@ private:
     Domain::ProjectQueries *m_projectQueries;
     Domain::ProjectRepository *m_projectRepository;
 
-    Domain::DataSourceQueries *m_sourceQueries;
-    Domain::TaskQueries *m_taskQueries;
+    Domain::ContextQueries *m_contextQueries;
+    Domain::ContextRepository *m_contextRepository;
 
+    Domain::DataSourceQueries *m_sourceQueries;
+    Domain::DataSourceRepository *m_sourceRepository;
+
+    Domain::TaskQueries *m_taskQueries;
     Domain::TaskRepository *m_taskRepository;
+
     Domain::QueryResult<Domain::DataSource::Ptr>::Ptr m_taskSources;
     QAbstractItemModel *m_taskSourcesModel;
 
     Domain::NoteRepository *m_noteRepository;
     Domain::QueryResult<Domain::DataSource::Ptr>::Ptr m_noteSources;
     QAbstractItemModel *m_noteSourcesModel;
+
+    Domain::TagQueries *m_tagQueries;
+    Domain::TagRepository *m_tagRepository;
 
     bool m_ownInterface;
 };
