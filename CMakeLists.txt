@@ -79,7 +79,7 @@ set(KDEPIM_STATIC_LIBS
 )
 
 add_subdirectory(3rdparty)
-add_subdirectory(attic)
+#add_subdirectory(attic)
 add_subdirectory(src)
 add_subdirectory(tests)
 
