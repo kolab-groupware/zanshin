@@ -66,20 +66,20 @@ void PersonSearchJob::start()
 
     mCollectionSearchDone = false;
     mLdapSearchDone = false;
-
-    mLdapSearch.startSearch(QLatin1String("*") + mSearchString);
-
     if (collections.isEmpty()) {
         //We didn't find anything
         mCollectionSearchDone = true;
-        return;
     }
 
-    Akonadi::CollectionFetchJob *fetchJob = new Akonadi::CollectionFetchJob(collections, Akonadi::CollectionFetchJob::Base, this);
-    fetchJob->fetchScope().setAncestorRetrieval(Akonadi::CollectionFetchScope::All);
-    fetchJob->fetchScope().setListFilter(Akonadi::CollectionFetchScope::NoFilter);
-    connect(fetchJob, SIGNAL(collectionsReceived(Akonadi::Collection::List)), this, SLOT(onCollectionsReceived(Akonadi::Collection::List)));
-    connect(fetchJob, SIGNAL(result(KJob*)), this, SLOT(onCollectionsFetched(KJob*)));
+    mLdapSearch.startSearch(QLatin1String("*") + mSearchString);
+
+    if (!collections.isEmpty()) {
+        Akonadi::CollectionFetchJob *fetchJob = new Akonadi::CollectionFetchJob(collections, Akonadi::CollectionFetchJob::Base, this);
+        fetchJob->fetchScope().setAncestorRetrieval(Akonadi::CollectionFetchScope::All);
+        fetchJob->fetchScope().setListFilter(Akonadi::CollectionFetchScope::NoFilter);
+        connect(fetchJob, SIGNAL(collectionsReceived(Akonadi::Collection::List)), this, SLOT(onCollectionsReceived(Akonadi::Collection::List)));
+        connect(fetchJob, SIGNAL(result(KJob*)), this, SLOT(onCollectionsFetched(KJob*)));
+    }
 
     //The IMAP resource should add a "Person" attribute to the collections in the person namespace,
     //the ldap query can then be used to update the name (entitydisplayattribute) for the person.
