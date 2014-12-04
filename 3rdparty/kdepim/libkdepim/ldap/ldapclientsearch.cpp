@@ -215,6 +215,7 @@ void LdapClientSearch::Private::slotFileChanged( const QString &file )
 void LdapClientSearch::startSearch( const QString &txt )
 {
     if ( d->mNoLDAPLookup ) {
+        emit searchDone();
         return;
     }
 
