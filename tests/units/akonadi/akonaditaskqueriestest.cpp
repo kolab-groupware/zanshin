@@ -71,7 +71,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -101,7 +101,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -140,7 +140,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -167,7 +167,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -188,7 +188,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -221,7 +221,7 @@ private slots:
         monitor->addItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -257,7 +257,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -292,7 +292,7 @@ private slots:
         monitor->removeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -331,7 +331,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -378,7 +378,7 @@ private slots:
         monitor->changeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -857,7 +857,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob1)
@@ -1013,7 +1013,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1043,7 +1043,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1066,7 +1066,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1099,7 +1099,7 @@ private slots:
         monitor->addItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1135,7 +1135,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1170,7 +1170,7 @@ private slots:
         monitor->removeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1206,7 +1206,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1248,7 +1248,7 @@ private slots:
         monitor->changeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1288,7 +1288,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1323,7 +1323,7 @@ private slots:
         monitor->changeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1360,7 +1360,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1395,7 +1395,7 @@ private slots:
         monitor->changeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1437,7 +1437,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1486,7 +1486,7 @@ private slots:
         monitor->removeItem(item2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1700,7 +1700,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1722,7 +1722,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));
@@ -1806,7 +1806,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
@@ -1828,7 +1828,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                                Akonadi::StorageInterface::Recursive,
                                                                                Akonadi::StorageInterface::Tasks)
                                                                          .exactly(1));

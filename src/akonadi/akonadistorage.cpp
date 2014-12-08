@@ -265,6 +265,11 @@ KJob *Storage::removeTag(Tag tag)
     return new Akonadi::TagDeleteJob(tag);
 }
 
+CollectionFetchJobInterface *Storage::fetchCollections(Collection collection, StorageInterface::FetchDepth depth, FetchContentTypes types)
+{
+    return fetchCollections(collection, depth, types, Display);
+}
+
 CollectionFetchJobInterface *Storage::fetchCollections(Collection collection, StorageInterface::FetchDepth depth, FetchContentTypes types, FetchFilter filter)
 {
     QStringList contentMimeTypes;

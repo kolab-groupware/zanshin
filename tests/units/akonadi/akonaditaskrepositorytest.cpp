@@ -200,7 +200,7 @@ private slots:
         // Storage mock returning the create job and with no default collection
         mock_object<Akonadi::StorageInterface> storageMock;
         storageMock(&Akonadi::StorageInterface::defaultTaskCollection).when().thenReturn(Akonadi::Collection());
-        storageMock(&Akonadi::StorageInterface::fetchCollections).when(Akonadi::Collection::root(),
+        storageMock(static_cast<Akonadi::CollectionFetchJobInterface* (Akonadi::StorageInterface::*)(Akonadi::Collection, Akonadi::StorageInterface::FetchDepth, Akonadi::StorageInterface::FetchContentTypes)>(&Akonadi::StorageInterface::fetchCollections)).when(Akonadi::Collection::root(),
                                                                        Akonadi::StorageInterface::Recursive,
                                                                        Akonadi::StorageInterface::Tasks)
                                                                  .thenReturn(collectionFetchJob);
