@@ -94,7 +94,8 @@ void MonitorImpl::onCollectionChanged(const Collection &collection, const QSet<Q
                                                                     << "AccessRights"
                                                                     << "ENTITYDISPLAY"
                                                                     << "ZanshinSelected"
-                                                                    << "ZanshinTimestamp";
+                                                                    << "ZanshinTimestamp"
+                                                                    << "REFERENCED";
 
     QSet<QByteArray> partsIntersection = parts;
     partsIntersection.intersect(allowedParts);
