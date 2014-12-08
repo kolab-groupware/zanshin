@@ -65,6 +65,7 @@ public:
     ContentTypes contentTypes() const;
     ListStatus listStatus() const;
     bool isSelected() const;
+    bool isPerson() const;
 
 public slots:
     void setName(const QString &name);
@@ -72,6 +73,7 @@ public slots:
     void setContentTypes(Domain::DataSource::ContentTypes types);
     void setListStatus(Domain::DataSource::ListStatus status);
     void setSelected(bool selected);
+    void setPerson(bool isPerson);
 
 signals:
     void nameChanged(const QString &name);
@@ -79,6 +81,7 @@ signals:
     void contentTypesChanged(Domain::DataSource::ContentTypes types);
     void listStatusChanged(Domain::DataSource::ListStatus status);
     void selectedChanged(bool selected);
+    void personChanged(bool person);
 
 private:
     QString m_name;
@@ -86,6 +89,7 @@ private:
     ContentTypes m_contentTypes;
     ListStatus m_listStatus;
     bool m_selected;
+    bool m_person;
 };
 
 }

@@ -30,6 +30,7 @@
 #include "domain/datasourcerepository.h"
 
 #include "presentation/querytreemodel.h"
+#include "utils/runner.h"
 
 using namespace Presentation;
 
@@ -68,6 +69,19 @@ void AvailableSourcesModel::listSource(const Domain::DataSource::Ptr &source)
     source->setSelected(true);
     source->setListStatus(Domain::DataSource::Listed);
     m_dataSourceRepository->update(source);
+    auto runner = new Utils::Runner([this, source](const std::function<void()> &done) {
+        auto result = m_dataSourceQueries->findChildrenRecursive(source);
+        result->addPostInsertHandler([this, done](Domain::DataSource::Ptr s, int){
+            s->setSelected(true);
+            s->setListStatus(Domain::DataSource::Listed);
+            m_dataSourceRepository->update(s);
+        });
+        //We have to keep the result alive
+        result->addDoneHandler([done, result](Domain::DataSource::Ptr, int){
+            done();
+        });
+    });
+    runner->start();
 }
 
 void AvailableSourcesModel::unlistSource(const Domain::DataSource::Ptr &source)
@@ -76,6 +90,19 @@ void AvailableSourcesModel::unlistSource(const Domain::DataSource::Ptr &source)
     source->setSelected(false);
     source->setListStatus(Domain::DataSource::Unlisted);
     m_dataSourceRepository->update(source);
+    auto runner = new Utils::Runner([this, source](const std::function<void()> &done) {
+        auto result = m_dataSourceQueries->findChildrenRecursive(source);
+        result->addPostInsertHandler([this, done](Domain::DataSource::Ptr s, int){
+            s->setSelected(false);
+            s->setListStatus(Domain::DataSource::Unlisted);
+            m_dataSourceRepository->update(s);
+        });
+        //We have to keep the result alive
+        result->addDoneHandler([done, result](Domain::DataSource::Ptr, int){
+            done();
+        });
+    });
+    runner->start();
 }
 
 void AvailableSourcesModel::bookmarkSource(const Domain::DataSource::Ptr &source)

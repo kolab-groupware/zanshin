@@ -30,8 +30,10 @@
 #include "akonadimonitorimpl.h"
 #include "akonadiserializer.h"
 #include "akonadistorage.h"
+#include "domain/mergedqueryresultprovider.h"
 
 #include "utils/jobhandler.h"
+#include "utils/compositejob.h"
 
 #include <QPointer>
 
@@ -48,22 +50,61 @@ static void traverseThisAndParents(const Collection &col, const std::function<bo
     }
 }
 
-AkonadiCollectionTreeSource::AkonadiCollectionTreeSource(StorageInterface *storage, MonitorInterface *monitor)
+static bool matchesParents(const Collection &col, const std::function<bool(const Collection &)> &matcher)
+{
+    bool matches = false;
+    traverseThisAndParents(col, [matcher, &matches](const Collection &c) {
+        if (matcher(c)) {
+            matches = true;
+            return false;
+        }
+        return true;
+    });
+    return matches;
+}
+
+AkonadiCollectionTreeSource::AkonadiCollectionTreeSource(MonitorInterface *monitor)
     : QObject(),
-    m_storage(storage),
     m_monitor(monitor),
     m_populated(false),
     m_populationInProgress(false)
 {
+    isToplevel = [](const Akonadi::Collection &col) {
+        if (col == Akonadi::Collection::root()) {
+            return true;
+        }
+        if (col.name() == "Other Users") {
+            return true;
+        }
+        return false;
+    };
+}
+
+Akonadi::Collection::Id AkonadiCollectionTreeSource::id(const Akonadi::Collection &col) const
+{
+    if (isToplevel(col)) {
+        return 0;
+    }
+    return col.id();
 }
 
 void AkonadiCollectionTreeSource::findChildren(const Collection &parent)
 {
     populate([this, parent] {
-        for (auto collection : m_collections[parent.id()]) {
-            emit added(collection);
+        for (auto collection : m_collections[id(parent)]) {
+            emit added(collection, id(parent));
         }
     });
+}
+
+void AkonadiCollectionTreeSource::setFilter(const std::function<bool(const Akonadi::Collection &)> &filter)
+{
+    isWantedCollection = filter;
+}
+
+void AkonadiCollectionTreeSource::setCollectionFetcher(const std::function<void(const std::function<void(bool, const Akonadi::Collection::List&)> &)> &fetcher)
+{
+    fetchCollections = fetcher;
 }
 
 void AkonadiCollectionTreeSource::populate(const std::function<void()> &callback)
@@ -76,44 +117,46 @@ void AkonadiCollectionTreeSource::populate(const std::function<void()> &callback
         m_populationInProgress = true;
         m_pendingCallbacks << callback;
         QPointer<AkonadiCollectionTreeSource> handle(this);
-        CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks | StorageInterface::Notes);
-        Utils::JobHandler::install(job->kjob(), [this, job, handle] {
+
+        fetchCollections([this, handle](bool error, const Akonadi::Collection::List &collections){
             //Since the this pointer might be invalid meanwhile, we have to double check
             if (!handle) {
                 return;
             }
-            if (job->kjob()->error()) {
-                kWarning() << "Failed to fetch collections " << job->kjob()->errorString();
+            if (error) {
                 m_pendingCallbacks.clear();
                 return;
             }
-            for (auto collection : job->collections()) {
+            for (auto collection : collections) {
+                if (!isWantedCollection(collection)) {
+                    continue;
+                }
                 traverseThisAndParents(collection, [this](const Collection &col) {
-                    Collection::List &collections = m_collections[col.parentCollection().id()];
+                    Collection::List &collections = m_collections[id(col.parentCollection())];
                     if (!collections.contains(col)) {
                         collections.append(col);
+                        if (isToplevel(col)) {
+                            return false;
+                        } else {
+                            return true;
+                        }
                     }
-                    return true;
+                    return false;
                 });
             }
             m_populated = true;
-            connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onAdded(Akonadi::Collection)));
-            connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onRemoved(Akonadi::Collection)));
-            connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onChanged(Akonadi::Collection)));
+            if (m_monitor) {
+                connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onAdded(Akonadi::Collection)));
+                connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onRemoved(Akonadi::Collection)));
+                connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onChanged(Akonadi::Collection)));
+            }
             for (auto callback : m_pendingCallbacks) {
                 callback();
             }
             m_pendingCallbacks.clear();
         });
-    }
-}
 
-static bool isWantedCollection(const Collection &col)
-{
-    if (!col.shouldList(Collection::ListDisplay) && !col.referenced()) {
-        return false;
     }
-    return true;
 }
 
 void AkonadiCollectionTreeSource::onAdded(const Collection &col)
@@ -124,11 +167,16 @@ void AkonadiCollectionTreeSource::onAdded(const Collection &col)
 
     //Insert collection and missing parents
     traverseThisAndParents(col, [this](const Collection &col) {
-        Collection::List &collections = m_collections[col.parentCollection().id()];
+
+        Collection::List &collections = m_collections[id(col.parentCollection())];
         if (!collections.contains(col)) {
             collections.append(col);
-            emit added(col);
-            return true;
+            emit added(col, id(col.parentCollection()));
+            if (isToplevel(col)) {
+                return false;
+            } else {
+                return true;
+            }
         }
         return false;
     });
@@ -138,17 +186,17 @@ void AkonadiCollectionTreeSource::onRemoved(const Collection &col)
 {
     //Collection may have to remain if it has wanted children.
     if (m_collections.contains(col.id())) {
-        m_collections[col.parentCollection().id()].removeAll(col);
+        m_collections[id(col.parentCollection())].removeAll(col);
         m_collections.remove(col.id());
-        emit removed(col);
+        emit removed(col, id(col.parentCollection()));
 
         //Check for parents to remove
         traverseThisAndParents(col.parentCollection(), [this](const Collection &col) {
-            Collection::List &collections = m_collections[col.id()];
+            Collection::List &collections = m_collections[id(col)];
             if (!isWantedCollection(col) && collections.isEmpty()) {
-                m_collections[col.parentCollection().id()].removeAll(col);
+                m_collections[id(col.parentCollection())].removeAll(col);
                 m_collections.remove(col.id());
-                emit removed(col);
+                emit removed(col, id(col.parentCollection()));
             }
             return true;
         });
@@ -160,12 +208,12 @@ void AkonadiCollectionTreeSource::onChanged(const Collection &col)
     if (!isWantedCollection(col)) {
         onRemoved(col);
     } else {
-        Collection::List &collections = m_collections[col.parentCollection().id()];
+        Collection::List &collections = m_collections[id(col.parentCollection())];
         if (collections.contains(col)) {
-            Collection::List &collections = m_collections[col.parentCollection().id()];
+            Collection::List &collections = m_collections[id(col.parentCollection())];
             collections.removeAll(col);
             collections.append(col);
-            emit changed(col);
+            emit changed(col, id(col.parentCollection()));
         } else {
             onAdded(col);
         }
@@ -178,62 +226,64 @@ TreeQuery::TreeQuery(SerializerInterface *serializer, const QSharedPointer<Akona
     m_serializer(serializer),
     m_source(source)
 {
-    connect(m_source.data(), SIGNAL(added(Akonadi::Collection)), this, SLOT(onAdded(Akonadi::Collection)));
-    connect(m_source.data(), SIGNAL(removed(Akonadi::Collection)), this, SLOT(onRemoved(Akonadi::Collection)));
-    connect(m_source.data(), SIGNAL(changed(Akonadi::Collection)), this, SLOT(onChanged(Akonadi::Collection)));
+    connect(m_source.data(), SIGNAL(added(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onAdded(Akonadi::Collection, Akonadi::Collection::Id)));
+    connect(m_source.data(), SIGNAL(removed(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onRemoved(Akonadi::Collection, Akonadi::Collection::Id)));
+    connect(m_source.data(), SIGNAL(changed(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onChanged(Akonadi::Collection, Akonadi::Collection::Id)));
 }
 
-DataSourceQueries::DataSourceResult::Ptr TreeQuery::findChildren(Domain::DataSource::Ptr source)
+void TreeQuery::findChildren(const Akonadi::Collection &col)
 {
-    Collection root = source ? m_serializer->createCollectionFromDataSource(source) : Collection::root();
+    if (m_source) {
+        m_source->findChildren(col);
+    }
+}
+
+void TreeQuery::reset(const QSharedPointer<AkonadiCollectionTreeSource> &source)
+{
+    disconnect(m_source.data(), SIGNAL(added(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onAdded(Akonadi::Collection, Akonadi::Collection::Id)));
+    disconnect(m_source.data(), SIGNAL(removed(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onRemoved(Akonadi::Collection, Akonadi::Collection::Id)));
+    disconnect(m_source.data(), SIGNAL(changed(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onChanged(Akonadi::Collection, Akonadi::Collection::Id)));
+
+    m_source = source;
+    foreach(auto query, m_findChildren.values()) {
+        query->reset();
+    }
+
+    connect(m_source.data(), SIGNAL(added(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onAdded(Akonadi::Collection, Akonadi::Collection::Id)));
+    connect(m_source.data(), SIGNAL(removed(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onRemoved(Akonadi::Collection, Akonadi::Collection::Id)));
+    connect(m_source.data(), SIGNAL(changed(Akonadi::Collection, Akonadi::Collection::Id)), this, SLOT(onChanged(Akonadi::Collection, Akonadi::Collection::Id)));
+}
+
+DataSourceQueries::DataSourceResult::Ptr TreeQuery::findChildren(Domain::DataSource::Ptr source, const std::function<void(DataSourceQuery::Ptr, const Akonadi::Collection &root)> &setupFunction)
+{
+    const Collection root = source ? m_serializer->createCollectionFromDataSource(source) : Collection::root();
     if (!m_findChildren.contains(root.id())) {
         auto query = DataSourceQuery::Ptr::create();
         m_findChildren.insert(root.id(), query);
-
-        query->setFetchFunction([this, root] (const DataSourceQuery::AddFunction &add) {
-            //We don't need the add function because we use the usual delivery method via the onAdded slot used for updates
-            Q_UNUSED(add);
-            m_source->findChildren(root);
-        });
-
-        query->setConvertFunction([this] (const Akonadi::Collection &collection) {
-            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
-        });
-
-        query->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
-            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
-        });
-
-        query->setPredicateFunction([this, root] (const Akonadi::Collection &collection) {
-            return true;
-        });
-
-        query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
-            return m_serializer->representsCollection(source, collection);
-        });
+        setupFunction(query, root);
     }
     return m_findChildren.value(root.id())->result();
 }
 
-void TreeQuery::onAdded(const Akonadi::Collection &collection)
+void TreeQuery::onAdded(const Akonadi::Collection &collection, Akonadi::Collection::Id id)
 {
-    auto query = m_findChildren.find(collection.parentCollection().id());
+    auto query = m_findChildren.find(id);
     if (query != m_findChildren.end()) {
         (*query)->onAdded(collection);
     }
 }
 
-void TreeQuery::onRemoved(const Akonadi::Collection &collection)
+void TreeQuery::onRemoved(const Akonadi::Collection &collection, Akonadi::Collection::Id id)
 {
-    auto query = m_findChildren.find(collection.parentCollection().id());
+    auto query = m_findChildren.find(id);
     if (query != m_findChildren.end()) {
         (*query)->onRemoved(collection);
     }
 }
 
-void TreeQuery::onChanged(const Akonadi::Collection &collection)
+void TreeQuery::onChanged(const Akonadi::Collection &collection, Akonadi::Collection::Id id)
 {
-    auto query = m_findChildren.find(collection.parentCollection().id());
+    auto query = m_findChildren.find(id);
     if (query != m_findChildren.end()) {
         (*query)->onChanged(collection);
     }
@@ -245,24 +295,18 @@ DataSourceQueries::DataSourceQueries(QObject *parent)
       m_storage(new Storage),
       m_serializer(new Serializer),
       m_monitor(new MonitorImpl),
-      m_ownInterfaces(true),
-      m_treeQuery(new TreeQuery(m_serializer, QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_storage, m_monitor))))
+      m_ownInterfaces(true)
 {
-    connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onCollectionAdded(Akonadi::Collection)));
-    connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onCollectionRemoved(Akonadi::Collection)));
-    connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onCollectionChanged(Akonadi::Collection)));
+    init();
 }
 
 DataSourceQueries::DataSourceQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor)
     : m_storage(storage),
       m_serializer(serializer),
       m_monitor(monitor),
-      m_ownInterfaces(false),
-      m_treeQuery(new TreeQuery(m_serializer, QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_storage, m_monitor))))
+      m_ownInterfaces(false)
 {
-    connect(monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onCollectionAdded(Akonadi::Collection)));
-    connect(monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onCollectionRemoved(Akonadi::Collection)));
-    connect(monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onCollectionChanged(Akonadi::Collection)));
+    init();
 }
 
 DataSourceQueries::~DataSourceQueries()
@@ -272,6 +316,155 @@ DataSourceQueries::~DataSourceQueries()
         delete m_serializer;
         delete m_monitor;
     }
+}
+
+void DataSourceQueries::init()
+{
+    connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onCollectionAdded(Akonadi::Collection)));
+    connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onCollectionRemoved(Akonadi::Collection)));
+    connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onCollectionChanged(Akonadi::Collection)));
+
+    //Provides the mapping onto the vairous zanshin queries
+    m_treeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findVisibleCollections()));
+    m_personTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findVisiblePersonCollections()));
+
+    m_searchTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findSearchCollections()));
+    m_searchPersonTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findSearchPersonCollections()));
+}
+
+QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollections() const
+{
+    auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
+    source->setFilter([this](const Collection &col) {
+        if (!col.shouldList(Collection::ListDisplay) && !col.referenced()) {
+            return false;
+        }
+        if(matchesParents(col, [this](const Collection &col) {
+            return (col.name() == "Other Users");
+        })) {
+            return false;
+        }
+        return true;
+    });
+    source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
+        auto job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks | StorageInterface::Notes, StorageInterface::NoFilter);
+        Utils::JobHandler::install(job->kjob(), [job, resultHandler] {
+            if (job->kjob()->error()) {
+                kWarning() << "Failed to fetch collections " << job->kjob()->errorString();
+                resultHandler(true, Akonadi::Collection::List());
+                return;
+            }
+            resultHandler(false, job->collections());
+        });
+    });
+
+    return source;
+}
+
+QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisiblePersonCollections() const
+{
+    auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
+    source->setFilter([this](const Collection &col) {
+            if (!col.shouldList(Collection::ListDisplay) && !col.referenced()) {
+                return false;
+            }
+            if(!matchesParents(col, [this](const Collection &col) {
+                return m_serializer->isPersonCollection(col);
+            })) {
+                return false;
+            }
+            return true;
+    });
+    source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
+        auto job = m_storage->fetchPersons();
+        Utils::JobHandler::install(job->kjob(), [this, job, resultHandler] {
+            if (job->kjob()->error()) {
+                kWarning() << "Failed to search persons " << job->kjob()->errorString();
+                resultHandler(true, Akonadi::Collection::List());
+                return;
+            }
+            auto result = QSharedPointer<Akonadi::Collection::List>::create();
+            result->append(job->collections());
+            //Fetch children for each person
+            auto compositeJob = new Utils::CompositeJob;
+            for (const auto &col : job->collections()) {
+                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, StorageInterface::Tasks|StorageInterface::Notes, StorageInterface::NoFilter);
+                compositeJob->install(fetchJob->kjob(), [fetchJob, resultHandler, result] {
+                    result->append(fetchJob->collections());
+                });
+            }
+            Utils::JobHandler::install(compositeJob, [result, resultHandler] {
+                resultHandler(false, *result);
+            });
+        });
+    });
+
+    return source;
+}
+
+QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchCollections() const
+{
+    auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
+    source->setFilter([this](const Collection &col) {
+        if(matchesParents(col, [this](const Collection &col) {
+            return m_serializer->isPersonCollection(col);
+        })) {
+            return false;
+        }
+        return true;
+    });
+    source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
+        auto job = m_storage->searchCollections(m_searchTerm);
+        Utils::JobHandler::install(job->kjob(), [job, resultHandler] {
+            if (job->kjob()->error()) {
+                kWarning() << "Failed to search collections " << job->kjob()->errorString();
+                resultHandler(true, Akonadi::Collection::List());
+                return;
+            }
+            resultHandler(false, job->collections());
+        });
+    });
+
+    return source;
+}
+
+QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchPersonCollections() const
+{
+    auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
+    source->setFilter([this](const Collection &col) {
+        if(!matchesParents(col, [this](const Collection &col) {
+            return m_serializer->isPersonCollection(col);
+        })) {
+            return false;
+        }
+        return true;
+    });
+    source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
+        //Search for persons, and then search for all their children
+        auto job = m_storage->searchPersons(m_searchTerm);
+        Utils::JobHandler::install(job->kjob(), [this, job, resultHandler] {
+            if (job->kjob()->error()) {
+                kWarning() << "Failed to search persons " << job->kjob()->errorString();
+                resultHandler(true, Akonadi::Collection::List());
+                return;
+            }
+            auto result = QSharedPointer<Akonadi::Collection::List>::create();
+            result->append(job->collections());
+            //Fetch children for each person
+            auto compositeJob = new Utils::CompositeJob;
+            for (const auto &col : job->collections()) {
+                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, StorageInterface::Tasks|StorageInterface::Notes, StorageInterface::NoFilter);
+                compositeJob->install(fetchJob->kjob(), [fetchJob, resultHandler, result] {
+                    result->append(fetchJob->collections());
+                });
+            }
+            Utils::JobHandler::install(compositeJob, [result, resultHandler] {
+                resultHandler(false, *result);
+            });
+        });
+    });
+
+    return source;
 }
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTasks() const
@@ -343,12 +536,40 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findNotes() const
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTopLevel() const
 {
-    return m_treeQuery->findChildren(Domain::DataSource::Ptr());
+
+    Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>::Ptr mergedResultProvider(new Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>());
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_treeQuery));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_personTreeQuery));
+    return DataSourceQueries::DataSourceResult::create(mergedResultProvider);
 }
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildren(Domain::DataSource::Ptr source) const
 {
-    return m_treeQuery->findChildren(source);
+    QSharedPointer<TreeQuery> treeQuery;
+    //The person tree and the rest are separate, so we need to multiplex that here
+    //FIXME: this doesn't work because after the first child isPerson returns false
+    if (source && source->isPerson()) {
+        treeQuery = m_personTreeQuery;
+    } else {
+        treeQuery = m_treeQuery;
+    }
+    return findSearchChildrenQuery(source, treeQuery);
+}
+
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildrenRecursive(Domain::DataSource::Ptr source) const
+{
+    auto query = Domain::QueryResultProvider<Domain::DataSource::Ptr>::Ptr::create();
+    Akonadi::Collection col = m_serializer->createCollectionFromDataSource(source);
+
+    auto job = m_storage->fetchCollections(col, StorageInterface::Recursive, StorageInterface::Notes | StorageInterface::Tasks, StorageInterface::NoFilter);
+    Utils::JobHandler::install(job->kjob(), [this, job, query] {
+        for (auto collection : job->collections()) {
+            auto source =  m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
+            query->append(source);
+        }
+        query->done();
+    });
+    return DataSourceQueries::DataSourceResult::create(query);
 }
 
 QString DataSourceQueries::searchTerm() const
@@ -362,113 +583,59 @@ void DataSourceQueries::setSearchTerm(QString term)
         return;
 
     m_searchTerm = term;
-    if (m_findSearchTopLevel) {
-        m_findSearchTopLevel->reset();
-    }
-    foreach(auto query, m_findSearchChildren.values())
-        query->reset();
+
+    m_searchTreeQuery->reset(findSearchCollections());
+    m_searchPersonTreeQuery->reset(findSearchPersonCollections());
 }
 
-DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchTopLevel() const
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery) const
 {
-    if (!m_findSearchTopLevel) {
-        {
-            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
-            self->m_findSearchTopLevel = self->createDataSourceQuery();
-        }
-
-        m_findSearchTopLevel->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
-            if (m_searchTerm.isEmpty())
-                return;
-
-            CollectionSearchJobInterface *job = m_storage->searchCollections(m_searchTerm);
-            Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                if (job->kjob()->error())
-                    return;
-
-                QHash<Collection::Id, Collection> topLevels;
-                foreach (const auto &collection, job->collections()) {
-                    auto topLevel = collection;
-                    while (topLevel.parentCollection() != Collection::root())
-                        topLevel = topLevel.parentCollection();
-                    if (!topLevels.contains(topLevel.id()))
-                        topLevels[topLevel.id()] = topLevel;
-                }
-
-                foreach (const auto &topLevel, topLevels.values())
-                    add(topLevel);
-
-            });
-        });
-
-        m_findSearchTopLevel->setConvertFunction([this] (const Akonadi::Collection &collection) {
-            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
-        });
-        m_findSearchTopLevel->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
-            m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
-        });
-        m_findSearchTopLevel->setPredicateFunction([this] (const Akonadi::Collection &collection) {
-            return collection.isValid()
-                && collection.parentCollection() == Akonadi::Collection::root();
-        });
-        m_findSearchTopLevel->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
-            return m_serializer->representsCollection(source, collection);
-        });
-    }
-
-    return m_findSearchTopLevel->result();
-}
-
-DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildren(Domain::DataSource::Ptr source) const
-{
-    Collection root = m_serializer->createCollectionFromDataSource(source);
-    if (!m_findSearchChildren.contains(root.id())) {
-        DataSourceQuery::Ptr query;
-
-        {
-            DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
-            query = self->createDataSourceQuery();
-            self->m_findSearchChildren.insert(root.id(), query);
-        }
-
-        query->setFetchFunction([this, root] (const DataSourceQuery::AddFunction &add) {
-            if (m_searchTerm.isEmpty())
-                return;
-
-            CollectionSearchJobInterface *job = m_storage->searchCollections(m_searchTerm);
-            Utils::JobHandler::install(job->kjob(), [this, root, job, add] {
-                if (job->kjob()->error())
-                    return;
-
-                QHash<Collection::Id, Collection> children;
-                foreach (const auto &collection, job->collections()) {
-                    auto child = collection;
-                    while (child.parentCollection() != root && child.parentCollection().isValid())
-                        child = child.parentCollection();
-                    if (!children.contains(child.id()))
-                        children[child.id()] = child;
-                }
-
-                foreach (const auto &topLevel, children.values())
-                    add(topLevel);
-            });
+    return treeQuery->findChildren(source, [this, treeQuery](DataSourceQuery::Ptr query, const Akonadi::Collection &root){
+        query->setFetchFunction([treeQuery, root] (const DataSourceQuery::AddFunction &add) {
+            //We don't need the add function because we use the usual delivery method via the onAdded slot used for updates
+            Q_UNUSED(add);
+            treeQuery->findChildren(root);
         });
 
         query->setConvertFunction([this] (const Akonadi::Collection &collection) {
             return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
         });
+
         query->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
             m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
         });
+
         query->setPredicateFunction([this, root] (const Akonadi::Collection &collection) {
-            return collection.isValid() && collection.parentCollection() == root;
+            return true;
         });
+
         query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
             return m_serializer->representsCollection(source, collection);
         });
-    }
+    });
+}
 
-    return m_findSearchChildren.value(root.id())->result();
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchTopLevel() const
+{
+    Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>::Ptr mergedResultProvider(new Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>());
+    //FIXME pass in function to fetch children for persons and rest? => see below for motivation in findSearchChildren
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_searchTreeQuery));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_searchPersonTreeQuery));
+    return DataSourceQueries::DataSourceResult::create(mergedResultProvider);
+}
+
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildren(Domain::DataSource::Ptr source) const
+{
+    //FIXME findSearchChildren should be separate for regular collections and persons
+    QSharedPointer<TreeQuery> treeQuery;
+    //The person tree and the rest are separate, so we need to multiplex that here
+    //FIXME: this doesn't work because after the first child isPerson returns false
+    if (source && source->isPerson()) {
+        treeQuery = m_searchPersonTreeQuery;
+    } else {
+        treeQuery = m_searchTreeQuery;
+    }
+    return findSearchChildrenQuery(source, treeQuery);
 }
 
 void DataSourceQueries::onCollectionAdded(const Collection &collection)

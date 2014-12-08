@@ -51,6 +51,7 @@ public:
     virtual bool isSelectedCollection(Akonadi::Collection collection) Q_DECL_OVERRIDE;
     virtual bool isNoteCollection(Akonadi::Collection collection) Q_DECL_OVERRIDE;
     virtual bool isTaskCollection(Akonadi::Collection collection) Q_DECL_OVERRIDE;
+    virtual bool isPersonCollection(Akonadi::Collection collection) Q_DECL_OVERRIDE;
 
     bool isTaskItem(Akonadi::Item item) Q_DECL_OVERRIDE;
     Domain::Task::Ptr createTaskFromItem(Akonadi::Item item) Q_DECL_OVERRIDE;

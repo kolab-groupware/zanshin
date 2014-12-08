@@ -29,6 +29,7 @@
 #include <Akonadi/EntityDisplayAttribute>
 #include <Akonadi/Item>
 #include <Akonadi/Notes/NoteUtils>
+#include <akonadi/collectionidentificationattribute.h>
 #include <KCalCore/Todo>
 #include <KMime/Message>
 
@@ -120,6 +121,10 @@ void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSour
         dataSource->setListStatus(Domain::DataSource::Unlisted);
 
     dataSource->setProperty("collectionId", collection.id());
+    dataSource->setPerson(isPersonCollection(collection));
+    if (isPersonCollection(collection)) {
+        dataSource->setIconName("meeting-participant");
+    }
 }
 
 Collection Serializer::createCollectionFromDataSource(Domain::DataSource::Ptr dataSource)
@@ -180,6 +185,12 @@ bool Akonadi::Serializer::isNoteCollection(Akonadi::Collection collection)
 bool Akonadi::Serializer::isTaskCollection(Akonadi::Collection collection)
 {
     return collection.contentMimeTypes().contains(KCalCore::Todo::todoMimeType());
+}
+
+bool Akonadi::Serializer::isPersonCollection(Akonadi::Collection collection)
+{
+    auto attr = collection.attribute<CollectionIdentificationAttribute>();
+    return (attr && attr->collectionNamespace() == "usertoplevel");
 }
 
 bool Serializer::isTaskItem(Item item)

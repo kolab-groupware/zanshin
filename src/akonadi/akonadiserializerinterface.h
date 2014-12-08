@@ -65,6 +65,7 @@ public:
     virtual bool isSelectedCollection(Akonadi::Collection collection) = 0;
     virtual bool isNoteCollection(Akonadi::Collection collection) = 0;
     virtual bool isTaskCollection(Akonadi::Collection collection) = 0;
+    virtual bool isPersonCollection(Akonadi::Collection collection) = 0;
 
     virtual bool isTaskItem(Akonadi::Item item) = 0;
     virtual Domain::Task::Ptr createTaskFromItem(Akonadi::Item item) = 0;

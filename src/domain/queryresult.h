@@ -92,6 +92,11 @@ public:
         QueryResultInputImpl<InputType>::m_postReplaceHandlers << handler;
     }
 
+    void addDoneHandler(const ChangeHandler &handler)
+    {
+        QueryResultInputImpl<InputType>::m_doneHandlers << handler;
+    }
+
 private:
     explicit QueryResult(const typename QueryResultProvider<InputType>::Ptr &provider)
         : QueryResultInputImpl<InputType>(provider)

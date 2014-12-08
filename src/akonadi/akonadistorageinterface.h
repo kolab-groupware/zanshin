@@ -56,6 +56,11 @@ public:
     };
     Q_DECLARE_FLAGS(FetchContentTypes, FetchContentType)
 
+    enum FetchFilter {
+        Display,
+        NoFilter
+    };
+
     StorageInterface();
     virtual ~StorageInterface();
 
@@ -77,8 +82,10 @@ public:
     virtual KJob *updateTag(Akonadi::Tag tag) = 0;
     virtual KJob *removeTag(Akonadi::Tag tag) = 0;
 
-    virtual CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types) = 0;
+    virtual CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types, FetchFilter filter = Display) = 0;
+    virtual CollectionFetchJobInterface *fetchPersons() = 0;
     virtual CollectionSearchJobInterface *searchCollections(QString collectionName) = 0;
+    virtual CollectionSearchJobInterface *searchPersons(QString collectionName) = 0;
     virtual ItemFetchJobInterface *fetchItems(Akonadi::Collection collection) = 0;
     virtual ItemFetchJobInterface *fetchItem(Akonadi::Item item) = 0;
     virtual ItemFetchJobInterface *fetchTagItems(Akonadi::Tag tag) = 0;

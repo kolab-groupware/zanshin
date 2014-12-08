@@ -44,12 +44,16 @@
 #include <Akonadi/TagFetchScope>
 #include <Akonadi/TagModifyJob>
 #include <Akonadi/TagAttribute>
+#include <Akonadi/AttributeFactory>
+#include <akonadi/collectionidentificationattribute.h>
 #include "akonadi/akonadicollectionfetchjobinterface.h"
 #include "akonadi/akonadicollectionsearchjobinterface.h"
 #include "akonadi/akonadiitemfetchjobinterface.h"
 #include "akonadi/akonaditagfetchjobinterface.h"
 #include "akonadi/akonadistoragesettings.h"
 #include "akonadi/collectionsearchjob.h"
+#include "akonadi/personsearchjob.h"
+#include "utils/jobhandler.h"
 
 using namespace Akonadi;
 
@@ -125,6 +129,52 @@ public:
     }
 };
 
+class PersonSearchJobAdaptor : public KJob, public CollectionSearchJobInterface
+{
+    Collection::List mCollections;
+    QString mCollectionName;
+
+public:
+    PersonSearchJobAdaptor(const QString &collectionName, QObject *parent=0)
+        : KJob(parent),
+        mCollectionName(collectionName)
+    {
+    }
+
+    void start()
+    {
+        auto job = new PersonSearchJob(mCollectionName, this);
+        Utils::JobHandler::install(job, [this, job] {
+            Collection::List collectionsToFetch;
+            Q_FOREACH(const Person &p,  job->matches()) {
+                Akonadi::Collection col(p.rootCollection);
+                collectionsToFetch << col;
+            }
+            if (!collectionsToFetch.isEmpty()) {
+                auto fetchJob = new CollectionFetchJob(collectionsToFetch, this);
+                auto scope = fetchJob->fetchScope();
+                scope.setIncludeStatistics(true);
+                scope.setAncestorRetrieval(CollectionFetchScope::All);
+                scope.ancestorFetchScope().setFetchIdOnly(false);
+                scope.ancestorFetchScope().fetchAttribute("collectionidentification", true);
+                fetchJob->setFetchScope(scope);
+                Utils::JobHandler::install(fetchJob, [this, fetchJob] {
+                    mCollections = fetchJob->collections();
+                    emitResult();
+                });
+            } else {
+                emitResult();
+            }
+        });
+    }
+
+    Collection::List collections() const
+    {
+        return mCollections;
+    }
+
+};
+
 class ItemJob : public ItemFetchJob, public ItemFetchJobInterface
 {
 public:
@@ -143,6 +193,7 @@ public:
 
 Storage::Storage()
 {
+    AttributeFactory::registerAttribute<CollectionIdentificationAttribute>();
 }
 
 Storage::~Storage()
@@ -214,7 +265,7 @@ KJob *Storage::removeTag(Tag tag)
     return new Akonadi::TagDeleteJob(tag);
 }
 
-CollectionFetchJobInterface *Storage::fetchCollections(Collection collection, StorageInterface::FetchDepth depth, FetchContentTypes types)
+CollectionFetchJobInterface *Storage::fetchCollections(Collection collection, StorageInterface::FetchDepth depth, FetchContentTypes types, FetchFilter filter)
 {
     QStringList contentMimeTypes;
     if (types & Notes)
@@ -231,7 +282,30 @@ CollectionFetchJobInterface *Storage::fetchCollections(Collection collection, St
     scope.setContentMimeTypes(contentMimeTypes);
     scope.setIncludeStatistics(true);
     scope.setAncestorRetrieval(CollectionFetchScope::All);
+    scope.ancestorFetchScope().setFetchIdOnly(false);
+    scope.ancestorFetchScope().fetchAttribute("collectionidentification", true);
+    if (filter == Display) {
+        scope.setListFilter(Akonadi::CollectionFetchScope::Display);
+    }
+    if (filter == NoFilter) {
+        scope.setListFilter(Akonadi::CollectionFetchScope::NoFilter);
+    }
+    job->setFetchScope(scope);
+
+    return job;
+}
+
+CollectionFetchJobInterface *Storage::fetchPersons()
+{
+
+    auto job = new CollectionJob(Collection::root(), CollectionJob::Recursive);
+
+    auto scope = job->fetchScope();
+    scope.setContentMimeTypes(QStringList() << Akonadi::Collection::mimeType());
+    scope.setIncludeStatistics(true);
+    scope.setAncestorRetrieval(CollectionFetchScope::All);
     scope.setListFilter(Akonadi::CollectionFetchScope::Display);
+    scope.ancestorFetchScope().fetchAttribute("collectionidentification", true);
     job->setFetchScope(scope);
 
     return job;
@@ -242,6 +316,10 @@ CollectionSearchJobInterface *Storage::searchCollections(QString collectionName)
     return new CollectionSearchJobAdaptor(collectionName);
 }
 
+CollectionSearchJobInterface *Storage::searchPersons(QString personName)
+{
+    return new PersonSearchJobAdaptor(personName);
+}
 
 ItemFetchJobInterface *Storage::fetchItems(Collection collection)
 {

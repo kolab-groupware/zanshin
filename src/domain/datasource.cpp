@@ -30,7 +30,8 @@ DataSource::DataSource(QObject *parent)
     : QObject(parent),
       m_contentTypes(NoContent),
       m_listStatus(Unlisted),
-      m_selected(false)
+      m_selected(false),
+      m_person(false)
 {
 }
 
@@ -61,6 +62,11 @@ DataSource::ListStatus DataSource::listStatus() const
 bool DataSource::isSelected() const
 {
     return m_selected;
+}
+
+bool DataSource::isPerson() const
+{
+    return m_person;
 }
 
 void DataSource::setName(const QString &name)
@@ -106,4 +112,13 @@ void DataSource::setSelected(bool selected)
 
     m_selected = selected;
     emit selectedChanged(selected);
+}
+
+void DataSource::setPerson(bool person)
+{
+    if (m_person == person)
+        return;
+
+    m_person = person;
+    emit personChanged(person);
 }

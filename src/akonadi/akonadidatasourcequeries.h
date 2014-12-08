@@ -42,6 +42,7 @@ class MonitorInterface;
 class SerializerInterface;
 class StorageInterface;
 class TreeQuery;
+class AkonadiCollectionTreeSource;
 
 class DataSourceQueries : public QObject, public Domain::DataSourceQueries
 {
@@ -59,6 +60,7 @@ public:
     DataSourceResult::Ptr findNotes() const;
     DataSourceResult::Ptr findTopLevel() const;
     DataSourceResult::Ptr findChildren(Domain::DataSource::Ptr source) const;
+    DataSourceResult::Ptr findChildrenRecursive(Domain::DataSource::Ptr source) const;
 
     QString searchTerm() const;
     void setSearchTerm(QString term);
@@ -71,7 +73,13 @@ private slots:
     void onCollectionChanged(const Akonadi::Collection &collection);
 
 private:
+    void init();
     DataSourceQuery::Ptr createDataSourceQuery();
+    DataSourceResult::Ptr findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery) const;
+    QSharedPointer<AkonadiCollectionTreeSource> findVisibleCollections() const;
+    QSharedPointer<AkonadiCollectionTreeSource> findVisiblePersonCollections() const;
+    QSharedPointer<AkonadiCollectionTreeSource> findSearchCollections() const;
+    QSharedPointer<AkonadiCollectionTreeSource> findSearchPersonCollections() const;
 
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
@@ -82,24 +90,35 @@ private:
     DataSourceQuery::Ptr m_findNotes;
     DataSourceQuery::List m_dataSourceQueries;
     QString m_searchTerm;
-    DataSourceQuery::Ptr m_findSearchTopLevel;
-    QHash<Akonadi::Entity::Id, DataSourceQuery::Ptr> m_findSearchChildren;
     QSharedPointer<TreeQuery> m_treeQuery;
+    QSharedPointer<TreeQuery> m_personTreeQuery;
+    QSharedPointer<TreeQuery> m_searchTreeQuery;
+    QSharedPointer<TreeQuery> m_searchPersonTreeQuery;
 };
 
-// This represents a reactive result set for an akonadi query
+// This represents a reactive result set for an akonadi query, which supports being recursively queried.
+// (and currently omits any other way of querying)
+// The result set will automatically update itself on changes in the store (therefore the monitor)
+// This is essentilally what akonadi should provide with a proper query interface.
 class AkonadiCollectionTreeSource : public QObject
 {
     Q_OBJECT
 public:
-    AkonadiCollectionTreeSource(StorageInterface *storage, MonitorInterface *monitor);
+    AkonadiCollectionTreeSource(MonitorInterface *monitor);
 
     void findChildren(const Akonadi::Collection &parent);
 
+    //Defines what parts match the tree. Implement to filter monitor notifications outside of the tree.
+    //The filter is recursive, meaning that if a parent is filtered, children will automatically match the filter as well.
+    void setFilter(const std::function<bool(const Akonadi::Collection &)> &);
+
+    //Defines what is initially fetched to populate the tree.
+    void setCollectionFetcher(const std::function<void(const std::function<void(bool, const Akonadi::Collection::List&)> &)> &fetcher);
+
 signals:
-    void added(Akonadi::Collection);
-    void removed(Akonadi::Collection);
-    void changed(Akonadi::Collection);
+    void added(Akonadi::Collection, Akonadi::Collection::Id parentId);
+    void removed(Akonadi::Collection, Akonadi::Collection::Id parentId);
+    void changed(Akonadi::Collection, Akonadi::Collection::Id parentId);
 
 private slots:
     void onAdded(const Akonadi::Collection &);
@@ -107,14 +126,17 @@ private slots:
     void onChanged(const Akonadi::Collection &);
 
 private:
-    //Internally trigger a fetch job and then call the appropriate signals/callbacks
+    Akonadi::Collection::Id id(const Akonadi::Collection &col) const;
+    //Internally trigger the fetchFunction and then call the appropriate signals/callbacks
     void populate(const std::function<void()> &callback);
     QHash<Collection::Id /*parent*/, Collection::List /*children*/> m_collections;
-    StorageInterface *m_storage;
     MonitorInterface *m_monitor;
     bool m_populated;
     bool m_populationInProgress;
     QList <std::function<void()> > m_pendingCallbacks;
+    std::function<bool(const Akonadi::Collection &)> isWantedCollection;
+    std::function<bool(const Akonadi::Collection &)> isToplevel;
+    std::function<void(const std::function<void(bool, const Akonadi::Collection::List&)> &)> fetchCollections;
 };
 
 //Maps the signals to the appropriate query
@@ -127,13 +149,15 @@ public:
     typedef Domain::QueryResult<Domain::DataSource::Ptr> DataSourceResult;
 
     TreeQuery(SerializerInterface *, const QSharedPointer<AkonadiCollectionTreeSource> &source);
+    void reset(const QSharedPointer<AkonadiCollectionTreeSource> &source);
 
-    DataSourceResult::Ptr findChildren(Domain::DataSource::Ptr source);
+    DataSourceResult::Ptr findChildren(Domain::DataSource::Ptr source, const std::function<void(DataSourceQuery::Ptr, const Akonadi::Collection &root)> &setupFunction);
+    void findChildren(const Akonadi::Collection &col);
 
 private slots:
-    void onAdded(const Akonadi::Collection &col);
-    void onRemoved(const Akonadi::Collection &col);
-    void onChanged(const Akonadi::Collection &col);
+    void onAdded(const Akonadi::Collection &col, Akonadi::Collection::Id parentId);
+    void onRemoved(const Akonadi::Collection &col, Akonadi::Collection::Id id);
+    void onChanged(const Akonadi::Collection &col, Akonadi::Collection::Id id);
 
 private:
     QHash<Akonadi::Entity::Id, DataSourceQuery::Ptr> m_findChildren;

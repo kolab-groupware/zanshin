@@ -77,7 +77,7 @@ static QList<DataSourceDelegate::Action> actionsForSource(const Domain::DataSour
 {
     auto actions = QList<DataSourceDelegate::Action>();
 
-    if (source->contentTypes() == Domain::DataSource::NoContent)
+    if (!source->isPerson() && (source->contentTypes() == Domain::DataSource::NoContent))
         return actions;
 
     if (source->listStatus() == Domain::DataSource::Unlisted) {

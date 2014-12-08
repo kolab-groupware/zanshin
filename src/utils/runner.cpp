@@ -20,34 +20,25 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
    USA.
 */
+#include "runner.h"
 
-#ifndef DOMAIN_DATASOURCEQUERIES_H
-#define DOMAIN_DATASOURCEQUERIES_H
+using namespace Utils;
 
-#include "datasource.h"
-#include "queryresult.h"
-
-namespace Domain {
-
-class DataSourceQueries
+Runner::Runner(std::function<void(const std::function<void()>&)> f)
+    :KJob(),
+    runnable(f)
 {
-public:
-    DataSourceQueries();
-    virtual ~DataSourceQueries();
-
-    virtual QueryResult<DataSource::Ptr>::Ptr findTasks() const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findNotes() const = 0;
-
-    virtual QueryResult<DataSource::Ptr>::Ptr findTopLevel() const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findChildren(DataSource::Ptr source) const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findChildrenRecursive(DataSource::Ptr source) const = 0;
-
-    virtual QString searchTerm() const = 0;
-    virtual void setSearchTerm(QString term) = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findSearchTopLevel() const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findSearchChildren(DataSource::Ptr source) const = 0;
-};
 
 }
 
-#endif // DOMAIN_DATASOURCEQUERIES_H
+Runner::~Runner()
+{
+
+}
+
+void Runner::start()
+{
+    runnable([this](){
+        emitResult();
+    });
+}

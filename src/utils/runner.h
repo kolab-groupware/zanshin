@@ -21,33 +21,29 @@
    USA.
 */
 
-#ifndef DOMAIN_DATASOURCEQUERIES_H
-#define DOMAIN_DATASOURCEQUERIES_H
 
-#include "datasource.h"
-#include "queryresult.h"
+#ifndef UTILS_RUNNER_H
+#define UTILS_RUNNER_H
 
-namespace Domain {
+#include <functional>
+#include <KJob>
 
-class DataSourceQueries
-{
+class KJob;
+
+namespace Utils {
+
+class Runner : public KJob {
+    Q_OBJECT
 public:
-    DataSourceQueries();
-    virtual ~DataSourceQueries();
+    Runner(std::function<void(const std::function<void()>&)> f);
+    virtual ~Runner();
 
-    virtual QueryResult<DataSource::Ptr>::Ptr findTasks() const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findNotes() const = 0;
+    void start();
 
-    virtual QueryResult<DataSource::Ptr>::Ptr findTopLevel() const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findChildren(DataSource::Ptr source) const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findChildrenRecursive(DataSource::Ptr source) const = 0;
-
-    virtual QString searchTerm() const = 0;
-    virtual void setSearchTerm(QString term) = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findSearchTopLevel() const = 0;
-    virtual QueryResult<DataSource::Ptr>::Ptr findSearchChildren(DataSource::Ptr source) const = 0;
+private:
+    std::function<void(const std::function<void()>&)> runnable;
 };
 
 }
 
-#endif // DOMAIN_DATASOURCEQUERIES_H
+#endif

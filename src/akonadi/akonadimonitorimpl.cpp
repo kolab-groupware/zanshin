@@ -35,6 +35,7 @@
 
 #include "akonadi/akonadiapplicationselectedattribute.h"
 #include "akonadi/akonaditimestampattribute.h"
+#include "akonadi/collectionidentificationattribute.h"
 
 using namespace Akonadi;
 
@@ -43,6 +44,7 @@ MonitorImpl::MonitorImpl()
 {
     AttributeFactory::registerAttribute<ApplicationSelectedAttribute>();
     AttributeFactory::registerAttribute<TimestampAttribute>();
+    AttributeFactory::registerAttribute<CollectionIdentificationAttribute>();
 
     m_monitor->fetchCollection(true);
     m_monitor->setCollectionMonitored(Akonadi::Collection::root());
@@ -54,6 +56,8 @@ MonitorImpl::MonitorImpl()
     collectionScope.setContentMimeTypes(m_monitor->mimeTypesMonitored());
     collectionScope.setIncludeStatistics(true);
     collectionScope.setAncestorRetrieval(CollectionFetchScope::All);
+    collectionScope.ancestorFetchScope().setFetchIdOnly(false);
+    collectionScope.ancestorFetchScope().fetchAttribute("collectionidentification", true);
     m_monitor->setCollectionFetchScope(collectionScope);
 
     connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection,Akonadi::Collection)), this, SIGNAL(collectionAdded(Akonadi::Collection)));

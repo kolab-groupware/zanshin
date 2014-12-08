@@ -106,6 +106,13 @@ protected:
         return m_postReplaceHandlers;
     }
 
+    // cppcheck can't figure out the friend class
+    // cppcheck-suppress unusedPrivateFunction
+    ChangeHandlerList doneHandlers() const
+    {
+        return m_doneHandlers;
+    }
+
     friend class QueryResultProvider<InputType>;
     ProviderPtr m_provider;
     ChangeHandlerList m_preInsertHandlers;
@@ -114,6 +121,7 @@ protected:
     ChangeHandlerList m_postRemoveHandlers;
     ChangeHandlerList m_preReplaceHandlers;
     ChangeHandlerList m_postReplaceHandlers;
+    ChangeHandlerList m_doneHandlers;
 };
 
 template<typename ItemType>
@@ -156,6 +164,13 @@ public:
         m_list.prepend(item);
         callChangeHandlers(item, 0,
                            std::mem_fn(&QueryResultInputImpl<ItemType>::postInsertHandlers));
+    }
+
+    void done()
+    {
+        cleanupResults();
+        callChangeHandlers(ItemType(), 0,
+                           std::mem_fn(&QueryResultInputImpl<ItemType>::doneHandlers));
     }
 
     void insert(int index, const ItemType &item)
@@ -217,6 +232,12 @@ public:
     void removeAt(int index)
     {
         takeAt(index);
+    }
+
+    void remove(ItemType item)
+    {
+        const int index = m_list.indexOf(item);
+        removeAt(index);
     }
 
     void replace(int index, const ItemType &item)
