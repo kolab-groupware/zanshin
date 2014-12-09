@@ -340,7 +340,14 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollec
             return false;
         }
         if(matchesParents(col, [this](const Collection &col) {
-            return (col.name() == "Other Users");
+            if (col.name() == "Other Users") {
+                return true;
+            }
+            //Filter the search collection
+            if (col.id() == 1) {
+                return true;
+            }
+            return false;
         })) {
             return false;
         }
@@ -407,7 +414,14 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchCollect
     auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
     source->setFilter([this](const Collection &col) {
         if(matchesParents(col, [this](const Collection &col) {
-            return m_serializer->isPersonCollection(col);
+            if (m_serializer->isPersonCollection(col)) {
+                return true;
+            }
+            //Filter the search collection
+            if (col.id() == 1) {
+                return true;
+            }
+            return false;
         })) {
             return false;
         }
