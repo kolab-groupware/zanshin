@@ -161,9 +161,11 @@ TagQueries::ArtifactResult::Ptr TagQueries::findTopLevelArtifacts(Domain::Tag::P
                 auto note = m_serializer->createNoteFromItem(item);
                 return Domain::Artifact::Ptr(note);
 
-            } else {
-                return Domain::Artifact::Ptr();
             }
+            //The conversion must never fail, otherwise we create an endless loop (child of invalid node is invalid).
+            //We therefore catch this case in the predicate.
+            Q_ASSERT(false);
+            return Domain::Artifact::Ptr();
         });
         query->setUpdateFunction([this] (const Akonadi::Item &item, Domain::Artifact::Ptr &artifact) {
             if (auto task = artifact.dynamicCast<Domain::Task>()) {
@@ -173,6 +175,12 @@ TagQueries::ArtifactResult::Ptr TagQueries::findTopLevelArtifacts(Domain::Tag::P
             }
         });
         query->setPredicateFunction([this, tag] (const Akonadi::Item &item) {
+            if (m_serializer->isTaskItem(item)) {
+                return false;
+            }
+            if (!m_serializer->isNoteItem(item)) {
+                return false;
+            }
             return m_serializer->isTagChild(tag, item);
         });
         query->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Artifact::Ptr &artifact) {
