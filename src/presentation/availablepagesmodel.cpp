@@ -57,7 +57,8 @@ AvailablePagesModel::AvailablePagesModel(Domain::ArtifactQueries *artifactQuerie
                                          Domain::NoteRepository *noteRepository,
                                          Domain::TagQueries *tagQueries,
                                          Domain::TagRepository *tagRepository,
-                                         QObject *parent)
+                                         QObject *parent,
+                                         ApplicationMode mode)
     : QObject(parent),
       m_pageListModel(0),
       m_artifactQueries(artifactQueries),
@@ -69,7 +70,8 @@ AvailablePagesModel::AvailablePagesModel(Domain::ArtifactQueries *artifactQuerie
       m_taskRepository(taskRepository),
       m_noteRepository(noteRepository),
       m_tagQueries(tagQueries),
-      m_tagRepository(tagRepository)
+      m_tagRepository(tagRepository),
+      m_mode(mode)
 {
 }
 
@@ -167,8 +169,12 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
 
     m_rootsProvider = Domain::QueryResultProvider<QObjectPtr>::Ptr::create();
     m_rootsProvider->append(m_inboxObject);
-    m_rootsProvider->append(m_projectsObject);
-    m_rootsProvider->append(m_contextsObject);
+    if (m_mode != NotesOnly) {
+        m_rootsProvider->append(m_projectsObject);
+    }
+    if (m_mode != NotesOnly) {
+        m_rootsProvider->append(m_contextsObject);
+    }
     m_rootsProvider->append(m_tagsObject);
 
     auto query = [this](const QObjectPtr &object) -> Domain::QueryResultInterface<QObjectPtr>::Ptr {

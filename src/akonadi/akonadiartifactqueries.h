@@ -29,6 +29,7 @@
 
 #include "domain/artifactqueries.h"
 #include "domain/livequery.h"
+#include "akonadistorageinterface.h"
 
 class KJob;
 
@@ -37,7 +38,6 @@ namespace Akonadi {
 class Item;
 class MonitorInterface;
 class SerializerInterface;
-class StorageInterface;
 
 class ArtifactQueries : public QObject, public Domain::ArtifactQueries
 {
@@ -53,6 +53,8 @@ public:
     explicit ArtifactQueries(QObject *parent = 0);
     ArtifactQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor);
     virtual ~ArtifactQueries();
+
+    void setApplicationMode(ApplicationMode);
 
     ArtifactResult::Ptr findInboxTopLevel() const;
     TagResult::Ptr findTags(Domain::Artifact::Ptr artifact) const;
@@ -73,6 +75,7 @@ private:
 
     ArtifactQuery::Ptr m_findInbox;
     ArtifactQuery::List m_artifactQueries;
+    StorageInterface::FetchContentTypes m_fetchContentTypeFilter;
 };
 
 }

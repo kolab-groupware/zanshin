@@ -40,7 +40,7 @@
 
 using namespace Widgets;
 
-ApplicationComponents::ApplicationComponents(QWidget *parent)
+ApplicationComponents::ApplicationComponents(QWidget *parent, ApplicationMode mode)
     : QObject(parent),
       m_model(0),
       m_parent(parent),
@@ -49,7 +49,8 @@ ApplicationComponents::ApplicationComponents(QWidget *parent)
       m_pageView(0),
       m_editorView(0),
       m_noteCombo(0),
-      m_taskCombo(0)
+      m_taskCombo(0),
+      m_mode(mode)
 {
 }
 
@@ -95,7 +96,7 @@ AvailablePagesView *ApplicationComponents::availablePagesView() const
 PageView *ApplicationComponents::pageView() const
 {
     if (!m_pageView) {
-        auto pageView = new PageView(m_parent);
+        auto pageView = new PageView(m_parent, m_mode == NotesOnly ? PageView::NotesOnly : PageView::TasksOnly);
         if (m_model) {
             pageView->setModel(m_model->property("currentPage").value<QObject*>());
             connect(m_model, SIGNAL(currentPageChanged(QObject*)),

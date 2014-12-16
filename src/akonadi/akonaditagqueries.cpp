@@ -41,6 +41,7 @@ TagQueries::TagQueries(QObject *parent)
       m_storage(new Storage),
       m_serializer(new Serializer),
       m_monitor(new MonitorImpl),
+      m_fetchContentTypeFilter(StorageInterface::Tasks|StorageInterface::Notes),
       m_ownInterfaces(true)
 {
     connect(m_monitor, SIGNAL(tagAdded(Akonadi::Tag)), this, SLOT(onTagAdded(Akonadi::Tag)));
@@ -56,6 +57,7 @@ TagQueries::TagQueries(StorageInterface *storage, SerializerInterface *serialize
     : m_storage(storage),
       m_serializer(serializer),
       m_monitor(monitor),
+      m_fetchContentTypeFilter(StorageInterface::Tasks|StorageInterface::Notes),
       m_ownInterfaces(false)
 {
     connect(m_monitor, SIGNAL(tagAdded(Akonadi::Tag)), this, SLOT(onTagAdded(Akonadi::Tag)));
@@ -73,6 +75,15 @@ TagQueries::~TagQueries()
         delete m_storage;
         delete m_serializer;
         delete m_monitor;
+    }
+}
+
+void TagQueries::setApplicationMode(TagQueries::ApplicationMode mode)
+{
+    if (mode == TasksOnly) {
+        m_fetchContentTypeFilter = StorageInterface::Tasks;
+    } else if (mode == NotesOnly) {
+        m_fetchContentTypeFilter = StorageInterface::Notes;
     }
 }
 
@@ -124,7 +135,7 @@ TagQueries::ArtifactResult::Ptr TagQueries::findTopLevelArtifacts(Domain::Tag::P
         query->setFetchFunction([this, akonadiTag] (const ArtifactQuery::AddFunction &add) {
             CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(),
                                                                            StorageInterface::Recursive,
-                                                                           StorageInterface::Tasks | StorageInterface::Notes);
+                                                                           m_fetchContentTypeFilter);
             Utils::JobHandler::install(job->kjob(), [this, job, add] {
                 if (job->kjob()->error() != KJob::NoError)
                     return;

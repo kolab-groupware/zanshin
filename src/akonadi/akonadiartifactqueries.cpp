@@ -39,6 +39,7 @@ ArtifactQueries::ArtifactQueries(QObject *parent)
       m_storage(new Storage),
       m_serializer(new Serializer),
       m_monitor(new MonitorImpl),
+      m_fetchContentTypeFilter(StorageInterface::Tasks|StorageInterface::Notes),
       m_ownInterfaces(true)
 {
     connect(m_monitor, SIGNAL(itemAdded(Akonadi::Item)), this, SLOT(onItemAdded(Akonadi::Item)));
@@ -51,6 +52,7 @@ ArtifactQueries::ArtifactQueries(StorageInterface *storage, SerializerInterface 
     : m_storage(storage),
       m_serializer(serializer),
       m_monitor(monitor),
+      m_fetchContentTypeFilter(StorageInterface::Tasks|StorageInterface::Notes),
       m_ownInterfaces(false)
 {
     connect(m_monitor, SIGNAL(itemAdded(Akonadi::Item)), this, SLOT(onItemAdded(Akonadi::Item)));
@@ -68,6 +70,15 @@ ArtifactQueries::~ArtifactQueries()
     }
 }
 
+void ArtifactQueries::setApplicationMode(ArtifactQueries::ApplicationMode mode)
+{
+    if (mode == TasksOnly) {
+        m_fetchContentTypeFilter = StorageInterface::Tasks;
+    } else if (mode == NotesOnly) {
+        m_fetchContentTypeFilter = StorageInterface::Notes;
+    }
+}
+
 ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
 {
     if (!m_findInbox) {
@@ -79,7 +90,7 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
         m_findInbox->setFetchFunction([this] (const ArtifactQuery::AddFunction &add) {
             CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(),
                                                                            StorageInterface::Recursive,
-                                                                           StorageInterface::Tasks|StorageInterface::Notes);
+                                                                           m_fetchContentTypeFilter);
             Utils::JobHandler::install(job->kjob(), [this, job, add] {
                 if (job->kjob()->error() != KJob::NoError)
                     return;

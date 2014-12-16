@@ -41,12 +41,13 @@
 
 using namespace Widgets;
 
-PageView::PageView(QWidget *parent)
+PageView::PageView(QWidget *parent, ApplicationMode mode)
     : QWidget(parent),
       m_model(0),
       m_filterWidget(new FilterWidget(this)),
       m_centralView(new QTreeView(this)),
-      m_quickAddEdit(new QLineEdit(this))
+      m_quickAddEdit(new QLineEdit(this)),
+      m_mode(mode)
 {
     m_filterWidget->setObjectName("filterWidget");
 
@@ -59,7 +60,11 @@ PageView::PageView(QWidget *parent)
     m_centralView->setModel(m_filterWidget->proxyModel());
 
     m_quickAddEdit->setObjectName("quickAddEdit");
-    m_quickAddEdit->setPlaceholderText(tr("Type and press enter to add an action"));
+    if (m_mode == TasksOnly) {
+        m_quickAddEdit->setPlaceholderText(tr("Type and press enter to add an action"));
+    } else {
+        m_quickAddEdit->setPlaceholderText(tr("Type and press enter to add a note"));
+    }
     connect(m_quickAddEdit, SIGNAL(editingFinished()), this, SLOT(onEditingFinished()));
 
     auto layout = new QVBoxLayout;
@@ -120,7 +125,11 @@ void PageView::onEditingFinished()
     if (m_quickAddEdit->text().isEmpty())
         return;
 
-    QMetaObject::invokeMethod(m_model, "addTask", Q_ARG(QString, m_quickAddEdit->text()));
+    if (m_mode == TasksOnly) {
+        QMetaObject::invokeMethod(m_model, "addTask", Q_ARG(QString, m_quickAddEdit->text()));
+    } else {
+        QMetaObject::invokeMethod(m_model, "addNote", Q_ARG(QString, m_quickAddEdit->text()));
+    }
     m_quickAddEdit->clear();
 }
 
@@ -154,11 +163,11 @@ void PageView::onRemoveItemRequested()
             return;
 
         if (currentIndex.model()->rowCount(currentIndex) > 0)
-            text = tr("Do you really want to delete the selected task and all its children?");
+            text = tr("Do you really want to delete the selected item and all its children?");
     }
 
     if (!text.isEmpty()) {
-        QMessageBox::Button button = m_messageBoxInterface->askConfirmation(this, tr("Delete Tasks"), text);
+        QMessageBox::Button button = m_messageBoxInterface->askConfirmation(this, tr("Delete"), text);
         bool canRemove = (button == QMessageBox::Yes);
 
         if (!canRemove)

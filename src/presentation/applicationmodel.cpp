@@ -45,7 +45,7 @@
 
 using namespace Presentation;
 
-ApplicationModel::ApplicationModel(QObject *parent)
+ApplicationModel::ApplicationModel(QObject *parent, ApplicationMode mode)
     : QObject(parent),
       m_availableSources(0),
       m_availablePages(0),
@@ -65,9 +65,13 @@ ApplicationModel::ApplicationModel(QObject *parent)
       m_noteSourcesModel(0),
       m_tagQueries(Utils::DependencyManager::globalInstance().create<Domain::TagQueries>()),
       m_tagRepository(Utils::DependencyManager::globalInstance().create<Domain::TagRepository>()),
-      m_ownInterface(true)
+      m_ownInterface(true),
+      m_mode(mode)
 {
     MetaTypes::registerAll();
+    m_sourceQueries->setApplicationMode(m_mode == NotesOnly ? Domain::DataSourceQueries::NotesOnly : Domain::DataSourceQueries::TasksOnly);
+    m_artifactQueries->setApplicationMode(m_mode == NotesOnly ? Domain::ArtifactQueries::NotesOnly : Domain::ArtifactQueries::TasksOnly);
+    m_tagQueries->setApplicationMode(m_mode == NotesOnly ? Domain::TagQueries::NotesOnly : Domain::TagQueries::TasksOnly);
 }
 
 ApplicationModel::ApplicationModel(Domain::ArtifactQueries *artifactQueries,
@@ -82,7 +86,7 @@ ApplicationModel::ApplicationModel(Domain::ArtifactQueries *artifactQueries,
                                    Domain::NoteRepository *noteRepository,
                                    Domain::TagQueries *tagQueries,
                                    Domain::TagRepository *tagRepository,
-                                   QObject *parent)
+                                   QObject *parent, ApplicationMode mode)
     : QObject(parent),
       m_availableSources(0),
       m_availablePages(0),
@@ -102,9 +106,13 @@ ApplicationModel::ApplicationModel(Domain::ArtifactQueries *artifactQueries,
       m_noteSourcesModel(0),
       m_tagQueries(tagQueries),
       m_tagRepository(tagRepository),
-      m_ownInterface(false)
+      m_ownInterface(false),
+      m_mode(mode)
 {
     MetaTypes::registerAll();
+    m_sourceQueries->setApplicationMode(m_mode == NotesOnly ? Domain::DataSourceQueries::NotesOnly : Domain::DataSourceQueries::TasksOnly);
+    m_artifactQueries->setApplicationMode(m_mode == NotesOnly ? Domain::ArtifactQueries::NotesOnly : Domain::ArtifactQueries::TasksOnly);
+    m_tagQueries->setApplicationMode(m_mode == NotesOnly ? Domain::TagQueries::NotesOnly : Domain::TagQueries::TasksOnly);
 }
 
 ApplicationModel::~ApplicationModel()
@@ -220,7 +228,8 @@ QObject *ApplicationModel::availablePages()
                                                    m_noteRepository,
                                                    m_tagQueries,
                                                    m_tagRepository,
-                                                   this);
+                                                   this,
+                                                   m_mode == NotesOnly ? AvailablePagesModel::NotesOnly : AvailablePagesModel::TasksOnly);
     }
     return m_availablePages;
 }

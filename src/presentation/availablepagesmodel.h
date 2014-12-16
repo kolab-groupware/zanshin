@@ -54,6 +54,12 @@ class AvailablePagesModel : public QObject
     Q_OBJECT
     Q_PROPERTY(QAbstractItemModel* pageListModel READ pageListModel)
 public:
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
     explicit AvailablePagesModel(Domain::ArtifactQueries *artifactQueries,
                                  Domain::ProjectQueries *projectQueries,
                                  Domain::ProjectRepository *projectRepository,
@@ -64,7 +70,7 @@ public:
                                  Domain::NoteRepository *noteRepository,
                                  Domain::TagQueries *tagQueries,
                                  Domain::TagRepository *tagRepository,
-                                 QObject *parent = 0);
+                                 QObject *parent = 0, ApplicationMode mode = TasksAndNotes);
     ~AvailablePagesModel();
 
     QAbstractItemModel *pageListModel();
@@ -103,6 +109,8 @@ private:
     QObjectPtr m_projectsObject;
     QObjectPtr m_contextsObject;
     QObjectPtr m_tagsObject;
+
+    ApplicationMode m_mode;
 };
 
 }

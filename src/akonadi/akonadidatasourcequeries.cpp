@@ -295,7 +295,8 @@ DataSourceQueries::DataSourceQueries(QObject *parent)
       m_storage(new Storage),
       m_serializer(new Serializer),
       m_monitor(new MonitorImpl),
-      m_ownInterfaces(true)
+      m_ownInterfaces(true),
+      m_fetchContentTypeFilter(StorageInterface::Tasks | StorageInterface::Notes)
 {
     init();
 }
@@ -304,7 +305,8 @@ DataSourceQueries::DataSourceQueries(StorageInterface *storage, SerializerInterf
     : m_storage(storage),
       m_serializer(serializer),
       m_monitor(monitor),
-      m_ownInterfaces(false)
+      m_ownInterfaces(false),
+      m_fetchContentTypeFilter(StorageInterface::Tasks | StorageInterface::Notes)
 {
     init();
 }
@@ -318,18 +320,59 @@ DataSourceQueries::~DataSourceQueries()
     }
 }
 
+void DataSourceQueries::setApplicationMode(DataSourceQueries::ApplicationMode mode)
+{
+    if (mode == TasksOnly) {
+        m_fetchContentTypeFilter = StorageInterface::Tasks;
+    } else if (mode == NotesOnly) {
+        m_fetchContentTypeFilter = StorageInterface::Notes;
+    }
+}
+
 void DataSourceQueries::init()
 {
     connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onCollectionAdded(Akonadi::Collection)));
     connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onCollectionRemoved(Akonadi::Collection)));
     connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onCollectionChanged(Akonadi::Collection)));
+}
 
-    //Provides the mapping onto the vairous zanshin queries
-    m_treeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findVisibleCollections()));
-    m_personTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findVisiblePersonCollections()));
+QSharedPointer<TreeQuery> DataSourceQueries::getVisibleCollectionTree() const
+{
+    if (!m_treeQuery) {
+        DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+        self->m_treeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findVisibleCollections()));
+    }
+    return m_treeQuery;
+}
 
-    m_searchTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findSearchCollections()));
-    m_searchPersonTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findSearchPersonCollections()));
+QSharedPointer<TreeQuery> DataSourceQueries::getVisiblePersonTree() const
+{
+
+    if (!m_personTreeQuery) {
+        DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+        self->m_personTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findVisiblePersonCollections()));
+    }
+    return m_personTreeQuery;
+}
+
+QSharedPointer<TreeQuery> DataSourceQueries::getSearchCollectionTree() const
+{
+
+    if (!m_searchTreeQuery) {
+        DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+        self->m_searchTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findSearchCollections()));
+    }
+    return m_searchTreeQuery;
+}
+
+QSharedPointer<TreeQuery> DataSourceQueries::getSearchPersonCollectionTree() const
+{
+
+    if (!m_searchPersonTreeQuery) {
+        DataSourceQueries *self = const_cast<DataSourceQueries*>(this);
+        self->m_searchPersonTreeQuery = QSharedPointer<TreeQuery>(new TreeQuery(m_serializer, findSearchPersonCollections()));
+    }
+    return m_searchPersonTreeQuery;
 }
 
 QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollections() const
@@ -354,7 +397,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollec
         return true;
     });
     source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
-        auto job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks | StorageInterface::Notes, StorageInterface::NoFilter);
+        auto job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::NoFilter);
         Utils::JobHandler::install(job->kjob(), [job, resultHandler] {
             if (job->kjob()->error()) {
                 kWarning() << "Failed to fetch collections " << job->kjob()->errorString();
@@ -395,7 +438,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisiblePerson
             //Fetch children for each person
             auto compositeJob = new Utils::CompositeJob;
             for (const auto &col : job->collections()) {
-                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, StorageInterface::Tasks|StorageInterface::Notes, StorageInterface::NoFilter);
+                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::NoFilter);
                 compositeJob->install(fetchJob->kjob(), [fetchJob, resultHandler, result] {
                     result->append(fetchJob->collections());
                 });
@@ -467,7 +510,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchPersonC
             //Fetch children for each person
             auto compositeJob = new Utils::CompositeJob;
             for (const auto &col : job->collections()) {
-                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, StorageInterface::Tasks|StorageInterface::Notes, StorageInterface::NoFilter);
+                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::NoFilter);
                 compositeJob->install(fetchJob->kjob(), [fetchJob, resultHandler, result] {
                     result->append(fetchJob->collections());
                 });
@@ -552,8 +595,8 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTopLevel() const
 {
 
     Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>::Ptr mergedResultProvider(new Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>());
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_treeQuery));
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_personTreeQuery));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getVisibleCollectionTree()));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getVisiblePersonTree()));
     return DataSourceQueries::DataSourceResult::create(mergedResultProvider);
 }
 
@@ -563,9 +606,9 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildren(Domain:
     //The person tree and the rest are separate, so we need to multiplex that here
     //FIXME: this doesn't work because after the first child isPerson returns false
     if (source && source->isPerson()) {
-        treeQuery = m_personTreeQuery;
+        treeQuery = getVisiblePersonTree();
     } else {
-        treeQuery = m_treeQuery;
+        treeQuery = getVisibleCollectionTree();
     }
     return findSearchChildrenQuery(source, treeQuery);
 }
@@ -575,7 +618,7 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildrenRecursiv
     auto query = Domain::QueryResultProvider<Domain::DataSource::Ptr>::Ptr::create();
     Akonadi::Collection col = m_serializer->createCollectionFromDataSource(source);
 
-    auto job = m_storage->fetchCollections(col, StorageInterface::Recursive, StorageInterface::Notes | StorageInterface::Tasks, StorageInterface::NoFilter);
+    auto job = m_storage->fetchCollections(col, StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::NoFilter);
     Utils::JobHandler::install(job->kjob(), [this, job, query] {
         for (auto collection : job->collections()) {
             auto source =  m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
@@ -598,8 +641,8 @@ void DataSourceQueries::setSearchTerm(QString term)
 
     m_searchTerm = term;
 
-    m_searchTreeQuery->reset(findSearchCollections());
-    m_searchPersonTreeQuery->reset(findSearchPersonCollections());
+    getSearchCollectionTree()->reset(findSearchCollections());
+    getSearchPersonCollectionTree()->reset(findSearchPersonCollections());
 }
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery) const
@@ -633,8 +676,8 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchTopLevel()
 {
     Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>::Ptr mergedResultProvider(new Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>());
     //FIXME pass in function to fetch children for persons and rest? => see below for motivation in findSearchChildren
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_searchTreeQuery));
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), m_searchPersonTreeQuery));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getSearchCollectionTree()));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getSearchPersonCollectionTree()));
     return DataSourceQueries::DataSourceResult::create(mergedResultProvider);
 }
 
@@ -645,9 +688,9 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildren(D
     //The person tree and the rest are separate, so we need to multiplex that here
     //FIXME: this doesn't work because after the first child isPerson returns false
     if (source && source->isPerson()) {
-        treeQuery = m_searchPersonTreeQuery;
+        treeQuery = getSearchPersonCollectionTree();
     } else {
-        treeQuery = m_searchTreeQuery;
+        treeQuery = getSearchCollectionTree();
     }
     return findSearchChildrenQuery(source, treeQuery);
 }

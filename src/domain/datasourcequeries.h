@@ -35,6 +35,14 @@ public:
     DataSourceQueries();
     virtual ~DataSourceQueries();
 
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
+    virtual void setApplicationMode(ApplicationMode) = 0;
+
     virtual QueryResult<DataSource::Ptr>::Ptr findTasks() const = 0;
     virtual QueryResult<DataSource::Ptr>::Ptr findNotes() const = 0;
 

@@ -29,12 +29,12 @@
 
 #include "domain/tagqueries.h"
 #include "domain/livequery.h"
+#include "akonadistorageinterface.h"
 
 namespace Akonadi {
 
 class MonitorInterface;
 class SerializerInterface;
-class StorageInterface;
 
 class TagQueries : public QObject, public Domain::TagQueries
 {
@@ -51,6 +51,8 @@ public:
     explicit TagQueries(QObject *parent = 0);
     TagQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor);
     virtual ~TagQueries();
+
+    void setApplicationMode(ApplicationMode);
 
     TagResult::Ptr findAll() const;
     ArtifactResult::Ptr findTopLevelArtifacts(Domain::Tag::Ptr tag) const;
@@ -78,6 +80,7 @@ private:
 
     QHash<Akonadi::Tag::Id, ArtifactQuery::Ptr> m_findTopLevel;
     ArtifactQuery::List m_artifactQueries;
+    StorageInterface::FetchContentTypes m_fetchContentTypeFilter;
 };
 
 } // akonadi namespace

@@ -36,6 +36,14 @@ public:
     TagQueries();
     virtual ~TagQueries();
 
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
+    virtual void setApplicationMode(ApplicationMode) = 0;
+
     virtual QueryResult<Tag::Ptr>::Ptr findAll() const = 0;
 
     virtual QueryResult<Artifact::Ptr>::Ptr findTopLevelArtifacts(Tag::Ptr tag) const = 0;

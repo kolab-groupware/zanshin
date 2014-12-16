@@ -59,7 +59,14 @@ class ApplicationModel : public QObject
     Q_PROPERTY(QObject* currentPage READ currentPage WRITE setCurrentPage NOTIFY currentPageChanged)
     Q_PROPERTY(QObject* editor READ editor)
 public:
-    explicit ApplicationModel(QObject *parent = 0);
+
+    enum ApplicationMode {
+        TaskOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
+    explicit ApplicationModel(QObject *parent = 0, ApplicationMode mode = TasksAndNotes);
 
     explicit ApplicationModel(Domain::ArtifactQueries *artifactQueries,
                               Domain::ProjectQueries *projectQueries,
@@ -73,7 +80,7 @@ public:
                               Domain::NoteRepository *noteRepository,
                               Domain::TagQueries *tagQueries,
                               Domain::TagRepository *tagRepository,
-                              QObject *parent = 0);
+                              QObject *parent = 0, ApplicationMode mode = TasksAndNotes);
     ~ApplicationModel();
 
     QAbstractItemModel *noteSourcesModel();
@@ -129,6 +136,7 @@ private:
     Domain::TagRepository *m_tagRepository;
 
     bool m_ownInterface;
+    ApplicationMode m_mode;
 };
 
 }

@@ -34,13 +34,13 @@
 
 #include "domain/datasourcequeries.h"
 #include "domain/livequery.h"
+#include "akonadistorageinterface.h"
 
 namespace Akonadi {
 
 class Item;
 class MonitorInterface;
 class SerializerInterface;
-class StorageInterface;
 class TreeQuery;
 class AkonadiCollectionTreeSource;
 
@@ -55,6 +55,8 @@ public:
     explicit DataSourceQueries(QObject *parent = 0);
     DataSourceQueries(StorageInterface *storage, SerializerInterface *serializer, MonitorInterface *monitor);
     virtual ~DataSourceQueries();
+
+    void setApplicationMode(ApplicationMode);
 
     DataSourceResult::Ptr findTasks() const;
     DataSourceResult::Ptr findNotes() const;
@@ -80,6 +82,10 @@ private:
     QSharedPointer<AkonadiCollectionTreeSource> findVisiblePersonCollections() const;
     QSharedPointer<AkonadiCollectionTreeSource> findSearchCollections() const;
     QSharedPointer<AkonadiCollectionTreeSource> findSearchPersonCollections() const;
+    QSharedPointer<TreeQuery> getVisibleCollectionTree() const;
+    QSharedPointer<TreeQuery> getVisiblePersonTree() const;
+    QSharedPointer<TreeQuery> getSearchCollectionTree() const;
+    QSharedPointer<TreeQuery> getSearchPersonCollectionTree() const;
 
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
@@ -94,6 +100,8 @@ private:
     QSharedPointer<TreeQuery> m_personTreeQuery;
     QSharedPointer<TreeQuery> m_searchTreeQuery;
     QSharedPointer<TreeQuery> m_searchPersonTreeQuery;
+
+    StorageInterface::FetchContentTypes m_fetchContentTypeFilter;
 };
 
 // This represents a reactive result set for an akonadi query, which supports being recursively queried.

@@ -36,6 +36,14 @@ public:
     ArtifactQueries();
     virtual ~ArtifactQueries();
 
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
+    virtual void setApplicationMode(ApplicationMode) = 0;
+
     virtual QueryResult<Artifact::Ptr>::Ptr findInboxTopLevel() const = 0;
 
     virtual QueryResult<Tag::Ptr>::Ptr findTags(Artifact::Ptr artifact) const = 0;

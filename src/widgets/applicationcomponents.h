@@ -46,7 +46,13 @@ class ApplicationComponents : public QObject
 {
     Q_OBJECT
 public:
-    explicit ApplicationComponents(QWidget *parent = 0);
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
+    explicit ApplicationComponents(QWidget *parent = 0, ApplicationMode mode = TasksAndNotes);
 
     QObject *model() const;
 
@@ -79,6 +85,7 @@ private:
     QList<QAction*> m_configureActions;
     DataSourceComboBox *m_noteCombo;
     DataSourceComboBox *m_taskCombo;
+    ApplicationMode m_mode;
 };
 
 }

@@ -47,7 +47,12 @@ class PageView : public QWidget
 {
     Q_OBJECT
 public:
-    explicit PageView(QWidget *parent = 0);
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+    explicit PageView(QWidget *parent = 0, ApplicationMode mode = TasksAndNotes);
 
     QObject *model() const;
     MessageBoxInterface::Ptr messageBoxInterface() const;
@@ -70,6 +75,7 @@ private:
     QTreeView *m_centralView;
     QLineEdit *m_quickAddEdit;
     MessageBoxInterface::Ptr m_messageBoxInterface;
+    ApplicationMode m_mode;
 };
 
 }
