@@ -44,6 +44,7 @@ public:
                             QObject *parent = 0);
 
     void addTask(const QString &title);
+    void addNote(const QString &title);
     void removeItem(const QModelIndex &index);
 
 private:

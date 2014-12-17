@@ -55,6 +55,13 @@ void InboxPageModel::addTask(const QString &title)
     taskRepository()->create(task);
 }
 
+void InboxPageModel::addNote(const QString &title)
+{
+    auto note = Domain::Note::Ptr::create();
+    note->setTitle(title);
+    noteRepository()->save(note);
+}
+
 void InboxPageModel::removeItem(const QModelIndex &index)
 {
     QVariant data = index.data(QueryTreeModel<Domain::Artifact::Ptr>::ObjectRole);
@@ -72,6 +79,7 @@ QAbstractItemModel *InboxPageModel::createCentralListModel()
         else if (auto task = artifact.dynamicCast<Domain::Task>())
             return Domain::QueryResult<Domain::Task::Ptr, Domain::Artifact::Ptr>::copy(taskQueries()->findChildren(task));
         else
+            //Notes have no descendants
             return Domain::QueryResult<Domain::Artifact::Ptr>::Ptr();
     };
 

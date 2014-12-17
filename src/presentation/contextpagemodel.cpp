@@ -30,6 +30,7 @@
 #include "domain/contextqueries.h"
 #include "domain/taskqueries.h"
 #include "domain/taskrepository.h"
+#include "domain/noterepository.h"
 
 #include "presentation/querytreemodel.h"
 
@@ -61,6 +62,14 @@ void ContextPageModel::addTask(const QString &title)
     auto task = Domain::Task::Ptr::create();
     task->setTitle(title);
     taskRepository()->createInContext(task, m_context);
+}
+
+void ContextPageModel::addNote(const QString &title)
+{
+    auto note = Domain::Note::Ptr::create();
+    note->setTitle(title);
+    //FIXME create in context
+    noteRepository()->save(note);
 }
 
 void ContextPageModel::removeItem(const QModelIndex &index)

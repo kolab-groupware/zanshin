@@ -51,6 +51,7 @@ public:
     Domain::Tag::Ptr tag() const;
 
     void addTask(const QString &title);
+    void addNote(const QString &title);
     void removeItem(const QModelIndex &index);
 
 private:

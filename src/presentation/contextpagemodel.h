@@ -49,6 +49,7 @@ public:
     Domain::Context::Ptr context() const;
 public slots:
     void addTask(const QString &title);
+    void addNote(const QString &title);
     void removeItem(const QModelIndex &index);
 
 private:

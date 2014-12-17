@@ -53,6 +53,7 @@ public:
 
 public slots:
     virtual void addTask(const QString &title) = 0;
+    virtual void addNote(const QString &title) = 0;
     virtual void removeItem(const QModelIndex &index) = 0;
 
 protected:

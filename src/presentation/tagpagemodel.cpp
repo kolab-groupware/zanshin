@@ -64,6 +64,15 @@ void TagPageModel::addTask(const QString &title)
     taskRepository()->createInTag(task, m_tag);
 }
 
+void TagPageModel::addNote(const QString &title)
+{
+    auto note = Domain::Note::Ptr::create();
+    note->setTitle(title);
+    //FIXME create in tag
+    noteRepository()->save(note);
+    // noteRepository()->createInTag(note, m_tag);
+}
+
 void TagPageModel::removeItem(const QModelIndex &index)
 {
     Q_UNUSED(index);

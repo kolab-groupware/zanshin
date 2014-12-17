@@ -62,6 +62,14 @@ void ProjectPageModel::addTask(const QString &title)
     taskRepository()->createInProject(task, m_project);
 }
 
+void ProjectPageModel::addNote(const QString &title)
+{
+    auto note = Domain::Note::Ptr::create();
+    note->setTitle(title);
+    //FIXME create in project
+    noteRepository()->save(note);
+}
+
 void ProjectPageModel::removeItem(const QModelIndex &index)
 {
     QVariant data = index.data(QueryTreeModel<Domain::Artifact::Ptr>::ObjectRole);

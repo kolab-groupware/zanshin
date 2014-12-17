@@ -69,6 +69,11 @@ void NoteRepository::setDefaultSource(Domain::DataSource::Ptr source)
     StorageSettings::instance().setDefaultNoteCollection(collection);
 }
 
+KJob *NoteRepository::create(Domain::Note::Ptr note)
+{
+    return save(note);
+}
+
 KJob *NoteRepository::save(Domain::Note::Ptr note)
 {
     auto item = m_serializer->createItemFromNote(note);

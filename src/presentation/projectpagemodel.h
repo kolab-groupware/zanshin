@@ -50,6 +50,7 @@ public:
     Domain::Project::Ptr project() const;
 
     void addTask(const QString &title);
+    void addNote(const QString &title);
     void removeItem(const QModelIndex &index);
 
 private:

@@ -39,6 +39,7 @@ public:
     }
 
     void addTask(const QString &) {}
+    void addNote(const QString &) {}
     void removeItem(const QModelIndex &) {}
 
 private:
