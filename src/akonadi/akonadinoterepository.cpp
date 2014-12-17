@@ -74,6 +74,22 @@ KJob *NoteRepository::create(Domain::Note::Ptr note)
     return save(note);
 }
 
+KJob *NoteRepository::createInTag(Domain::Note::Ptr note, Domain::Tag::Ptr tag)
+{
+    auto item = m_serializer->createItemFromNote(note);
+    Q_ASSERT(!item.isValid());
+
+    Tag akonadiTag = m_serializer->createAkonadiTagFromTag(tag);
+    Q_ASSERT(akonadiTag .isValid());
+    item.setTag(akonadiTag);
+
+    if (item.isValid()) {
+        return m_storage->updateItem(item);
+    } else {
+        return m_storage->createItem(item, m_storage->defaultNoteCollection());
+    }
+}
+
 KJob *NoteRepository::save(Domain::Note::Ptr note)
 {
     auto item = m_serializer->createItemFromNote(note);

@@ -68,9 +68,7 @@ void TagPageModel::addNote(const QString &title)
 {
     auto note = Domain::Note::Ptr::create();
     note->setTitle(title);
-    //FIXME create in tag
-    noteRepository()->save(note);
-    // noteRepository()->createInTag(note, m_tag);
+    noteRepository()->createInTag(note, m_tag);
 }
 
 void TagPageModel::removeItem(const QModelIndex &index)
