@@ -662,7 +662,7 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQu
             m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
         });
 
-        query->setPredicateFunction([this, root] (const Akonadi::Collection &collection) {
+        query->setPredicateFunction([this, root] (const Akonadi::Collection &) {
             return true;
         });
 
