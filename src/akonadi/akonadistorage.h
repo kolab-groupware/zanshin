@@ -59,6 +59,7 @@ public:
     CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types, FetchFilter filter) Q_DECL_OVERRIDE;
     CollectionFetchJobInterface *fetchPersons() Q_DECL_OVERRIDE;
     CollectionSearchJobInterface *searchCollections(QString collectionName) Q_DECL_OVERRIDE;
+    CollectionSearchJobInterface *searchCollections(QString collectionName, FetchContentTypes types) Q_DECL_OVERRIDE;
     CollectionSearchJobInterface *searchPersons(QString collectionName) Q_DECL_OVERRIDE;
     ItemFetchJobInterface *fetchItems(Akonadi::Collection collection) Q_DECL_OVERRIDE;
     ItemFetchJobInterface *fetchItem(Akonadi::Item item) Q_DECL_OVERRIDE;

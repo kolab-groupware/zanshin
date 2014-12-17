@@ -471,7 +471,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchCollect
         return true;
     });
     source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
-        auto job = m_storage->searchCollections(m_searchTerm);
+        auto job = m_storage->searchCollections(m_searchTerm, m_fetchContentTypeFilter);
         Utils::JobHandler::install(job->kjob(), [job, resultHandler] {
             if (job->kjob()->error()) {
                 kWarning() << "Failed to search collections " << job->kjob()->errorString();

@@ -118,8 +118,8 @@ private:
 class CollectionSearchJobAdaptor : public CollectionSearchJob, public CollectionSearchJobInterface
 {
 public:
-    CollectionSearchJobAdaptor(const QString &collectionName, QObject *parent=0)
-        : CollectionSearchJob(collectionName, parent)
+    CollectionSearchJobAdaptor(const QString &collectionName, QStringList mimeTypeFilter, QObject *parent=0)
+        : CollectionSearchJob(collectionName, mimeTypeFilter, parent)
     {
     }
 
@@ -318,7 +318,17 @@ CollectionFetchJobInterface *Storage::fetchPersons()
 
 CollectionSearchJobInterface *Storage::searchCollections(QString collectionName)
 {
-    return new CollectionSearchJobAdaptor(collectionName);
+    return searchCollections(collectionName, 0);
+}
+
+CollectionSearchJobInterface *Storage::searchCollections(QString collectionName, FetchContentTypes types)
+{
+    QStringList contentMimeTypes;
+    if (types & Notes)
+        contentMimeTypes << NoteUtils::noteMimeType();
+    if (types & Tasks)
+        contentMimeTypes << KCalCore::Todo::todoMimeType();
+    return new CollectionSearchJobAdaptor(collectionName, contentMimeTypes);
 }
 
 CollectionSearchJobInterface *Storage::searchPersons(QString personName)

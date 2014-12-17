@@ -1429,7 +1429,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock returning the tasks from the items
@@ -1450,7 +1450,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).exactly(1));
 
@@ -1465,7 +1465,7 @@ private slots:
         collectionSearchJob = new MockCollectionSearchJob(this);
         collectionSearchJob->setCollections(Akonadi::Collection::List() << col4);
 
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm2)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm2)
                                                                   .thenReturn(collectionSearchJob);
 
         serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col4, Akonadi::SerializerInterface::BaseName).thenReturn(source4);
@@ -1475,7 +1475,7 @@ private slots:
         // THEN
         QTest::qWait(150);
 
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm2)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm2)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col4, Akonadi::SerializerInterface::BaseName).exactly(1));
 
@@ -1494,7 +1494,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock returning the tasks from the items
@@ -1522,7 +1522,7 @@ private slots:
         monitor->addCollection(col);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col, Akonadi::SerializerInterface::BaseName).exactly(1));
 
@@ -1551,7 +1551,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock returning the tasks from the items
@@ -1576,7 +1576,7 @@ private slots:
         monitor->removeCollection(col2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                          .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).exactly(1));
@@ -1610,7 +1610,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                  .thenReturn(collectionSearchJob);
 
         // Serializer mock returning the tasks from the items
@@ -1643,7 +1643,7 @@ private slots:
         monitor->changeCollection(col3);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                          .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).exactly(1));
@@ -1703,7 +1703,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock
@@ -1722,7 +1722,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                           .exactly(1));
         QCOMPARE(result->data().size(), 0);
     }
@@ -1791,7 +1791,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock
@@ -1814,7 +1814,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).exactly(1));
@@ -1829,7 +1829,7 @@ private slots:
         collectionSearchJob = new MockCollectionSearchJob(this);
         collectionSearchJob->setCollections(Akonadi::Collection::List() << col2);
 
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm2)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm2)
                                                                   .thenReturn(collectionSearchJob);
 
 
@@ -1838,7 +1838,7 @@ private slots:
         // THEN
         QTest::qWait(150);
 
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm2)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm2)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).exactly(2));
 
@@ -1862,7 +1862,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock
@@ -1891,7 +1891,7 @@ private slots:
         monitor->addCollection(col);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col, Akonadi::SerializerInterface::BaseName).exactly(1));
 
@@ -1925,7 +1925,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock returning the tasks from the items
@@ -1951,7 +1951,7 @@ private slots:
         monitor->removeCollection(col2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                           .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).exactly(1));
@@ -1984,7 +1984,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock returning the tasks from the items
@@ -2015,7 +2015,7 @@ private slots:
         monitor->changeCollection(col2);
 
         // THEN
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                          .exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col1, Akonadi::SerializerInterface::BaseName).exactly(1));
         QVERIFY(serializerMock(&Akonadi::SerializerInterface::createDataSourceFromCollection).when(col2, Akonadi::SerializerInterface::BaseName).exactly(1));
@@ -2080,7 +2080,7 @@ private slots:
 
         // Storage mock returning the fetch jobs
         mock_object<Akonadi::StorageInterface> storageMock;
-        storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                   .thenReturn(collectionSearchJob);
 
         // Serializer mock
@@ -2100,7 +2100,7 @@ private slots:
         // THEN
         QVERIFY(result->data().isEmpty());
         QTest::qWait(150);
-        QVERIFY(storageMock(&Akonadi::StorageInterface::searchCollections).when(searchTerm)
+        QVERIFY(storageMock(static_cast<Akonadi::CollectionSearchJobInterface* (Akonadi::StorageInterface::*)(QString)>(&Akonadi::StorageInterface::searchCollections)).when(searchTerm)
                                                                          .exactly(1));
         QCOMPARE(result->data().size(), 0);
     }

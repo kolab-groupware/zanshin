@@ -25,12 +25,13 @@
 
 #include <KJob>
 #include <Akonadi/Collection>
+#include <QStringList>
 
 class CollectionSearchJob : public KJob
 {
     Q_OBJECT
 public:
-    explicit CollectionSearchJob(const QString &searchString, QObject* parent = 0);
+    explicit CollectionSearchJob(const QString &searchString, const QStringList &mimetypeFilter, QObject* parent = 0);
 
     virtual void start();
 
@@ -43,6 +44,7 @@ private Q_SLOTS:
 
 private:
     QString mSearchString;
+    QStringList mMimeTypeFilter;
     Akonadi::Collection::List mMatchingCollections;
     Akonadi::Collection::List mAncestors;
 };

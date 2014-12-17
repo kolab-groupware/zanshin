@@ -25,9 +25,10 @@ without including the source code for Qt in the source distribution.
 #include <Akonadi/CollectionFetchScope>
 #include <baloo/pim/collectionquery.h>
 
-CollectionSearchJob::CollectionSearchJob(const QString& searchString, QObject* parent)
+CollectionSearchJob::CollectionSearchJob(const QString& searchString, const QStringList &mimetypeFilter, QObject* parent)
     : KJob(parent),
-    mSearchString(searchString)
+    mSearchString(searchString),
+    mMimeTypeFilter(mimetypeFilter)
 {
 }
 
@@ -37,7 +38,7 @@ void CollectionSearchJob::start()
     //We exclude the other users namespace
     query.setNamespace(QStringList() << QLatin1String("shared") << QLatin1String(""));
     query.pathMatches(mSearchString);
-    query.setMimetype(QStringList() << QLatin1String("text/calendar"));
+    query.setMimetype(mMimeTypeFilter);
     query.setLimit(200);
     Baloo::PIM::ResultIterator it = query.exec();
     Akonadi::Collection::List collections;
@@ -62,7 +63,7 @@ void CollectionSearchJob::start()
 void CollectionSearchJob::onCollectionsReceived(const Akonadi::Collection::List &list)
 {
     Q_FOREACH(const Akonadi::Collection &col, list) {
-        if (col.name().contains(mSearchString)) {
+        if (col.name().contains(mSearchString) && !col.contentMimeTypes().toSet().intersect(mMimeTypeFilter.toSet()).isEmpty()) {
             mMatchingCollections << col;
             Akonadi::Collection ancestor = col.parentCollection();
             while (ancestor.isValid() && (ancestor != Akonadi::Collection::root())) {

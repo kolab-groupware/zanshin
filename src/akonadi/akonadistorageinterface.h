@@ -86,6 +86,7 @@ public:
     virtual CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types, FetchFilter filter) = 0;
     virtual CollectionFetchJobInterface *fetchPersons() = 0;
     virtual CollectionSearchJobInterface *searchCollections(QString collectionName) = 0;
+    virtual CollectionSearchJobInterface *searchCollections(QString collectionName, FetchContentTypes types) = 0;
     virtual CollectionSearchJobInterface *searchPersons(QString collectionName) = 0;
     virtual ItemFetchJobInterface *fetchItems(Akonadi::Collection collection) = 0;
     virtual ItemFetchJobInterface *fetchItem(Akonadi::Item item) = 0;
