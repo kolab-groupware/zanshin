@@ -11,7 +11,7 @@ include(KDE4Defaults)
 macro(assert_min_ver version)
     set(error_msg "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_VERSION} not supported")
     if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS "${version}")
-        message(FATAL_ERROR "${msg}")
+        message(FATAL_ERROR "${error_msg}")
     endif()
 endmacro()
 
