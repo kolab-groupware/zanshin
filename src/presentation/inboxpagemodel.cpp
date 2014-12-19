@@ -69,6 +69,9 @@ void InboxPageModel::removeItem(const QModelIndex &index)
     auto task = artifact.objectCast<Domain::Task>();
     if (task)
         taskRepository()->remove(task);
+    auto note = artifact.objectCast<Domain::Note>();
+    if (note)
+        noteRepository()->remove(note);
 }
 
 QAbstractItemModel *InboxPageModel::createCentralListModel()
