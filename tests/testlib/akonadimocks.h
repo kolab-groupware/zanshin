@@ -60,7 +60,7 @@ class MockCollectionFetchJob : public MockAkonadiJob, public Akonadi::Collection
 {
     Q_OBJECT
 public:
-    using MockAkonadiJob::MockAkonadiJob;
+    MockCollectionFetchJob(QObject *parent = 0) : MockAkonadiJob(parent) {};
 
     void setCollections(const Akonadi::Collection::List &collections);
     Akonadi::Collection::List collections() const;
@@ -73,7 +73,7 @@ class MockCollectionSearchJob : public MockAkonadiJob, public Akonadi::Collectio
 {
     Q_OBJECT
 public:
-    using MockAkonadiJob::MockAkonadiJob;
+    MockCollectionSearchJob(QObject *parent = 0) : MockAkonadiJob(parent) {};
 
     void setCollections(const Akonadi::Collection::List &collections);
     Akonadi::Collection::List collections() const;
@@ -86,7 +86,7 @@ class MockItemFetchJob : public MockAkonadiJob, public Akonadi::ItemFetchJobInte
 {
     Q_OBJECT
 public:
-    using MockAkonadiJob::MockAkonadiJob;
+    MockItemFetchJob(QObject *parent = 0) : MockAkonadiJob(parent) {};
 
     void setItems(const Akonadi::Item::List &items);
     Akonadi::Item::List items() const;
@@ -99,7 +99,7 @@ class MockTagFetchJob : public MockAkonadiJob, public Akonadi::TagFetchJobInterf
 {
     Q_OBJECT
 public:
-    using MockAkonadiJob::MockAkonadiJob;
+    MockTagFetchJob(QObject *parent = 0) : MockAkonadiJob(parent) {};
 
     void setTags(const Akonadi::Tag::List &tags);
     Akonadi::Tag::List tags() const;

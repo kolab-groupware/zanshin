@@ -178,7 +178,9 @@ public:
 class ItemJob : public ItemFetchJob, public ItemFetchJobInterface
 {
 public:
-    using ItemFetchJob::ItemFetchJob;
+    ItemJob(const Akonadi::Collection &col) : ItemFetchJob(col) {}
+    ItemJob(const Akonadi::Item &item) : ItemFetchJob(item) {}
+    ItemJob(const Akonadi::Tag &tag) : ItemFetchJob(tag) {}
 
     Item::List items() const { return ItemFetchJob::items(); }
 };
@@ -186,7 +188,7 @@ public:
 class TagJob : public TagFetchJob, public TagFetchJobInterface
 {
 public:
-    using TagFetchJob::TagFetchJob;
+    TagJob() : TagFetchJob() {}
 
     Tag::List tags() const { return TagFetchJob::tags(); }
 };
