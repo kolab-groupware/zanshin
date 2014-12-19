@@ -146,6 +146,11 @@ Domain::QueryResult<Domain::DataSource::Ptr>::Ptr ApplicationModel::noteSources(
 {
     if (!m_noteSources) {
         m_noteSources = m_sourceQueries->findNotes();
+        m_noteSources->addPostInsertHandler([this](const Domain::DataSource::Ptr &source, int) {
+            if (m_noteRepository->isDefaultSource(source)) {
+                emit defaultNoteDataSourceChanged(source);
+            }
+        });
     }
 
     return m_noteSources;

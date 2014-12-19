@@ -134,27 +134,30 @@ void AvailableSourcesView::onRefreshDefaultSource()
     selectSource(defaultSource, QModelIndex());
 }
 
+void AvailableSourcesView::setDefaultNoteSource(const Domain::DataSource::Ptr &source)
+{
+    selectSource(source, QModelIndex());
+}
+
 void AvailableSourcesView::selectSource(Domain::DataSource::Ptr source, const QModelIndex &parentIndex)
 {
     std::function<void(QAbstractItemModel *, const QModelIndex &, std::function<void(const QModelIndex &)>)> traverseTree;
     traverseTree = [&traverseTree](QAbstractItemModel *model, const QModelIndex &parent, std::function<void(const QModelIndex &)> visitor) {
         for (int i = 0; i < model->rowCount(parent); i++) {
-            visitor(parent);
-            if (model->hasChildren(parent)) {
-                traverseTree(model, model->index(i, 0, parent), visitor);
+            const auto idx = model->index(i, 0, parent);
+            visitor(idx);
+            if (model->hasChildren(idx)) {
+                traverseTree(model, idx, visitor);
             }
         }
     };
-    QVariant modelProperty = m_model->property("searchListModel");
-    if (modelProperty.canConvert<QAbstractItemModel*>()) {
-        traverseTree(modelProperty.value<QAbstractItemModel*>(), QModelIndex(), [this, &source](const QModelIndex &index) {
-            if (index.data(Presentation::QueryTreeModelBase::ObjectRole).value<Domain::DataSource::Ptr>() == source) {
-                // todo select proxy
-                m_selectionModel->select(index, QItemSelectionModel::SelectCurrent);
-            }
-        });
-    }
-
+    traverseTree(m_sortProxy, QModelIndex(), [this, &source](const QModelIndex &index) {
+        auto ptr = index.data(Presentation::QueryTreeModelBase::ObjectRole).value<Domain::DataSource::Ptr>();
+        //FIXME: Comparison of nodes doesn't work because DataSourceQueries::findNotes doesn't yet feed on the tree, and we thus end up with two separate pointers.
+        if (index.data(Presentation::QueryTreeModelBase::ObjectRole).value<Domain::DataSource::Ptr>()->name() == source->name()) {
+            m_selectionModel->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
+        }
+    });
 }
 
 void AvailableSourcesView::onActionTriggered(const Domain::DataSource::Ptr &source, int action)

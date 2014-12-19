@@ -68,6 +68,8 @@ AvailableSourcesView *ApplicationComponents::availableSourcesView() const
             availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
             connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
                     m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
+            connect(m_model, SIGNAL(defaultNoteDataSourceChanged(Domain::DataSource::Ptr)),
+                    availableSourcesView, SLOT(setDefaultNoteSource(Domain::DataSource::Ptr)));
             //TODO the source view should probably set both task and note default sources, perhaps depending on the current type of folder selected
         }
 

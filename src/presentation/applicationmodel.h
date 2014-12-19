@@ -51,9 +51,9 @@ class ApplicationModel : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QAbstractItemModel* noteSourcesModel READ noteSourcesModel)
-    Q_PROPERTY(Domain::DataSource::Ptr defaultNoteDataSource READ defaultNoteDataSource WRITE setDefaultNoteDataSource)
+    Q_PROPERTY(Domain::DataSource::Ptr defaultNoteDataSource READ defaultNoteDataSource WRITE setDefaultNoteDataSource NOTIFY defaultNoteDataSourceChanged)
     Q_PROPERTY(QAbstractItemModel* taskSourcesModel READ taskSourcesModel)
-    Q_PROPERTY(Domain::DataSource::Ptr defaultTaskDataSource READ defaultTaskDataSource WRITE setDefaultTaskDataSource)
+    Q_PROPERTY(Domain::DataSource::Ptr defaultTaskDataSource READ defaultTaskDataSource WRITE setDefaultTaskDataSource NOTIFY defaultTaskDataSourceChanged)
     Q_PROPERTY(QObject* availableSources READ availableSources)
     Q_PROPERTY(QObject* availablePages READ availablePages)
     Q_PROPERTY(QObject* currentPage READ currentPage WRITE setCurrentPage NOTIFY currentPageChanged)
@@ -101,6 +101,8 @@ public slots:
 
 signals:
     void currentPageChanged(QObject *page);
+    void defaultNoteDataSourceChanged(Domain::DataSource::Ptr source);
+    void defaultTaskDataSourceChanged(Domain::DataSource::Ptr source);
 
 private:
     Domain::QueryResult<Domain::DataSource::Ptr>::Ptr noteSources();
