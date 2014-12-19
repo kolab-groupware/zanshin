@@ -21,8 +21,8 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_definitions(-DQ_DECL_OVERRIDE=override)
     add_definitions(-DQ_DECL_FINAL=final)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    # using GCC >= 4.7
-    assert_min_ver("4.7")
+    # using GCC >= 4.6
+    assert_min_ver("4.6")
     add_definitions(-DQ_DECL_OVERRIDE=override)
     add_definitions(-DQ_DECL_FINAL=final)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
