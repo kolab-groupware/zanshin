@@ -71,11 +71,6 @@ int main(int argc, char **argv)
 
     QVBoxLayout *layout = new QVBoxLayout;
 
-    QHBoxLayout *hbox = new QHBoxLayout;
-    hbox->addWidget(components->defaultTaskSourceCombo());
-    hbox->addWidget(components->defaultNoteSourceCombo());
-
-    layout->addLayout(hbox);
     layout->addWidget(components->pageView());
 
     widget->setLayout(layout);

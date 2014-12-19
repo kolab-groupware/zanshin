@@ -30,6 +30,9 @@
 #include "domain/datasource.h"
 
 class QSortFilterProxyModel;
+class QItemSelection;
+class QItemSelectionModel;
+class QModelIndex;
 
 namespace Widgets {
 
@@ -42,16 +45,28 @@ public:
     QObject *model() const;
 
     void setSourceModel(const QByteArray &propertyName);
+    void setDefaultSourceProperty(QObject *object, const char *property);
+
+signals:
+    void sourceActivated(const Domain::DataSource::Ptr &source);
+
 public slots:
     void setModel(QObject *model);
 
 private slots:
     void onActionTriggered(const Domain::DataSource::Ptr &source, int action);
     void onSearchTextChanged(const QString &text);
+    void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+    void onRefreshDefaultSource();
 
 private:
+    void selectSource(Domain::DataSource::Ptr source, const QModelIndex &parentIndex);
+
     QObject *m_model;
+    QObject *m_object;
+    const char *m_property;
     QSortFilterProxyModel *m_sortProxy;
+    QItemSelectionModel *m_selectionModel;
 };
 
 }

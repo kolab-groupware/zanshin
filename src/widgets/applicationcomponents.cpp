@@ -65,6 +65,10 @@ AvailableSourcesView *ApplicationComponents::availableSourcesView() const
         auto availableSourcesView = new AvailableSourcesView(m_parent);
         if (m_model) {
             availableSourcesView->setModel(m_model->property("availableSources").value<QObject*>());
+            availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
+            connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                    m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
+            //TODO the source view should probably set both task and note default sources, perhaps depending on the current type of folder selected
         }
 
         ApplicationComponents *self = const_cast<ApplicationComponents*>(this);
@@ -133,25 +137,27 @@ QList<QAction *> ApplicationComponents::configureActions() const
     if (m_configureActions.isEmpty()) {
         QList<QAction*> actions;
 
-        auto widget = new QWidget;
-        widget->setLayout(new QHBoxLayout);
-        widget->layout()->addWidget(new QLabel(tr("Default task source")));
-        widget->layout()->addWidget(defaultTaskSourceCombo());
+        if (m_mode != NotesOnly) {
+            auto widget = new QWidget;
+            widget->setLayout(new QHBoxLayout);
+            widget->layout()->addWidget(new QLabel(tr("Default task source")));
+            widget->layout()->addWidget(defaultTaskSourceCombo());
 
-        auto comboAction = new QWidgetAction(m_parent);
-        comboAction->setObjectName("zanshin_settings_task_sources");
-        comboAction->setDefaultWidget(widget);
-        actions << comboAction;
+            auto comboAction = new QWidgetAction(m_parent);
+            comboAction->setObjectName("zanshin_settings_task_sources");
+            comboAction->setDefaultWidget(widget);
+            actions << comboAction;
 
-        widget = new QWidget;
-        widget->setLayout(new QHBoxLayout);
-        widget->layout()->addWidget(new QLabel(tr("Default note source")));
-        widget->layout()->addWidget(defaultNoteSourceCombo());
+            widget = new QWidget;
+            widget->setLayout(new QHBoxLayout);
+            widget->layout()->addWidget(new QLabel(tr("Default note source")));
+            widget->layout()->addWidget(defaultNoteSourceCombo());
 
-        comboAction = new QWidgetAction(m_parent);
-        comboAction->setObjectName("zanshin_settings_note_sources");
-        comboAction->setDefaultWidget(widget);
-        actions << comboAction;
+            comboAction = new QWidgetAction(m_parent);
+            comboAction->setObjectName("zanshin_settings_note_sources");
+            comboAction->setDefaultWidget(widget);
+            actions << comboAction;
+        }
 
         ApplicationComponents *self = const_cast<ApplicationComponents*>(this);
         self->m_configureActions = actions;
@@ -209,6 +215,7 @@ void ApplicationComponents::setModel(QObject *model)
 
     if (m_availableSourcesView) {
         m_availableSourcesView->setModel(m_model->property("availableSources").value<QObject*>());
+        m_availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
     }
 
     if (m_availablePagesView) {

@@ -24,14 +24,18 @@
 
 #include "availablesourcesview.h"
 
+#include <functional>
+
 #include <QHeaderView>
 #include <QSortFilterProxyModel>
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QItemSelection>
 
 #include <KLineEdit>
 
 #include "presentation/metatypes.h"
+#include "presentation/querytreemodelbase.h"
 
 #include "widgets/datasourcedelegate.h"
 
@@ -56,6 +60,9 @@ AvailableSourcesView::AvailableSourcesView(QWidget *parent)
     sourcesView->setObjectName("sourcesView");
     sourcesView->header()->hide();
     sourcesView->setModel(m_sortProxy);
+    connect(sourcesView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)),
+            this, SLOT(onSelectionChanged(const QItemSelection &, const QItemSelection &)));
+    m_selectionModel = sourcesView->selectionModel();
 
     auto delegate = new DataSourceDelegate(sourcesView);
     connect(delegate, SIGNAL(actionTriggered(Domain::DataSource::Ptr,int)),
@@ -66,6 +73,13 @@ AvailableSourcesView::AvailableSourcesView(QWidget *parent)
     layout->addWidget(searchEdit);
     layout->addWidget(sourcesView);
     setLayout(layout);
+
+    connect(m_sortProxy, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(onRefreshDefaultSource()));
+    connect(m_sortProxy, SIGNAL(layoutChanged()), this, SLOT(onRefreshDefaultSource()));
+    connect(m_sortProxy, SIGNAL(modelReset()), this, SLOT(onRefreshDefaultSource()));
+    connect(m_sortProxy, SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(onRefreshDefaultSource()));
+    connect(m_sortProxy, SIGNAL(rowsRemoved(QModelIndex,int,int)), this, SLOT(onRefreshDefaultSource()));
+    onRefreshDefaultSource();
 }
 
 QObject *AvailableSourcesView::model() const
@@ -83,6 +97,64 @@ void AvailableSourcesView::setModel(QObject *model)
     m_model = model;
 
     setSourceModel("sourceListModel");
+}
+
+void AvailableSourcesView::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    const QModelIndexList indexes = selected.indexes();
+    if (indexes.size() > 1) {
+        qWarning() << "Selected multiple indexes, no idea what to do with that";
+    }
+    if (indexes.size() >= 1) {
+        const QModelIndex &idx = indexes.first();
+        const QVariant data = idx.data(Presentation::QueryTreeModelBase::ObjectRole);
+        const auto source = data.value<Domain::DataSource::Ptr>();
+        emit sourceActivated(source);
+    }
+}
+
+void AvailableSourcesView::setDefaultSourceProperty(QObject *object, const char *property)
+{
+    m_object = object;
+    m_property = property;
+    onRefreshDefaultSource();
+}
+
+void AvailableSourcesView::onRefreshDefaultSource()
+{
+    if (!m_object)
+        return;
+
+    const QVariant data = m_object->property(m_property);
+    const auto defaultSource = data.value<Domain::DataSource::Ptr>();
+
+    if (!defaultSource)
+        return;
+
+    selectSource(defaultSource, QModelIndex());
+}
+
+void AvailableSourcesView::selectSource(Domain::DataSource::Ptr source, const QModelIndex &parentIndex)
+{
+    std::function<void(QAbstractItemModel *, const QModelIndex &, std::function<void(const QModelIndex &)>)> traverseTree;
+    traverseTree = [&traverseTree](QAbstractItemModel *model, const QModelIndex &parent, std::function<void(const QModelIndex &)> visitor) {
+        for (int i = 0; i < model->rowCount(parent); i++) {
+            visitor(parent);
+            if (model->hasChildren(parent)) {
+                traverseTree(model, model->index(i, 0, parent), visitor);
+            }
+        }
+    };
+    QVariant modelProperty = m_model->property("searchListModel");
+    if (modelProperty.canConvert<QAbstractItemModel*>()) {
+        traverseTree(modelProperty.value<QAbstractItemModel*>(), QModelIndex(), [this, &source](const QModelIndex &index) {
+            if (index.data(Presentation::QueryTreeModelBase::ObjectRole).value<Domain::DataSource::Ptr>() == source) {
+                // todo select proxy
+                m_selectionModel->select(index, QItemSelectionModel::SelectCurrent);
+            }
+        });
+    }
+
 }
 
 void AvailableSourcesView::onActionTriggered(const Domain::DataSource::Ptr &source, int action)

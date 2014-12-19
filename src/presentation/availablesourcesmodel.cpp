@@ -125,10 +125,9 @@ QAbstractItemModel *AvailableSourcesModel::createSourceListModel()
     };
 
     auto flags = [] (const Domain::DataSource::Ptr &source) {
-        const Qt::ItemFlags defaultFlags = Qt::ItemIsSelectable
-                                         | Qt::ItemIsEnabled;
+        const Qt::ItemFlags defaultFlags = Qt::ItemIsEnabled;
         if (source->contentTypes() != Domain::DataSource::NoContent)
-            return defaultFlags | Qt::ItemIsUserCheckable;
+            return defaultFlags | Qt::ItemIsUserCheckable | Qt::ItemIsSelectable;
         else
             return defaultFlags;
     };
