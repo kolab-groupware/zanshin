@@ -73,8 +73,15 @@ void TagPageModel::addNote(const QString &title)
 
 void TagPageModel::removeItem(const QModelIndex &index)
 {
-    Q_UNUSED(index);
-    qFatal("Not implemented yet");
+    QVariant data = index.data(QueryTreeModel<Domain::Artifact::Ptr>::ObjectRole);
+    auto artifact = data.value<Domain::Artifact::Ptr>();
+    auto task = artifact.objectCast<Domain::Task>();
+    if (task)
+        taskRepository()->remove(task);
+    auto note = artifact.objectCast<Domain::Note>();
+    if (note) {
+        noteRepository()->remove(note);
+    }
 }
 
 QAbstractItemModel *TagPageModel::createCentralListModel()
