@@ -149,49 +149,49 @@ public:
     void append(const ItemType &item)
     {
         cleanupResults();
-        callChangeHandlers(item, m_list.size(),
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preInsertHandlers));
+        ChangeHandlerGetter preInsert = [](ResultPtr ptr) { return ptr->preInsertHandlers(); };
+        ChangeHandlerGetter postInsert = [](ResultPtr ptr) { return ptr->postInsertHandlers(); };
+        callChangeHandlers(item, m_list.size(), preInsert);
         m_list.append(item);
-        callChangeHandlers(item, m_list.size()-1,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postInsertHandlers));
+        callChangeHandlers(item, m_list.size()-1, postInsert);
     }
 
     void prepend(const ItemType &item)
     {
         cleanupResults();
-        callChangeHandlers(item, 0,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preInsertHandlers));
+        ChangeHandlerGetter preInsert = [](ResultPtr ptr) { return ptr->preInsertHandlers(); };
+        ChangeHandlerGetter postInsert = [](ResultPtr ptr) { return ptr->postInsertHandlers(); };
+        callChangeHandlers(item, 0, preInsert);
         m_list.prepend(item);
-        callChangeHandlers(item, 0,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postInsertHandlers));
+        callChangeHandlers(item, 0, postInsert);
     }
 
     void done()
     {
         cleanupResults();
-        callChangeHandlers(ItemType(), 0,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::doneHandlers));
+        ChangeHandlerGetter done = [](ResultPtr ptr) { return ptr->doneHandlers(); };
+        callChangeHandlers(ItemType(), 0, done);
     }
 
     void insert(int index, const ItemType &item)
     {
         cleanupResults();
-        callChangeHandlers(item, index,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preInsertHandlers));
+        ChangeHandlerGetter preInsert = [](ResultPtr ptr) { return ptr->preInsertHandlers(); };
+        ChangeHandlerGetter postInsert = [](ResultPtr ptr) { return ptr->postInsertHandlers(); };
+        callChangeHandlers(item, index, preInsert);
         m_list.insert(index, item);
-        callChangeHandlers(item, index,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postInsertHandlers));
+        callChangeHandlers(item, index, postInsert);
     }
 
     ItemType takeFirst()
     {
         cleanupResults();
+        ChangeHandlerGetter preRemove = [](ResultPtr ptr) { return ptr->preRemoveHandlers(); };
+        ChangeHandlerGetter postRemove = [](ResultPtr ptr) { return ptr->postRemoveHandlers(); };
         const ItemType item = m_list.first();
-        callChangeHandlers(item, 0,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preRemoveHandlers));
+        callChangeHandlers(item, 0, preRemove);
         m_list.removeFirst();
-        callChangeHandlers(item, 0,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postRemoveHandlers));
+        callChangeHandlers(item, 0, postRemove);
         return item;
     }
 
@@ -203,12 +203,12 @@ public:
     ItemType takeLast()
     {
         cleanupResults();
+        ChangeHandlerGetter preRemove = [](ResultPtr ptr) { return ptr->preRemoveHandlers(); };
+        ChangeHandlerGetter postRemove = [](ResultPtr ptr) { return ptr->postRemoveHandlers(); };
         const ItemType item = m_list.last();
-        callChangeHandlers(item, m_list.size()-1,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preRemoveHandlers));
+        callChangeHandlers(item, m_list.size()-1, preRemove);
         m_list.removeLast();
-        callChangeHandlers(item, m_list.size(),
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postRemoveHandlers));
+        callChangeHandlers(item, m_list.size(), postRemove);
         return item;
     }
 
@@ -220,12 +220,12 @@ public:
     ItemType takeAt(int index)
     {
         cleanupResults();
+        ChangeHandlerGetter preRemove = [](ResultPtr ptr) { return ptr->preRemoveHandlers(); };
+        ChangeHandlerGetter postRemove = [](ResultPtr ptr) { return ptr->postRemoveHandlers(); };
         const ItemType item = m_list.at(index);
-        callChangeHandlers(item, index,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preRemoveHandlers));
+        callChangeHandlers(item, index, preRemove);
         m_list.removeAt(index);
-        callChangeHandlers(item, index,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postRemoveHandlers));
+        callChangeHandlers(item, index, postRemove);
         return item;
     }
 
@@ -243,11 +243,11 @@ public:
     void replace(int index, const ItemType &item)
     {
         cleanupResults();
-        callChangeHandlers(m_list.at(index), index,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::preReplaceHandlers));
+        ChangeHandlerGetter preReplace = [](ResultPtr ptr) { return ptr->preReplaceHandlers(); };
+        ChangeHandlerGetter postReplace = [](ResultPtr ptr) { return ptr->postReplaceHandlers(); };
+        callChangeHandlers(m_list.at(index), index, preReplace);
         m_list.replace(index, item);
-        callChangeHandlers(item, index,
-                           std::mem_fn(&QueryResultInputImpl<ItemType>::postReplaceHandlers));
+        callChangeHandlers(item, index, postReplace);
     }
 
     QueryResultProvider &operator<< (const ItemType &item)
