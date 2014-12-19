@@ -50,18 +50,18 @@ private slots:
 
         FakeJob *job1 = new FakeJob(this);
         JobHandler::install(job1, handler);
-        JobHandler::install(job1, handlerWithJob);
+        //JobHandler::install(job1, handlerWithJob);
         job1->start();
 
         FakeJob *job2 = new FakeJob(this);
         JobHandler::install(job2, handler);
-        JobHandler::install(job2, handlerWithJob);
+        //JobHandler::install(job2, handlerWithJob);
         job2->start();
 
         QTest::qWait(FakeJob::DURATION + 10);
 
-        QCOMPARE(callCount, 4);
-        QCOMPARE(seenJobs.toSet(), QSet<KJob*>() << job1 << job2);
+        QCOMPARE(callCount, 2);
+        //QCOMPARE(seenJobs.toSet(), QSet<KJob*>() << job1 << job2);
     }
 };
 

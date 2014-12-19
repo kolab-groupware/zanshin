@@ -40,14 +40,18 @@ void CompositeJob::start()
     }
 }
 
+/**
+  * gcc 4.7 does not like overloaded functions with different types of lambdas.
+  * because the second variant is not used at all till now disable it.
 bool CompositeJob::install(KJob *job, const JobHandler::ResultHandlerWithJob &handler)
 {
     if (!addSubjob(job))
         return false;
 
-    JobHandler::install(job, handler);
+    JobHandler::installWithJob(job, handler);
     return true;
 }
+*/
 
 bool CompositeJob::install(KJob *job, const JobHandler::ResultHandler &handler)
 {
