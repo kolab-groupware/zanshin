@@ -51,10 +51,10 @@ public:
         m_inputResults << result;
 
         result->addPostInsertHandler([this](const ItemType &item, int){
-            QueryResultProvider<ItemType>::append(item);
+            this->append(item);
         });
         result->addPreRemoveHandler([this](const ItemType &item, int){
-            QueryResultProvider<ItemType>::remove(item);
+            this->remove(item);
         });
 
         //FIXME we need a better replace handler
