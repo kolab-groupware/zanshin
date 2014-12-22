@@ -32,3 +32,17 @@ target_link_libraries(zanshin-notes
 
 install(TARGETS zanshin-notes DESTINATION ${BIN_INSTALL_DIR})
 install(PROGRAMS zanshin-notes.desktop DESTINATION ${XDG_APPS_INSTALL_DIR})
+
+kde4_add_executable(zanshin-tasks tasksmain.cpp ${app_SRCS})
+target_link_libraries(zanshin-tasks
+    ${KDE4_KDEUI_LIBS}
+    akonadi
+    domain
+    presentation
+    utils
+    widgets
+    ${KDEPIM_STATIC_LIBS}
+)
+
+install(TARGETS zanshin-tasks DESTINATION ${BIN_INSTALL_DIR})
+install(PROGRAMS zanshin-tasks.desktop DESTINATION ${XDG_APPS_INSTALL_DIR})

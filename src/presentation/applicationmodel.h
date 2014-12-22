@@ -61,7 +61,7 @@ class ApplicationModel : public QObject
 public:
 
     enum ApplicationMode {
-        TaskOnly,
+        TasksOnly,
         NotesOnly,
         TasksAndNotes
     };
