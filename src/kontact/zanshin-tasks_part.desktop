@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Zanshin Tasks Part
+Name[de]=Zanshin Aufgaben-Part
+Name[x-test]=xxZanshin Tasks Partxx
+X-KDE-ServiceTypes=KParts/ReadOnlyPart
+X-KDE-Library=zanshin_tasks_part
+Type=Service
+Icon=zanshin
+

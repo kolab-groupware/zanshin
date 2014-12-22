@@ -1,0 +1,24 @@
+[Desktop Entry]
+Type=Service
+Icon=zanshin
+X-KDE-ServiceTypes=Kontact/Plugin,KPluginInfo
+
+X-KDE-Library=kontact_zanshinnotesplugin
+X-KDE-KontactPluginVersion=9
+X-KDE-KontactPartLibraryName=zanshin-notes_part
+X-KDE-KontactPartExecutableName=zanshin-notes
+X-KDE-KontactPartLoadOnStart=false
+X-KDE-KontactPluginHasSummary=false
+
+X-KDE-PluginInfo-Name=kontact_zanshinnotesplugin
+X-KDE-PluginInfo-Version=0.1
+X-KDE-PluginInfo-License=GPL
+X-KDE-PluginInfo-EnabledByDefault=true
+X-KDE-PluginInfo-AllowEmptySettings=true
+
+Comment=Kontact Zanshin Notes Plugin
+Comment[de]=Zanshin Notiz-Modul für Kontakt
+Comment[x-test]=xxKontact Zanshin Notes Pluginxx
+Name=Notes
+Name[de]=Notizen
+Name[x-test]=xxNotesxx
