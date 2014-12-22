@@ -31,3 +31,4 @@ target_link_libraries(zanshin-notes
 )
 
 install(TARGETS zanshin-notes DESTINATION ${BIN_INSTALL_DIR})
+install(PROGRAMS zanshin-notes.desktop DESTINATION ${XDG_APPS_INSTALL_DIR})

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Categories=Qt;KDE;Utility;X-KDE-Utilities-PIM;
+Exec=zanshin-notes
+Name=Zanshin Notes
+Name[x-test]=xxZanshinxx
+Icon=zanshin
+GenericName=Notes Management Application
+GenericName[de]=Programm zur Notizverwaltung
+GenericName[x-test]=xxNotes Management Applicationxx
