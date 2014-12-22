@@ -31,6 +31,7 @@
 #include <QTreeView>
 #include <QVBoxLayout>
 #include <QItemSelection>
+#include <QDebug>
 
 #include <KLineEdit>
 
