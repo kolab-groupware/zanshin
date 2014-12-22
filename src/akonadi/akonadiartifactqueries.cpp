@@ -100,11 +100,13 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
                         continue;
 
                     ItemFetchJobInterface *job = m_storage->fetchItems(collection);
-                    Utils::JobHandler::install(job->kjob(), [this, job, add] {
+                    Utils::JobHandler::install(job->kjob(), [this, job, add, collection] {
                         if (job->kjob()->error() != KJob::NoError)
                             return;
 
                         for (auto item : job->items()) {
+                            //We have to set the parent to since we rely on attributes being available in isSelectedCollection
+                            item.setParentCollection(collection);
                             add(item);
                         }
                     });
@@ -138,7 +140,8 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
             const bool excluded = !m_serializer->relatedUidFromItem(item).isEmpty()
                                || (!m_serializer->isTaskItem(item) && !m_serializer->isNoteItem(item))
                                || (m_serializer->isTaskItem(item) && m_serializer->hasContextTags(item))
-                               || m_serializer->hasAkonadiTags(item);
+                               || m_serializer->hasAkonadiTags(item)
+                               || !m_serializer->isSelectedCollection(item.parentCollection());
 
             return !excluded;
         });
