@@ -65,12 +65,28 @@ AvailableSourcesView *ApplicationComponents::availableSourcesView() const
         auto availableSourcesView = new AvailableSourcesView(m_parent);
         if (m_model) {
             availableSourcesView->setModel(m_model->property("availableSources").value<QObject*>());
-            availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
-            connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
-                    m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
-            connect(m_model, SIGNAL(defaultNoteDataSourceChanged(Domain::DataSource::Ptr)),
-                    availableSourcesView, SLOT(setDefaultNoteSource(Domain::DataSource::Ptr)));
-            //TODO the source view should probably set both task and note default sources, perhaps depending on the current type of folder selected
+            if (m_mode == NotesOnly) {
+                availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
+                connect(m_model, SIGNAL(defaultNoteDataSourceChanged(Domain::DataSource::Ptr)),
+                        availableSourcesView, SLOT(setDefaultSource(Domain::DataSource::Ptr)));
+                connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                        m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
+            } else if (m_mode == TasksOnly) {
+                availableSourcesView->setDefaultSourceProperty(m_model, "defaultTaskDataSource");
+                connect(m_model, SIGNAL(defaultTaskDataSourceChanged(Domain::DataSource::Ptr)),
+                        availableSourcesView, SLOT(setDefaultSource(Domain::DataSource::Ptr)));
+                connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                        m_model, SLOT(setDefaultTaskDataSource(Domain::DataSource::Ptr)));
+            } else {
+                availableSourcesView->setDefaultSourceProperty(m_model, "defaultTaskDataSource");
+                connect(m_model, SIGNAL(defaultTaskDataSourceChanged(Domain::DataSource::Ptr)),
+                        availableSourcesView, SLOT(setDefaultSource(Domain::DataSource::Ptr)));
+                //TODO decide wether to set task or note source depending on source type?
+                connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                        m_model, SLOT(setDefaultTaskDataSource(Domain::DataSource::Ptr)));
+                connect(availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                        m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
+            }
         }
 
         ApplicationComponents *self = const_cast<ApplicationComponents*>(this);
@@ -139,7 +155,7 @@ QList<QAction *> ApplicationComponents::configureActions() const
     if (m_configureActions.isEmpty()) {
         QList<QAction*> actions;
 
-        if (m_mode != NotesOnly) {
+        if (m_mode == TasksAndNotes) {
             auto widget = new QWidget;
             widget->setLayout(new QHBoxLayout);
             widget->layout()->addWidget(new QLabel(tr("Default task source")));

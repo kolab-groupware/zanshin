@@ -52,7 +52,7 @@ signals:
 
 public slots:
     void setModel(QObject *model);
-    void setDefaultNoteSource(const Domain::DataSource::Ptr &source);
+    void setDefaultSource(const Domain::DataSource::Ptr &source);
 
 private slots:
     void onActionTriggered(const Domain::DataSource::Ptr &source, int action);

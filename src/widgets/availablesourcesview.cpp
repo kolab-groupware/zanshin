@@ -135,7 +135,7 @@ void AvailableSourcesView::onRefreshDefaultSource()
     selectSource(defaultSource, QModelIndex());
 }
 
-void AvailableSourcesView::setDefaultNoteSource(const Domain::DataSource::Ptr &source)
+void AvailableSourcesView::setDefaultSource(const Domain::DataSource::Ptr &source)
 {
     selectSource(source, QModelIndex());
 }
