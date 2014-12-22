@@ -69,7 +69,7 @@ private slots:
         delete compositeJob;
     }
 
-    void shouldCallHandlersWithJob()
+    /*void shouldCallHandlersWithJob()
     {
         // GIVEN
         int callCount = 0;
@@ -96,7 +96,7 @@ private slots:
         QCOMPARE(seenJobs.toSet(), QSet<KJob*>() << job1 << job2);
         QVERIFY(!compositeJob->error());
         delete compositeJob;
-    }
+    }*/
 
     void handleJobResult(KJob*)
     {

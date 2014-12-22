@@ -38,7 +38,10 @@ public:
     using KCompositeJob::addSubjob;
 
     virtual void start();
-    virtual bool install(KJob *job, const JobHandler::ResultHandlerWithJob &handler);
+    /**
+      * gcc 4.7 does not like overloaded functions with different types of lambdas.
+      * because the second variant is not used at all till now disable it.
+    virtual bool install(KJob *job, const JobHandler::ResultHandlerWithJob &handler); */
     virtual bool install(KJob *job, const JobHandler::ResultHandler &handler);
 
 private slots:

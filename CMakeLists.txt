@@ -21,10 +21,16 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_definitions(-DQ_DECL_OVERRIDE=override)
     add_definitions(-DQ_DECL_FINAL=final)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    # using GCC >= 4.8
-    assert_min_ver("4.8")
-    add_definitions(-DQ_DECL_OVERRIDE=override)
-    add_definitions(-DQ_DECL_FINAL=final)
+    # using GCC >= 4.6
+    assert_min_ver("4.6")
+    if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS "4.7")
+       #GCC < 4.7 has no override and no final support
+       add_definitions(-DQ_DECL_OVERRIDE=)
+       add_definitions(-DQ_DECL_FINAL=)
+    else()
+       add_definitions(-DQ_DECL_OVERRIDE=override)
+       add_definitions(-DQ_DECL_FINAL=final)
+    endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     # currently Intel compiler does not support all required C++11 features in zanshin
     # http://software.intel.com/en-us/articles/c0x-features-supported-by-intel-c-compiler

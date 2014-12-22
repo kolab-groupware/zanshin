@@ -67,6 +67,9 @@ void JobHandler::install(KJob *job, const ResultHandler &handler)
     job->start();
 }
 
+/**
+  * gcc 4.7 does not like overloaded functions with different types of lambdas.
+  * because the second variant is not used at all till now disable it.
 void JobHandler::install(KJob *job, const ResultHandlerWithJob &handler)
 {
     auto self = jobHandlerInstance();
@@ -74,5 +77,6 @@ void JobHandler::install(KJob *job, const ResultHandlerWithJob &handler)
     self->m_handlersWithJob[job] << handler;
     job->start();
 }
+*/
 
 #include "jobhandler.moc"

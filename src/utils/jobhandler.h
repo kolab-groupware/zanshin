@@ -37,7 +37,10 @@ namespace JobHandler
     typedef std::function<void()> ResultHandler;
 
     void install(KJob *job, const ResultHandler &handler);
-    void install(KJob *job, const ResultHandlerWithJob &handler);
+    /**
+      * gcc 4.7 does not like overloaded functions with different types of lambdas.
+      * because the second variant is not used at all till now disable it.
+    void installWithJob(KJob *job, const ResultHandlerWithJob &handler);*/
 }
 
 }
