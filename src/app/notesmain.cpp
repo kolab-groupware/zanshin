@@ -92,12 +92,15 @@ int main(int argc, char **argv)
         configureMenu->addAction(action);
     }
 
-    auto configureButton = new QToolButton(widget);
-    configureButton->setIcon(QIcon::fromTheme("configure"));
-    configureButton->setText(QObject::tr("Settings"));
-    configureButton->setToolTip(configureButton ->text());
-    configureButton->setPopupMode(QToolButton::InstantPopup);
-    configureButton->setMenu(configureMenu);
+    QToolButton *configureButton = 0;
+    if (!components->configureActions().isEmpty()) {
+        configureButton= new QToolButton(widget);
+        configureButton->setIcon(QIcon::fromTheme("configure"));
+        configureButton->setText(QObject::tr("Settings"));
+        configureButton->setToolTip(configureButton ->text());
+        configureButton->setPopupMode(QToolButton::InstantPopup);
+        configureButton->setMenu(configureMenu);
+    }
 
     auto window = new KMainWindow;
     window->resize(1024, 600);
@@ -106,7 +109,9 @@ int main(int argc, char **argv)
 
     QToolBar *mainToolBar = window->addToolBar(QObject::tr("Main"));
     mainToolBar->setObjectName("mainToolBar");
-    mainToolBar->addWidget(configureButton);
+    if (configureButton) {
+        mainToolBar->addWidget(configureButton);
+    }
 
     window->addDockWidget(Qt::RightDockWidgetArea, editorDock);
     window->addDockWidget(Qt::LeftDockWidgetArea, pagesDock);
