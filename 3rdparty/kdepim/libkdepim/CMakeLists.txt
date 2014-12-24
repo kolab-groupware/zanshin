@@ -42,7 +42,7 @@ if (KDEPIM_INPROCESS_LDAP)
   )
 endif ()
 
-kde4_add_library(zanshinkdepimstatic ${kdepim_LIB_SRCS})
+kde4_add_library(zanshinkdepimstatic STATIC ${kdepim_LIB_SRCS})
 
 target_link_libraries(zanshinkdepimstatic
 #  ${KDEPIMLIBS_KRESOURCES_LIBS}
