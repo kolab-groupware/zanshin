@@ -86,6 +86,7 @@ set(KDEPIM_STATIC_LIBS
 
 add_subdirectory(3rdparty)
 #add_subdirectory(attic)
+add_subdirectory(attic/src/icons)
 add_subdirectory(src)
 add_subdirectory(tests)
 
