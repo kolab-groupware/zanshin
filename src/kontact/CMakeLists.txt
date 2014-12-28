@@ -40,7 +40,7 @@ set(notepart_SRCS
     notes_part.cpp
 )
 
-kde4_add_plugin(zanshin-notes_part ${part_SRCS})
+kde4_add_plugin(zanshin-notes_part ${notepart_SRCS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${KDE4_ENABLE_EXCEPTIONS}")
 target_link_libraries(zanshin-notes_part
     ${KDE4_KPARTS_LIBS}
@@ -61,7 +61,7 @@ set(notes_kontact_SRCS
     notes_kontact_plugin.cpp
 )
 
-kde4_add_plugin(kontact_zanshinnotesplugin ${kontact_SRCS})
+kde4_add_plugin(kontact_zanshinnotesplugin ${notes_kontact_SRCS})
 target_link_libraries(kontact_zanshinnotesplugin ${KDE4_KPARTS_LIBS} ${KDEPIMLIBS_KONTACTINTERFACE_LIBS})
 
 install(TARGETS kontact_zanshinnotesplugin DESTINATION ${PLUGIN_INSTALL_DIR})
@@ -70,13 +70,13 @@ install(FILES zanshin-notes_part.rc DESTINATION ${DATA_INSTALL_DIR}/zanshin)
 
 ################### Task part
 
-set(notepart_SRCS
+set(taskpart_SRCS
     ../app/aboutdata.cpp
     ../app/dependencies.cpp
     tasks_part.cpp
 )
 
-kde4_add_plugin(zanshin-tasks_part ${part_SRCS})
+kde4_add_plugin(zanshin-tasks_part ${taskpart_SRCS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${KDE4_ENABLE_EXCEPTIONS}")
 target_link_libraries(zanshin-tasks_part
     ${KDE4_KPARTS_LIBS}
@@ -97,7 +97,7 @@ set(tasks_kontact_SRCS
     tasks_kontact_plugin.cpp
 )
 
-kde4_add_plugin(kontact_zanshintasksplugin ${kontact_SRCS})
+kde4_add_plugin(kontact_zanshintasksplugin ${tasks_kontact_SRCS})
 target_link_libraries(kontact_zanshintasksplugin ${KDE4_KPARTS_LIBS} ${KDEPIMLIBS_KONTACTINTERFACE_LIBS})
 
 install(TARGETS kontact_zanshintasksplugin DESTINATION ${PLUGIN_INSTALL_DIR})

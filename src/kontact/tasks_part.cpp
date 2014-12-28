@@ -21,7 +21,7 @@
    USA.
 */
 
-#include "taskspart.h"
+#include "tasks_part.h"
 
 #include <KDE/KActionCollection>
 #include <KDE/KPluginFactory>

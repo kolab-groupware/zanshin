@@ -21,20 +21,23 @@
    USA.
 */
 
-#include "notes_kontact_plugin.h"
+#ifndef ZANSHIN_TASKS_KONTACT_PLUGIN_H
+#define ZANSHIN_TASKS_KONTACT_PLUGIN_H
 
-#include <KDE/KontactInterface/Core>
+#include <KDE/KontactInterface/Plugin>
 
-EXPORT_KONTACT_PLUGIN(NotesPlugin, zanshinnotes)
-
-NotesPlugin::NotesPlugin(KontactInterface::Core *core, const QVariantList&)
-    : KontactInterface::Plugin(core, core, "zanshinnotes")
+class TasksPlugin : public KontactInterface::Plugin
 {
-    setComponentData(KontactPluginFactory::componentData());
-}
+    Q_OBJECT
 
-KParts::ReadOnlyPart *NotesPlugin::createPart()
-{
-    return loadPart();
-}
+public:
+    TasksPlugin(KontactInterface::Core *core, const QVariantList &);
+
+    int weight() const { return 449; }
+
+protected:
+    KParts::ReadOnlyPart *createPart();
+};
+
+#endif
 

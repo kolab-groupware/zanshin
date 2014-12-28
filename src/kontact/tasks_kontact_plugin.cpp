@@ -21,19 +21,19 @@
    USA.
 */
 
-#include "kontact_plugin.h"
+#include "tasks_kontact_plugin.h"
 
 #include <KDE/KontactInterface/Core>
 
-EXPORT_KONTACT_PLUGIN(Plugin, zanshintasks)
+EXPORT_KONTACT_PLUGIN(TasksPlugin, zanshintasks)
 
-Plugin::Plugin(KontactInterface::Core *core, const QVariantList&)
+TasksPlugin::TasksPlugin(KontactInterface::Core *core, const QVariantList&)
     : KontactInterface::Plugin(core, core, "zanshintasks")
 {
     setComponentData(KontactPluginFactory::componentData());
 }
 
-KParts::ReadOnlyPart *Plugin::createPart()
+KParts::ReadOnlyPart *TasksPlugin::createPart()
 {
     return loadPart();
 }
