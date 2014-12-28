@@ -233,7 +233,28 @@ void ApplicationComponents::setModel(QObject *model)
 
     if (m_availableSourcesView) {
         m_availableSourcesView->setModel(m_model->property("availableSources").value<QObject*>());
-        m_availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
+        if (m_mode == NotesOnly) {
+            m_availableSourcesView->setDefaultSourceProperty(m_model, "defaultNoteDataSource");
+            connect(m_model, SIGNAL(defaultNoteDataSourceChanged(Domain::DataSource::Ptr)),
+                    m_availableSourcesView, SLOT(setDefaultSource(Domain::DataSource::Ptr)));
+            connect(m_availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                    m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
+        } else if (m_mode == TasksOnly) {
+            m_availableSourcesView->setDefaultSourceProperty(m_model, "defaultTaskDataSource");
+            connect(m_model, SIGNAL(defaultTaskDataSourceChanged(Domain::DataSource::Ptr)),
+                    m_availableSourcesView, SLOT(setDefaultSource(Domain::DataSource::Ptr)));
+            connect(m_availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                    m_model, SLOT(setDefaultTaskDataSource(Domain::DataSource::Ptr)));
+        } else {
+            m_availableSourcesView->setDefaultSourceProperty(m_model, "defaultTaskDataSource");
+            connect(m_model, SIGNAL(defaultTaskDataSourceChanged(Domain::DataSource::Ptr)),
+                    m_availableSourcesView, SLOT(setDefaultSource(Domain::DataSource::Ptr)));
+            //TODO decide wether to set task or note source depending on source type?
+            connect(m_availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                    m_model, SLOT(setDefaultTaskDataSource(Domain::DataSource::Ptr)));
+            connect(m_availableSourcesView, SIGNAL(sourceActivated(Domain::DataSource::Ptr)),
+                    m_model, SLOT(setDefaultNoteDataSource(Domain::DataSource::Ptr)));
+        }
     }
 
     if (m_availablePagesView) {
