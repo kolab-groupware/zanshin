@@ -1,5 +1,7 @@
 project(zanshin)
 
+option(BUILD_ZANSHIN_NEXT "build zanshin-next" TRUE)
+
 find_package(KDE4 REQUIRED)
 find_package(KdepimLibs REQUIRED)
 find_package(Boost REQUIRED)
