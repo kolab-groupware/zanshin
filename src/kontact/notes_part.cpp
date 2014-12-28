@@ -55,8 +55,8 @@ NotesPart::NotesPart(QWidget *parentWidget, QObject *parent, const QVariantList 
     auto splitter = new QSplitter(parentWidget);
     auto sidebar = new QSplitter(Qt::Vertical, parentWidget);
 
-    auto components = new Widgets::ApplicationComponents(parentWidget);
-    components->setModel(new Presentation::ApplicationModel(components));
+    auto components = new Widgets::ApplicationComponents(parentWidget, Widgets::ApplicationComponents::NotesOnly);
+    components->setModel(new Presentation::ApplicationModel(components, Presentation::ApplicationModel::NotesOnly));
 
     sidebar->addWidget(components->availablePagesView());
     sidebar->addWidget(components->availableSourcesView());

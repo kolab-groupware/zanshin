@@ -45,6 +45,7 @@ using namespace Widgets;
 AvailableSourcesView::AvailableSourcesView(QWidget *parent)
     : QWidget(parent),
       m_model(0),
+      m_object(0),
       m_sortProxy(new QSortFilterProxyModel(this))
 {
     m_sortProxy->setDynamicSortFilter(true);
@@ -100,7 +101,7 @@ void AvailableSourcesView::setModel(QObject *model)
     setSourceModel("sourceListModel");
 }
 
-void AvailableSourcesView::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+void AvailableSourcesView::onSelectionChanged(const QItemSelection &selected, const QItemSelection &/* deselected */)
 {
     const QModelIndexList indexes = selected.indexes();
     if (indexes.size() > 1) {
