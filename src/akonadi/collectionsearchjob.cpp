@@ -64,15 +64,13 @@ void CollectionSearchJob::start()
 void CollectionSearchJob::onCollectionsReceived(const Akonadi::Collection::List &list)
 {
     Q_FOREACH(const Akonadi::Collection &col, list) {
-        if (col.name().contains(mSearchString) && !col.contentMimeTypes().toSet().intersect(mMimeTypeFilter.toSet()).isEmpty()) {
-            mMatchingCollections << col;
-            Akonadi::Collection ancestor = col.parentCollection();
-            while (ancestor.isValid() && (ancestor != Akonadi::Collection::root())) {
-                if (!mAncestors.contains(ancestor)) {
-                    mAncestors << ancestor;
-                }
-                ancestor = ancestor.parentCollection();
+        mMatchingCollections << col;
+        Akonadi::Collection ancestor = col.parentCollection();
+        while (ancestor.isValid() && (ancestor != Akonadi::Collection::root())) {
+            if (!mAncestors.contains(ancestor)) {
+                mAncestors << ancestor;
             }
+            ancestor = ancestor.parentCollection();
         }
     }
 }
