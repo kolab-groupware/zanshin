@@ -30,15 +30,22 @@
 #include "domain/taskrepository.h"
 #include "domain/note.h"
 #include "domain/noterepository.h"
+#include "domain/relation.h"
+#include "domain/relationqueries.h"
+#include "domain/relationrepository.h"
 
 using namespace Presentation;
 
 ArtifactEditorModel::ArtifactEditorModel(Domain::TaskRepository *taskRepository,
                                          Domain::NoteRepository *noteRepository,
+                                         Domain::RelationQueries *relationQueries,
+                                         Domain::RelationRepository *relationRepository,
                                          QObject *parent)
     : QObject(parent),
       m_taskRepository(taskRepository),
       m_noteRepository(noteRepository),
+      m_relationQueries(relationQueries),
+      m_relationRepository(relationRepository),
       m_saveTimer(new QTimer(this)),
       m_saveNeeded(false)
 {
@@ -70,6 +77,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     m_delegate = Domain::Task::Delegate();
     m_progress = 0;
     m_status = Domain::Task::None;
+    m_relations.clear();
 
     m_artifact = artifact;
 
@@ -104,6 +112,13 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
                 this, SLOT(onStatusChanged(int)));
     }
 
+    auto relationQuery = m_relationQueries->findRelations(m_artifact);
+    relationQuery->addPostInsertHandler([this, relationQuery](const Domain::Relation::Ptr &rel, int) {
+        //hack to keep query alive
+        Q_ASSERT(relationQuery);
+        addRelation(rel);
+    });
+
     emit textChanged(m_text);
     emit titleChanged(m_title);
     emit startDateChanged(m_start);
@@ -113,6 +128,20 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     emit artifactChanged(m_artifact);
     emit progressChanged(m_progress);
     emit statusChanged(m_status);
+    emit relationsChanged(m_relations);
+}
+
+void ArtifactEditorModel::addRelation(const Domain::Relation::Ptr &relation)
+{
+    m_relations << relation;
+    emit relationsChanged(m_relations);
+}
+
+void ArtifactEditorModel::removeRelation(const Domain::Relation::Ptr &relation)
+{
+    m_relations.removeAll(relation);
+    emit relationsChanged(m_relations);
+    m_relationRepository->remove(relation);
 }
 
 bool ArtifactEditorModel::hasTaskProperties() const
@@ -222,6 +251,11 @@ void ArtifactEditorModel::setStatus(int status)
         return;
     onStatusChanged(status);
     setSaveNeeded(true);
+}
+
+QList<Domain::Relation::Ptr> ArtifactEditorModel::relations() const
+{
+    return m_relations;
 }
 
 void ArtifactEditorModel::onTextChanged(const QString &text)

@@ -55,6 +55,8 @@ public:
     KJob *updateTag(Akonadi::Tag tag) Q_DECL_OVERRIDE;
     KJob *removeTag(Akonadi::Tag tag) Q_DECL_OVERRIDE;
 
+    KJob *removeRelation(Akonadi::Relation relation) Q_DECL_OVERRIDE;
+
     CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types) Q_DECL_OVERRIDE;
     CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types, FetchFilter filter) Q_DECL_OVERRIDE;
     CollectionFetchJobInterface *fetchPersons() Q_DECL_OVERRIDE;
@@ -65,6 +67,7 @@ public:
     ItemFetchJobInterface *fetchItem(Akonadi::Item item) Q_DECL_OVERRIDE;
     ItemFetchJobInterface *fetchTagItems(Akonadi::Tag tag) Q_DECL_OVERRIDE;
     TagFetchJobInterface *fetchTags() Q_DECL_OVERRIDE;
+    RelationFetchJobInterface *fetchRelations(Akonadi::Item item) Q_DECL_OVERRIDE;
 
 private:
     CollectionFetchJob::Type jobTypeFromDepth(StorageInterface::FetchDepth depth);

@@ -1,6 +1,7 @@
 /* This file is part of Zanshin
 
    Copyright 2014 Kevin Ottens <ervin@kde.org>
+   Copyright 2014 Franck Arrecot <franck.arrecot@gmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -21,34 +22,43 @@
    USA.
 */
 
+#include "akonadirelationrepository.h"
 
-#ifndef PRESENTATION_METATYPES_H
-#define PRESENTATION_METATYPES_H
+#include "akonadiitemfetchjobinterface.h"
+#include "akonadiserializer.h"
+#include "akonadistorage.h"
 
-#include <QMetaType>
-#include <QSharedPointer>
-#include "domain/relation.h"
+#include "utils/compositejob.h"
 
-class QAbstractItemModel;
+using namespace Akonadi;
 
-typedef QSharedPointer<QObject> QObjectPtr;
-typedef QList<QObjectPtr> QObjectPtrList;
 
-namespace Presentation {
-
-namespace MetaTypes
+RelationRepository::RelationRepository(QObject *parent)
+    : QObject(parent),
+      m_storage(new Storage),
+      m_serializer(new Serializer),
+      m_ownInterfaces(true)
 {
-    void registerAll();
 }
 
+RelationRepository::RelationRepository(StorageInterface *storage, SerializerInterface *serializer)
+    : m_storage(storage),
+      m_serializer(serializer),
+      m_ownInterfaces(false)
+{
 }
 
-// cppcheck's parser somehow confuses it for a C-cast
-// cppcheck-suppress cstyleCast
-Q_DECLARE_METATYPE(QAbstractItemModel*)
+RelationRepository::~RelationRepository()
+{
+    if (m_ownInterfaces) {
+        delete m_storage;
+        delete m_serializer;
+    }
+}
 
-Q_DECLARE_METATYPE(QObjectPtr)
-Q_DECLARE_METATYPE(QObjectPtrList)
-Q_DECLARE_METATYPE(QList<Domain::Relation::Ptr>)
-
-#endif // PRESENTATION_METATYPES_H
+KJob *RelationRepository::remove(Domain::Relation::Ptr relation)
+{
+   auto akonadiRelation = m_serializer->createAkonadiRelationFromRelation(relation);
+   Q_ASSERT(akonadiRelation.isValid());
+   return m_storage->removeRelation(akonadiRelation);
+}

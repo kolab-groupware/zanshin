@@ -22,22 +22,41 @@
 */
 
 
-#include "metatypes.h"
+#ifndef DOMAIN_RELATION_H
+#define DOMAIN_RELATION_H
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
+#include <QMetaType>
+#include <QSharedPointer>
+#include <QString>
+#include <QUrl>
 
-using namespace Presentation;
+namespace Domain {
 
-void MetaTypes::registerAll()
+class Relation : public QObject
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
+    Q_OBJECT
+    // Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+
+public:
+    typedef QSharedPointer<Relation> Ptr;
+    typedef QList<Relation::Ptr> List;
+
+    explicit Relation(QObject *parent = 0);
+    virtual ~Relation();
+
+    QString name() const;
+    QUrl url() const;
+
+public slots:
+    void setName(const QString &name);
+    void setUrl(const QUrl &url);
+private:
+    QString m_name;
+    QUrl m_url;
+};
+
 }
+
+Q_DECLARE_METATYPE(Domain::Relation::Ptr)
+
+#endif // DOMAIN_RELATION_H

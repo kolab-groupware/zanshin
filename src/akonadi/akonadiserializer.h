@@ -63,6 +63,7 @@ public:
     void updateItemProject(Akonadi::Item item, Domain::Project::Ptr project) Q_DECL_OVERRIDE;
     void removeItemParent(Akonadi::Item item) Q_DECL_OVERRIDE;
     Akonadi::Item::List filterDescendantItems(const Akonadi::Item::List &potentialChildren, const Akonadi::Item &ancestorItem) Q_DECL_OVERRIDE;
+    Akonadi::Item createItemFromArtifact(Domain::Artifact::Ptr artifact) Q_DECL_OVERRIDE;
 
     bool isNoteItem(Akonadi::Item item) Q_DECL_OVERRIDE;
     Domain::Note::Ptr createNoteFromItem(Akonadi::Item item) Q_DECL_OVERRIDE;
@@ -88,6 +89,10 @@ public:
 
     bool hasContextTags(Akonadi::Item item) const Q_DECL_OVERRIDE;
     bool hasAkonadiTags(Akonadi::Item item) const Q_DECL_OVERRIDE;
+
+    Domain::Relation::Ptr createRelationFromAkonadiRelation(const QPair<Akonadi::Item, Akonadi::Relation> &) Q_DECL_OVERRIDE;
+    bool representsAkonadiRelation(Domain::Relation::Ptr relation, const QPair<Item, Relation> &akonadiRelation) const Q_DECL_OVERRIDE;
+    Akonadi::Relation createAkonadiRelationFromRelation(Domain::Relation::Ptr) Q_DECL_OVERRIDE;
 
 private:
     bool isContext(const Akonadi::Tag &tag) const;

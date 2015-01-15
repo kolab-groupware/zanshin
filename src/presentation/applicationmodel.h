@@ -43,6 +43,8 @@ namespace Domain {
     class TagRepository;
     class TaskQueries;
     class TaskRepository;
+    class RelationQueries;
+    class RelationRepository;
 }
 
 namespace Presentation {
@@ -136,6 +138,9 @@ private:
 
     Domain::TagQueries *m_tagQueries;
     Domain::TagRepository *m_tagRepository;
+
+    Domain::RelationQueries *m_relationQueries;
+    Domain::RelationRepository *m_relationRepository;
 
     bool m_ownInterface;
     ApplicationMode m_mode;

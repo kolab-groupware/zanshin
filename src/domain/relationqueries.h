@@ -21,23 +21,34 @@
    USA.
 */
 
+#ifndef DOMAIN_RELATIONQUERIES_H
+#define DOMAIN_RELATIONQUERIES_H
 
-#include "metatypes.h"
+#include "artifact.h"
+#include "queryresult.h"
+#include "relation.h"
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
+namespace Domain {
 
-using namespace Presentation;
-
-void MetaTypes::registerAll()
+class RelationQueries
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
+public:
+    RelationQueries();
+    virtual ~RelationQueries();
+
+    // enum ApplicationMode {
+    //     TasksOnly,
+    //     NotesOnly,
+    //     TasksAndNotes
+    // };
+
+    // virtual void setApplicationMode(ApplicationMode) = 0;
+
+    virtual QueryResult<Relation::Ptr>::Ptr findRelations(Artifact::Ptr artifact) const = 0;
+
+    // virtual QueryResult<Artifact::Ptr>::Ptr findTopLevelArtifacts(Relation::Ptr tag) const = 0;
+};
+
 }
+
+#endif // DOMAIN_RELATIONQUERIES_H

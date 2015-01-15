@@ -22,22 +22,35 @@
 */
 
 
-#include "metatypes.h"
+#include "relation.h"
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
+using namespace Domain;
 
-using namespace Presentation;
-
-void MetaTypes::registerAll()
+Relation::Relation(QObject *parent)
+    : QObject(parent)
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
+}
+
+Relation::~Relation()
+{
+}
+
+QString Relation::name() const
+{
+    return m_name;
+}
+
+void Relation::setName(const QString &name)
+{
+    m_name = name;
+}
+
+QUrl Relation::url() const
+{
+    return m_url;
+}
+
+void Relation::setUrl(const QUrl &url)
+{
+    m_url = url;
 }

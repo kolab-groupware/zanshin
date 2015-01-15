@@ -29,12 +29,15 @@
 #include <QObject>
 
 #include "domain/task.h"
+#include "domain/relation.h"
 
 class QTimer;
 
 namespace Domain {
     class NoteRepository;
     class TaskRepository;
+    class RelationQueries;
+    class RelationRepository;
 }
 
 namespace Presentation {
@@ -51,9 +54,12 @@ class ArtifactEditorModel : public QObject
     Q_PROPERTY(bool hasTaskProperties READ hasTaskProperties NOTIFY hasTaskPropertiesChanged)
     Q_PROPERTY(int progress READ progress WRITE setProgress NOTIFY progressChanged)
     Q_PROPERTY(int status READ status WRITE setStatus NOTIFY statusChanged)
+    Q_PROPERTY(QList<Domain::Relation::Ptr> relations READ relations NOTIFY relationsChanged)
 public:
     explicit ArtifactEditorModel(Domain::TaskRepository *taskRepository,
                                  Domain::NoteRepository *noteRepository,
+                                 Domain::RelationQueries *relationQueries,
+                                 Domain::RelationRepository *relationRepository,
                                  QObject *parent = 0);
     ~ArtifactEditorModel();
 
@@ -69,6 +75,7 @@ public:
     QString delegateText() const;
     int progress() const;
     int status() const;
+    QList<Domain::Relation::Ptr> relations() const;
 
     static int autoSaveDelay();
 
@@ -81,6 +88,7 @@ public slots:
     void delegate(const QString &name, const QString &email);
     void setProgress(int progress);
     void setStatus(int status);
+    void removeRelation(const Domain::Relation::Ptr &);
 
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);
@@ -92,6 +100,7 @@ signals:
     void delegateTextChanged(const QString &delegateText);
     void progressChanged(int progress);
     void statusChanged(int status);
+    void relationsChanged(const QList<Domain::Relation::Ptr> &relations);
 
 private slots:
     void onTextChanged(const QString &text);
@@ -108,8 +117,12 @@ private:
     void setSaveNeeded(bool needed);
     bool isSaveNeeded() const;
 
+    void addRelation(const Domain::Relation::Ptr &);
+
     Domain::TaskRepository *m_taskRepository;
     Domain::NoteRepository *m_noteRepository;
+    Domain::RelationQueries *m_relationQueries;
+    Domain::RelationRepository *m_relationRepository;
 
     Domain::Artifact::Ptr m_artifact;
 
@@ -120,6 +133,7 @@ private:
     Domain::Task::Delegate m_delegate;
     int m_progress;
     Domain::Task::Status m_status;
+    QList<Domain::Relation::Ptr> m_relations;
 
     QTimer *m_saveTimer;
     bool m_saveNeeded;

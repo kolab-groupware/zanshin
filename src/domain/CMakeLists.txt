@@ -22,6 +22,9 @@ set(domain_SRCS
     task.cpp
     taskqueries.cpp
     taskrepository.cpp
+    relation.cpp
+    relationqueries.cpp
+    relationrepository.cpp
 )
 
 kde4_add_library(domain STATIC ${domain_SRCS})

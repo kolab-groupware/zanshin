@@ -65,6 +65,8 @@ ApplicationModel::ApplicationModel(QObject *parent, ApplicationMode mode)
       m_noteSourcesModel(0),
       m_tagQueries(Utils::DependencyManager::globalInstance().create<Domain::TagQueries>()),
       m_tagRepository(Utils::DependencyManager::globalInstance().create<Domain::TagRepository>()),
+      m_relationQueries(Utils::DependencyManager::globalInstance().create<Domain::RelationQueries>()),
+      m_relationRepository(Utils::DependencyManager::globalInstance().create<Domain::RelationRepository>()),
       m_ownInterface(true),
       m_mode(mode)
 {
@@ -247,7 +249,7 @@ QObject *ApplicationModel::currentPage()
 QObject *ApplicationModel::editor()
 {
     if (!m_editor) {
-        m_editor = new ArtifactEditorModel(m_taskRepository, m_noteRepository, this);
+        m_editor = new ArtifactEditorModel(m_taskRepository, m_noteRepository, m_relationQueries, m_relationRepository, this);
     }
 
     return m_editor;

@@ -26,6 +26,7 @@
 
 #include "domain/datasource.h"
 #include "domain/tag.h"
+#include "domain/relation.h"
 #include "domain/task.h"
 #include "domain/note.h"
 #include "domain/project.h"
@@ -105,7 +106,13 @@ public:
     virtual bool hasContextTags(Akonadi::Item item) const = 0;
     virtual bool hasAkonadiTags(Akonadi::Item item) const = 0;
 
+    virtual Domain::Relation::Ptr createRelationFromAkonadiRelation(const QPair<Item, Relation> &) = 0;
+    virtual bool representsAkonadiRelation(Domain::Relation::Ptr relation, const QPair<Item, Relation> &akonadiRelation) const = 0;
+    virtual Akonadi::Relation createAkonadiRelationFromRelation(Domain::Relation::Ptr) = 0;
+
     static QByteArray contextTagType();
+
+    virtual Akonadi::Item createItemFromArtifact(Domain::Artifact::Ptr artifact) = 0;
 };
 
 }

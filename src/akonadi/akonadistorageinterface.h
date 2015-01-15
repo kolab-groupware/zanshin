@@ -39,6 +39,7 @@ class CollectionFetchJobInterface;
 class CollectionSearchJobInterface;
 class ItemFetchJobInterface;
 class TagFetchJobInterface;
+class RelationFetchJobInterface;
 
 
 class StorageInterface
@@ -82,6 +83,8 @@ public:
     virtual KJob *updateTag(Akonadi::Tag tag) = 0;
     virtual KJob *removeTag(Akonadi::Tag tag) = 0;
 
+    virtual KJob *removeRelation(Akonadi::Relation relation) = 0;
+
     virtual CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types) = 0;
     virtual CollectionFetchJobInterface *fetchCollections(Akonadi::Collection collection, FetchDepth depth, FetchContentTypes types, FetchFilter filter) = 0;
     virtual CollectionFetchJobInterface *fetchPersons() = 0;
@@ -92,6 +95,7 @@ public:
     virtual ItemFetchJobInterface *fetchItem(Akonadi::Item item) = 0;
     virtual ItemFetchJobInterface *fetchTagItems(Akonadi::Tag tag) = 0;
     virtual TagFetchJobInterface *fetchTags() = 0;
+    virtual RelationFetchJobInterface *fetchRelations(Akonadi::Item item) = 0;
 };
 
 }

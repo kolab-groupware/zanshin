@@ -22,22 +22,15 @@
 */
 
 
-#include "metatypes.h"
+#include "relationrepository.h"
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
+using namespace Domain;
 
-using namespace Presentation;
-
-void MetaTypes::registerAll()
+RelationRepository::RelationRepository()
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
 }
+
+RelationRepository::~RelationRepository()
+{
+}
+

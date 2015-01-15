@@ -34,6 +34,8 @@ class QLabel;
 class QPlainTextEdit;
 class QComboBox;
 class QSpinBox;
+class QVBoxLayout;
+class QListWidget;
 
 class KLineEdit;
 
@@ -72,6 +74,7 @@ private slots:
     void onDelegateTextChanged();
     void onProgressChanged();
     void onStatusChanged();
+    void onRelationsChanged();
 
     void onTextEditChanged();
     void onStartEditEntered(const QDate &start);
@@ -80,6 +83,9 @@ private slots:
     void onDelegateEntered();
     void onProgressChanged(int progress);
     void onStatusChanged(int status);
+
+    void onLinkActivated(const QString &link);
+    void onRemoveRelationClicked();
 
 private:
     QObject *m_model;
@@ -93,6 +99,8 @@ private:
     KLineEdit *m_delegateEdit;
     QComboBox *m_statusComboBox;
     QSpinBox *m_progressEdit;
+    QList<QWidget*> m_relationWidgets;
+    QVBoxLayout *m_relationsLayout;
 };
 
 }

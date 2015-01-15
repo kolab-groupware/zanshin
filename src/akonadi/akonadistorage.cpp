@@ -44,12 +44,14 @@
 #include <Akonadi/TagFetchScope>
 #include <Akonadi/TagModifyJob>
 #include <Akonadi/TagAttribute>
+#include <Akonadi/RelationDeleteJob>
 #include <Akonadi/AttributeFactory>
 #include <akonadi/collectionidentificationattribute.h>
 #include "akonadi/akonadicollectionfetchjobinterface.h"
 #include "akonadi/akonadicollectionsearchjobinterface.h"
 #include "akonadi/akonadiitemfetchjobinterface.h"
 #include "akonadi/akonaditagfetchjobinterface.h"
+#include "akonadi/akonadirelationfetchjobinterface.h"
 #include "akonadi/akonadistoragesettings.h"
 #include "akonadi/collectionsearchjob.h"
 #include "akonadi/personsearchjob.h"
@@ -193,6 +195,63 @@ public:
     Tag::List tags() const { return TagFetchJob::tags(); }
 };
 
+
+class RelationFetchJobImpl : public KJob
+{
+public:
+    QList<QPair<Item, Relation> > resultItems;
+
+    RelationFetchJobImpl(const Akonadi::Item &item)
+        : KJob()
+    {
+        auto fetchJob = new ItemFetchJob(item);
+        fetchJob->fetchScope().setFetchRelations(true);
+        Utils::JobHandler::install(fetchJob, [this, fetchJob] {
+            if (fetchJob->items().size() >= 1) {
+                const auto item = fetchJob->items().first();
+                QHash<Item::Id, Relation> relations;
+                Item::List items;
+                for (auto relation : item.relations()) {
+                    Item otherItem;
+                    if (item == relation.left()) {
+                        otherItem = relation.right();
+                    } else {
+                        otherItem = relation.left();
+                    }
+                    relations.insert(otherItem.id(), relation);
+                    items << otherItem;
+                }
+
+                auto fetchItemJob = new ItemFetchJob(items);
+                fetchItemJob->fetchScope().fetchFullPayload();
+                Utils::JobHandler::install(fetchItemJob, [this, fetchItemJob, relations] {
+                    for(const auto item : fetchItemJob->items()) {
+                        resultItems << QPair<Item, Relation>(item, relations.value(item.id()));
+                    }
+                    emitResult();
+                });
+            } else {
+                emitResult();
+            }
+        });
+    }
+
+    void start() {}
+};
+
+class RelationJob : public RelationFetchJobImpl, public RelationFetchJobInterface
+{
+public:
+    RelationJob(const Akonadi::Item &item) : RelationFetchJobImpl(item)
+    {
+    }
+
+    QList<QPair<Item, Relation> > relations() const
+    {
+        return resultItems;
+    }
+};
+
 Storage::Storage()
 {
     AttributeFactory::registerAttribute<CollectionIdentificationAttribute>();
@@ -265,6 +324,11 @@ KJob *Storage::updateTag(Tag tag)
 KJob *Storage::removeTag(Tag tag)
 {
     return new Akonadi::TagDeleteJob(tag);
+}
+
+KJob *Storage::removeRelation(Relation relation)
+{
+    return new Akonadi::RelationDeleteJob(relation);
 }
 
 CollectionFetchJobInterface *Storage::fetchCollections(Collection collection, StorageInterface::FetchDepth depth, FetchContentTypes types)
@@ -401,4 +465,9 @@ void Storage::configureItemFetchJob(ItemJob *job)
     scope.tagFetchScope().setFetchIdOnly(false);
     scope.setAncestorRetrieval(ItemFetchScope::All);
     job->setFetchScope(scope);
+}
+
+RelationFetchJobInterface *Storage::fetchRelations(Akonadi::Item item)
+{
+    return new RelationJob(item);
 }

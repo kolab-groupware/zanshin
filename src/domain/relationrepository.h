@@ -21,23 +21,23 @@
    USA.
 */
 
+#ifndef DOMAIN_RELATIONREPOSITORY_H
+#define DOMAIN_RELATIONREPOSITORY_H
 
-#include "metatypes.h"
+#include "relation.h"
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
+class KJob;
 
-using namespace Presentation;
+namespace Domain {
 
-void MetaTypes::registerAll()
+class RelationRepository
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
+public:
+    RelationRepository();
+    virtual ~RelationRepository();
+    virtual KJob *remove(Relation::Ptr tag) = 0;
+};
+
 }
+
+#endif // DOMAIN_RELATIONREPOSITORY_H

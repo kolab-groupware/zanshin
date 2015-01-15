@@ -31,11 +31,15 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QSpinBox>
+#include <QUrl>
+#include <KRun>
 #include "kdateedit.h"
 #include "addressline/addresseelineedit.h"
+#include "presentation/metatypes.h"
 
 #include "domain/artifact.h"
 #include "domain/task.h"
+#include "domain/relation.h"
 
 
 using namespace Widgets;
@@ -51,7 +55,8 @@ EditorView::EditorView(QWidget *parent)
       m_startTodayButton(new QPushButton(tr("Start today"), m_taskGroup)),
       m_delegateEdit(0),
       m_statusComboBox(new QComboBox(m_taskGroup)),
-      m_progressEdit(new QSpinBox(m_taskGroup))
+      m_progressEdit(new QSpinBox(m_taskGroup)),
+      m_relationsLayout(new QVBoxLayout)
 {
     // To avoid having unit tests talking to akonadi
     // while we don't need the completion for them
@@ -83,6 +88,7 @@ EditorView::EditorView(QWidget *parent)
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(m_delegateLabel);
     layout->addWidget(m_textEdit);
+    layout->addLayout(m_relationsLayout);
     layout->addWidget(m_taskGroup);
     setLayout(layout);
 
@@ -155,6 +161,7 @@ void EditorView::setModel(QObject *model)
     onDelegateTextChanged();
     onProgressChanged();
     onStatusChanged();
+    onRelationsChanged();
 
     connect(m_model, SIGNAL(artifactChanged(Domain::Artifact::Ptr)),
             this, SLOT(onArtifactChanged()));
@@ -167,6 +174,7 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
     connect(m_model, SIGNAL(progressChanged(int)), this, SLOT(onProgressChanged()));
     connect(m_model, SIGNAL(statusChanged(int)), this, SLOT(onStatusChanged()));
+    connect(m_model, SIGNAL(relationsChanged(QList<Domain::Relation::Ptr>)), this, SLOT(onRelationsChanged()));
 
     connect(this, SIGNAL(titleChanged(QString)), m_model, SLOT(setTitle(QString)));
     connect(this, SIGNAL(textChanged(QString)), m_model, SLOT(setText(QString)));
@@ -233,6 +241,52 @@ void EditorView::onDelegateTextChanged()
     m_delegateLabel->setVisible(!labelText.isEmpty());
     m_delegateLabel->setText(labelText);
     m_delegateEdit->clear();
+}
+
+void EditorView::onRelationsChanged()
+{
+    const auto relations = m_model->property("relations").value<QList<Domain::Relation::Ptr> >();
+    for (auto widget : m_relationWidgets) {
+        m_relationsLayout->removeWidget(widget);
+        delete widget;
+    }
+    m_relationWidgets.clear();
+
+    for (auto relation : relations) {
+        auto widget = new QWidget(this);
+        auto layout = new QHBoxLayout(widget);
+        widget->setLayout(layout);
+
+        auto labelText = QString("<a href=\"%1\">%2</a>").arg(relation->url().toString()).arg(relation->name());
+        auto label = new QLabel(widget);
+        label->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
+        label->setTextFormat(Qt::RichText);
+        label->setText(labelText);
+        connect(label, SIGNAL(linkActivated(QString)), this, SLOT(onLinkActivated(QString)));
+        layout->addWidget(label);
+
+        auto button = new QPushButton(widget);
+        button->setProperty("relation", QVariant::fromValue(relation));
+        button->setIcon(QIcon::fromTheme("list-remove"));
+        connect(button, SIGNAL(clicked()), this, SLOT(onRemoveRelationClicked()));
+        layout->addWidget(button);
+        layout->addStretch();
+
+        m_relationsLayout->addWidget(widget);
+        m_relationWidgets << widget;
+    }
+}
+
+void EditorView::onRemoveRelationClicked()
+{
+    auto relation = sender()->property("relation").value<Domain::Relation::Ptr>();
+    QMetaObject::invokeMethod(m_model, "removeRelation",
+                                Q_ARG(Domain::Relation::Ptr, relation));
+}
+
+void EditorView::onLinkActivated(const QString &link)
+{
+    new KRun(link, this);
 }
 
 void EditorView::onTextEditChanged()

@@ -1,6 +1,6 @@
 /* This file is part of Zanshin
 
-   Copyright 2014 Kevin Ottens <ervin@kde.org>
+   Copyright 2014 Franck Arrecot <franck.arrecot@gmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -21,23 +21,24 @@
    USA.
 */
 
+#include "akonadirelationfetchjobinterface.h"
+#include <KJob>
 
-#include "metatypes.h"
+using namespace Akonadi ;
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
-
-using namespace Presentation;
-
-void MetaTypes::registerAll()
+RelationFetchJobInterface::RelationFetchJobInterface()
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
 }
+
+RelationFetchJobInterface::~RelationFetchJobInterface()
+{
+}
+
+KJob *RelationFetchJobInterface::kjob()
+{
+    KJob *job = dynamic_cast<KJob*>(this);
+    Q_ASSERT(job);
+    return job;
+}
+
+

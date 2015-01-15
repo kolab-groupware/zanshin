@@ -1,6 +1,7 @@
 /* This file is part of Zanshin
 
    Copyright 2014 Kevin Ottens <ervin@kde.org>
+   Copyright 2014 Franck Arrecot<franck.arrecot@kgmail.com>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -21,23 +22,30 @@
    USA.
 */
 
+#ifndef AKONADIRELATIONREPOSITORY_H
+#define AKONADIRELATIONREPOSITORY_H
 
-#include "metatypes.h"
+#include "domain/relationrepository.h"
 
-#include "domain/artifact.h"
-#include "domain/datasource.h"
-#include "domain/task.h"
-#include "domain/relation.h"
+namespace Akonadi {
 
-using namespace Presentation;
+class SerializerInterface;
+class StorageInterface;
 
-void MetaTypes::registerAll()
+class RelationRepository : public QObject, public Domain::RelationRepository
 {
-    qRegisterMetaType<QAbstractItemModel*>();
-    qRegisterMetaType<QObjectPtr>();
-    qRegisterMetaType<QObjectPtrList>();
-    qRegisterMetaType<Domain::Artifact::Ptr>();
-    qRegisterMetaType<Domain::DataSource::Ptr>();
-    qRegisterMetaType<Domain::Task::Delegate>();
-    qRegisterMetaType<QList<Domain::Relation::Ptr> >();
+    Q_OBJECT
+public:
+    explicit RelationRepository(QObject* parent = 0);
+    RelationRepository(StorageInterface *storage, SerializerInterface *serializer);
+    virtual ~RelationRepository();
+
+    KJob *remove(Domain::Relation::Ptr relation) Q_DECL_OVERRIDE;
+
+private:
+    StorageInterface *m_storage;
+    SerializerInterface *m_serializer;
+    bool m_ownInterfaces;
+};
 }
+#endif // AKONADIRELATIONREPOSITORY_H

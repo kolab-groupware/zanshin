@@ -27,6 +27,9 @@ set(akonadi_SRCS
     akonaditaskqueries.cpp
     akonaditaskrepository.cpp
     akonaditimestampattribute.cpp
+    akonadirelationqueries.cpp
+    akonadirelationfetchjobinterface.cpp
+    akonadirelationrepository.cpp
     collectionsearchjob.cpp
     personsearchjob.cpp
 )

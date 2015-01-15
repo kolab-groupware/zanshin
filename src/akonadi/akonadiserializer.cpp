@@ -649,3 +649,43 @@ bool Serializer::isTagChild(Domain::Tag::Ptr tag, Akonadi::Item item)
 
     return item.hasTag(akonadiTag);
 }
+
+Akonadi::Item Serializer::createItemFromArtifact(Domain::Artifact::Ptr artifact)
+{
+    if (auto task = artifact.objectCast<Domain::Task>()) {
+        return createItemFromTask(task);
+    }
+    if (auto note = artifact.objectCast<Domain::Note>()) {
+        return createItemFromNote(note);
+    }
+    return Akonadi::Item();
+}
+
+Domain::Relation::Ptr Serializer::createRelationFromAkonadiRelation(const QPair<Item, Relation> &akonadiRelation)
+{
+    auto relation = Domain::Relation::Ptr::create();
+    relation->setUrl(akonadiRelation.first.url());
+    if (akonadiRelation.first.hasPayload<KMime::Message::Ptr>()) {
+        QString subject;
+        auto header = akonadiRelation.first.payload<KMime::Message::Ptr>()->subject();
+        if (header) {
+            subject = header->asUnicodeString();
+        } else {
+            subject = "Unknown mail";
+        }
+
+        relation->setName(subject);
+    }
+    relation->setProperty("akonadiRelation", QVariant::fromValue(akonadiRelation.second));
+    return relation;
+}
+
+bool Serializer::representsAkonadiRelation(Domain::Relation::Ptr relation, const QPair<Item, Relation> &akonadiRelation) const
+{
+    return relation->url() == akonadiRelation.first.url();
+}
+
+Akonadi::Relation Serializer::createAkonadiRelationFromRelation(Domain::Relation::Ptr relation)
+{
+    return relation->property("akonadiRelation").value<Relation>();
+}

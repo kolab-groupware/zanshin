@@ -36,6 +36,8 @@
 #include "akonadi/akonaditagrepository.h"
 #include "akonadi/akonaditaskqueries.h"
 #include "akonadi/akonaditaskrepository.h"
+#include "akonadi/akonadirelationqueries.h"
+#include "akonadi/akonadirelationrepository.h"
 
 #include "utils/dependencymanager.h"
 
@@ -55,4 +57,6 @@ void App::initializeDependencies()
     deps.add<Domain::TagRepository, Akonadi::TagRepository>();
     deps.add<Domain::TaskQueries, Akonadi::TaskQueries>();
     deps.add<Domain::TaskRepository, Akonadi::TaskRepository>();
+    deps.add<Domain::RelationQueries, Akonadi::RelationQueries>();
+    deps.add<Domain::RelationRepository, Akonadi::RelationRepository>();
 }
