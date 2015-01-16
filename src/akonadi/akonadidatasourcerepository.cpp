@@ -79,18 +79,26 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
         //This can could be used to provide a parent widget for the created dialogs
         QWidget *parentWidget = 0;
 
-        auto actionCollection = new KActionCollection(parent, KComponentData());
-        auto mActionManager = new Akonadi::StandardCalendarActionManager(actionCollection, parentWidget);
-        mActionManager->setParent(parent);
+        static auto actionCollection = new KActionCollection(0, KComponentData());
+        //We can't delete the actionmanager because it's the parent of running jobs
+        static Akonadi::StandardCalendarActionManager *mActionManager = 0;
+        if (!mActionManager) {
+            mActionManager = new Akonadi::StandardCalendarActionManager(actionCollection, parentWidget);
 
-        QList<Akonadi::StandardActionManager::Type> standardActions;
-        standardActions << Akonadi::StandardActionManager::CreateCollection
-                        << Akonadi::StandardActionManager::DeleteCollections
-                        << Akonadi::StandardActionManager::SynchronizeCollections
-                        << Akonadi::StandardActionManager::CollectionProperties;
+            QList<Akonadi::StandardActionManager::Type> standardActions;
+            standardActions << Akonadi::StandardActionManager::CreateCollection
+                            << Akonadi::StandardActionManager::DeleteCollections
+                            << Akonadi::StandardActionManager::SynchronizeCollections
+                            << Akonadi::StandardActionManager::CollectionProperties;
 
-        Q_FOREACH(Akonadi::StandardActionManager::Type standardAction, standardActions) {
-            mActionManager->createAction(standardAction);
+            Q_FOREACH(Akonadi::StandardActionManager::Type standardAction, standardActions) {
+                mActionManager->createAction(standardAction);
+            }
+
+            const QStringList pages = QStringList() << QLatin1String("CalendarSupport::CollectionGeneralPage")
+                                                    << QLatin1String("Akonadi::CachePolicyPage")
+                                                    << QLatin1String("PimCommon::CollectionAclPage");
+            mActionManager->setCollectionPropertiesPageNames(pages);
         }
         
         const auto collection = m_serializer->createCollectionFromDataSource(selectedSource);
@@ -116,10 +124,6 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
                                         QStringList() << Akonadi::Collection::mimeType() << Akonadi::NoteUtils::noteMimeType());
         }
 
-        const QStringList pages = QStringList() << QLatin1String("CalendarSupport::CollectionGeneralPage")
-                                                << QLatin1String("Akonadi::CachePolicyPage")
-                                                << QLatin1String("PimCommon::CollectionAclPage");
-        mActionManager->setCollectionPropertiesPageNames(pages);
         menu->addActions(actionCollection->actions());
         
         //TODO register additional pages
