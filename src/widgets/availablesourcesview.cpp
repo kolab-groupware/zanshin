@@ -229,7 +229,10 @@ void AvailableSourcesView::setSourceModel(const QByteArray &propertyName)
 
 void AvailableSourcesView::onSearchTextChanged(const QString &text)
 {
-    if (text.size() <= 2) {
+    if (text == "*") {
+        m_model->setProperty("searchTerm", text);
+        setSourceModel("searchListModel");
+    } else if (text.size() <= 2) {
         m_model->setProperty("searchTerm", QString());
         setSourceModel("sourceListModel");
     } else {

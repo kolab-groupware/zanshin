@@ -35,9 +35,13 @@ CollectionSearchJob::CollectionSearchJob(const QString& searchString, const QStr
 void CollectionSearchJob::start()
 {
     Baloo::PIM::CollectionQuery query;
-    //We exclude the other users namespace
-    query.setNamespace(QStringList() << QLatin1String("shared") << QLatin1String(""));
-    query.pathMatches(mSearchString);
+    if (mSearchString == "*") {
+        query.setNamespace(QStringList() << QLatin1String(""));
+    } else {
+        //We exclude the other users namespace
+        query.setNamespace(QStringList() << QLatin1String("shared") << QLatin1String(""));
+        query.pathMatches(mSearchString);
+    }
     query.setMimetype(mMimeTypeFilter);
     query.setLimit(200);
     Baloo::PIM::ResultIterator it = query.exec();
