@@ -40,6 +40,7 @@ public:
     virtual ~DataSourceRepository();
 
     KJob *update(Domain::DataSource::Ptr source) Q_DECL_OVERRIDE;
+    void configure(QMenu*, Domain::DataSource::Ptr) Q_DECL_OVERRIDE;
 
 private:
     StorageInterface *m_storage;

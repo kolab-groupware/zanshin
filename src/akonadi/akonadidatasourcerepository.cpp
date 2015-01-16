@@ -26,6 +26,18 @@
 
 #include "akonadiserializer.h"
 #include "akonadistorage.h"
+#include <QMenu>
+#include <Akonadi/Calendar/StandardCalendarActionManager>
+#include <Akonadi/EntityTreeModel>
+#include <KActionCollection>
+#include <KAction>
+#include <KLocalizedString>
+#include <QWidget>
+#include <QStandardItemModel>
+#include <QItemSelectionModel>
+#include <KCalCore/Todo>
+#include <akonadi/notes/noteutils.h>
+
 
 using namespace Akonadi;
 
@@ -57,4 +69,82 @@ KJob *DataSourceRepository::update(Domain::DataSource::Ptr source)
     auto collection = m_serializer->createCollectionFromDataSource(source);
     Q_ASSERT(collection.isValid());
     return m_storage->updateCollection(collection);
+}
+
+void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selectedSource)
+{
+    if (menu->isEmpty()) {
+        //We bind the lifetime of all actions to the menu and simply recreate the menu everytime.
+        QObject *parent = menu;
+        //This can could be used to provide a parent widget for the created dialogs
+        QWidget *parentWidget = 0;
+
+        auto actionCollection = new KActionCollection(parent, KComponentData());
+        auto mActionManager = new Akonadi::StandardCalendarActionManager(actionCollection, parentWidget);
+        mActionManager->setParent(parent);
+
+        QList<Akonadi::StandardActionManager::Type> standardActions;
+        standardActions << Akonadi::StandardActionManager::CreateCollection
+                        << Akonadi::StandardActionManager::DeleteCollections
+                        << Akonadi::StandardActionManager::SynchronizeCollections
+                        << Akonadi::StandardActionManager::CollectionProperties;
+
+        Q_FOREACH(Akonadi::StandardActionManager::Type standardAction, standardActions) {
+            mActionManager->createAction(standardAction);
+        }
+        
+        const auto collection = m_serializer->createCollectionFromDataSource(selectedSource);
+
+        //FIXME set appropriate mimetypes based on selected source
+        if (m_serializer->isTaskCollection(collection)) {
+            mActionManager->setActionText(Akonadi::StandardActionManager::CreateCollection, ki18n("Add Task Folder"));
+            mActionManager->setActionText(Akonadi::StandardActionManager::DeleteCollections, ki18n("Delete Task Folder"));
+            mActionManager->setActionText(Akonadi::StandardActionManager::SynchronizeCollections, ki18n("Update Folder"));
+            mActionManager->setContextText(Akonadi::StandardActionManager::CollectionProperties,
+                                            Akonadi::StandardActionManager::DialogTitle,
+                                            tr("@title:window", "Properties of Task Folder %1"));
+            mActionManager->action(Akonadi::StandardActionManager::CreateCollection )->setProperty("ContentMimeTypes",
+                                        QStringList() << Akonadi::Collection::mimeType() << KCalCore::Todo::todoMimeType());
+        } else if (m_serializer->isNoteCollection(collection)) {
+            mActionManager->setActionText(Akonadi::StandardActionManager::CreateCollection, ki18n("Add Note Folder"));
+            mActionManager->setActionText(Akonadi::StandardActionManager::DeleteCollections, ki18n("Delete Note Folder"));
+            mActionManager->setActionText(Akonadi::StandardActionManager::SynchronizeCollections, ki18n("Update Folder"));
+            mActionManager->setContextText(Akonadi::StandardActionManager::CollectionProperties,
+                                            Akonadi::StandardActionManager::DialogTitle,
+                                            tr("@title:window", "Properties of Note Folder %1"));
+            mActionManager->action(Akonadi::StandardActionManager::CreateCollection )->setProperty("ContentMimeTypes",
+                                        QStringList() << Akonadi::Collection::mimeType() << Akonadi::NoteUtils::noteMimeType());
+        }
+
+        const QStringList pages = QStringList() << QLatin1String("CalendarSupport::CollectionGeneralPage")
+                                                << QLatin1String("Akonadi::CachePolicyPage")
+                                                << QLatin1String("PimCommon::CollectionAclPage");
+        mActionManager->setCollectionPropertiesPageNames(pages);
+        menu->addActions(actionCollection->actions());
+        
+        //TODO register additional pages
+        // {
+        //     static bool pageRegistered = false;
+        //     if (!pageRegistered) {
+        //         Akonadi::CollectionPropertiesDialog::registerPage(new CalendarSupport::CollectionGeneralPageFactory);
+        //         Akonadi::CollectionPropertiesDialog::registerPage(new PimCommon::CollectionAclPageFactory);
+        //         pageRegistered = true;
+        //     }
+        // }
+
+        //Since we have no ETM based selection model we simply emulate one to tell the actionmanager about the current collection
+        auto itemModel = new QStandardItemModel(parent);
+        auto selectionModel = new QItemSelectionModel(itemModel);
+
+        auto item = new QStandardItem();
+        item->setData(QVariant::fromValue(collection), Akonadi::EntityTreeModel::CollectionRole);
+        itemModel->setItem(0, 0, item);
+
+        mActionManager->setCollectionSelectionModel(selectionModel);
+
+        selectionModel->setCurrentIndex(itemModel->index(0, 0, QModelIndex()), QItemSelectionModel::SelectCurrent);
+    } else {
+        //update actions according to selected datasource
+        //TODO currently we always recreate all actions and menues 
+    }
 }

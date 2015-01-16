@@ -253,3 +253,8 @@ void AvailableSourcesModel::setSearchTerm(const QString &term)
     m_dataSourceQueries->setSearchTerm(term);
     emit searchTermChanged(term);
 }
+
+void AvailableSourcesModel::configurePopupMenu(QMenu *menu, Domain::DataSource::Ptr datasource)
+{
+    m_dataSourceRepository->configure(menu, datasource);
+}

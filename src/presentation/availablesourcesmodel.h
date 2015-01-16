@@ -32,6 +32,7 @@
 #include "presentation/metatypes.h"
 
 class QModelIndex;
+class QMenu;
 
 namespace Domain {
     class DataSourceQueries;
@@ -65,6 +66,7 @@ public slots:
     void listSource(const Domain::DataSource::Ptr &source);
     void unlistSource(const Domain::DataSource::Ptr &source);
     void bookmarkSource(const Domain::DataSource::Ptr &source);
+    void configurePopupMenu(QMenu*, Domain::DataSource::Ptr);
 
 private:
     QAbstractItemModel *createSourceListModel();

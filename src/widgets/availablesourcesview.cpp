@@ -32,6 +32,8 @@
 #include <QVBoxLayout>
 #include <QItemSelection>
 #include <QDebug>
+#include <QContextMenuEvent>
+#include <QMenu>
 
 #include <KLineEdit>
 
@@ -41,6 +43,41 @@
 #include "widgets/datasourcedelegate.h"
 
 using namespace Widgets;
+
+class TreeView : public QTreeView {
+public:
+    AvailableSourcesView *m_availableSourcesView;
+
+    TreeView(AvailableSourcesView *parent) : QTreeView(parent), m_availableSourcesView(parent) {}
+
+    void contextMenuEvent(QContextMenuEvent *event) Q_DECL_OVERRIDE
+    {
+        if (!model()) {
+            return;
+        }
+
+        const QModelIndex index = indexAt(event->pos());
+
+        Domain::DataSource::Ptr currentDataSource;
+        if (index.isValid()) { // popup not over empty space
+            const QVariant data = index.data(Presentation::QueryTreeModelBase::ObjectRole);
+            currentDataSource = data.value<Domain::DataSource::Ptr>();
+        }
+
+        if (m_availableSourcesView->model()) {
+            QMenu *popup = new QMenu(this);
+            QMetaObject::invokeMethod(m_availableSourcesView->model(), "configurePopupMenu",
+                                    Q_ARG(QMenu*, popup),
+                                    Q_ARG(Domain::DataSource::Ptr, currentDataSource));
+            if (popup) {
+                if (!popup->isEmpty()) {
+                    popup->exec(event->globalPos());
+                }
+                delete popup;
+            }
+        }
+    }
+};
 
 AvailableSourcesView::AvailableSourcesView(QWidget *parent)
     : QWidget(parent),
@@ -58,7 +95,7 @@ AvailableSourcesView::AvailableSourcesView(QWidget *parent)
     connect(searchEdit, SIGNAL(textChanged(QString)),
             this, SLOT(onSearchTextChanged(QString)));
 
-    auto sourcesView = new QTreeView(this);
+    auto sourcesView = new TreeView(this);
     sourcesView->setObjectName("sourcesView");
     sourcesView->header()->hide();
     sourcesView->setModel(m_sortProxy);

@@ -27,6 +27,7 @@
 #include "datasource.h"
 
 class KJob;
+class QMenu;
 
 namespace Domain {
 
@@ -37,6 +38,7 @@ public:
     virtual ~DataSourceRepository();
 
     virtual KJob *update(DataSource::Ptr source) = 0;
+    virtual void configure(QMenu*, Domain::DataSource::Ptr) = 0;
 };
 
 }

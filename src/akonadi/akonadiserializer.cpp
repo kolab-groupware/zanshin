@@ -121,6 +121,7 @@ void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSour
         dataSource->setListStatus(Domain::DataSource::Unlisted);
 
     dataSource->setProperty("collectionId", collection.id());
+    dataSource->setProperty("collection", QVariant::fromValue(collection));
     dataSource->setPerson(isPersonCollection(collection));
     if (isPersonCollection(collection)) {
         dataSource->setIconName("meeting-participant");
@@ -129,8 +130,7 @@ void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSour
 
 Collection Serializer::createCollectionFromDataSource(Domain::DataSource::Ptr dataSource)
 {
-    const auto id = dataSource->property("collectionId").value<Collection::Id>();
-    auto collection = Collection(id);
+    auto collection = dataSource->property("collection").value<Collection>();
 
     collection.attribute<Akonadi::TimestampAttribute>(Akonadi::Collection::AddIfMissing);
 
