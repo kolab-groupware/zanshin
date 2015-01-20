@@ -58,8 +58,8 @@ class ArtifactEditorModel : public QObject
 public:
     explicit ArtifactEditorModel(Domain::TaskRepository *taskRepository,
                                  Domain::NoteRepository *noteRepository,
-                                 Domain::RelationQueries *relationQueries,
-                                 Domain::RelationRepository *relationRepository,
+                                 Domain::RelationQueries *relationQueries = 0,
+                                 Domain::RelationRepository *relationRepository = 0,
                                  QObject *parent = 0);
     ~ArtifactEditorModel();
 
