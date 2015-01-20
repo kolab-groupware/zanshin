@@ -81,7 +81,6 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
         static bool pageRegistered = false;
         if (!pageRegistered) {
             kDebug() << "registering pages";
-            Akonadi::AttributeFactory::registerAttribute<PimCommon::ImapAclAttribute>();
             // Akonadi::CollectionPropertiesDialog::registerPage(new CalendarSupport::CollectionGeneralPageFactory);
             Akonadi::CollectionPropertiesDialog::registerPage(new PimCommon::CollectionAclPageFactory);
             pageRegistered = true;
@@ -118,6 +117,18 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
         
         const auto collection = m_serializer->createCollectionFromDataSource(selectedSource);
 
+        //Since we have no ETM based selection model we simply emulate one to tell the actionmanager about the current collection
+        auto itemModel = new QStandardItemModel(parent);
+        auto selectionModel = new QItemSelectionModel(itemModel);
+
+        auto item = new QStandardItem();
+        item->setData(QVariant::fromValue(collection), Akonadi::EntityTreeModel::CollectionRole);
+        itemModel->setItem(0, 0, item);
+
+        mActionManager->setCollectionSelectionModel(selectionModel);
+
+        selectionModel->setCurrentIndex(itemModel->index(0, 0, QModelIndex()), QItemSelectionModel::SelectCurrent);
+
         //FIXME set appropriate mimetypes based on selected source
         if (m_serializer->isTaskCollection(collection)) {
             mActionManager->setActionText(Akonadi::StandardActionManager::CreateCollection, ki18n("Add Task Folder"));
@@ -140,18 +151,6 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
         }
 
         menu->addActions(actionCollection->actions());
-
-        //Since we have no ETM based selection model we simply emulate one to tell the actionmanager about the current collection
-        auto itemModel = new QStandardItemModel(parent);
-        auto selectionModel = new QItemSelectionModel(itemModel);
-
-        auto item = new QStandardItem();
-        item->setData(QVariant::fromValue(collection), Akonadi::EntityTreeModel::CollectionRole);
-        itemModel->setItem(0, 0, item);
-
-        mActionManager->setCollectionSelectionModel(selectionModel);
-
-        selectionModel->setCurrentIndex(itemModel->index(0, 0, QModelIndex()), QItemSelectionModel::SelectCurrent);
     } else {
         //update actions according to selected datasource
         //TODO currently we always recreate all actions and menues 
