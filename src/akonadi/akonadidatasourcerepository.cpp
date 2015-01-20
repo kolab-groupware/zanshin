@@ -37,6 +37,10 @@
 #include <QItemSelectionModel>
 #include <KCalCore/Todo>
 #include <akonadi/notes/noteutils.h>
+#include <akonadi/collectionpropertiesdialog.h>
+#include <akonadi/attributefactory.h>
+#include <pimcommon/acl/collectionaclpage.h>
+#include <pimcommon/acl/imapaclattribute.h>
 
 
 using namespace Akonadi;
@@ -73,6 +77,17 @@ KJob *DataSourceRepository::update(Domain::DataSource::Ptr source)
 
 void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selectedSource)
 {
+    {
+        static bool pageRegistered = false;
+        if (!pageRegistered) {
+            kDebug() << "registering pages";
+            Akonadi::AttributeFactory::registerAttribute<PimCommon::ImapAclAttribute>();
+            // Akonadi::CollectionPropertiesDialog::registerPage(new CalendarSupport::CollectionGeneralPageFactory);
+            Akonadi::CollectionPropertiesDialog::registerPage(new PimCommon::CollectionAclPageFactory);
+            pageRegistered = true;
+        }
+    }
+
     if (menu->isEmpty()) {
         //We bind the lifetime of all actions to the menu and simply recreate the menu everytime.
         QObject *parent = menu;
@@ -125,16 +140,6 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
         }
 
         menu->addActions(actionCollection->actions());
-        
-        //TODO register additional pages
-        // {
-        //     static bool pageRegistered = false;
-        //     if (!pageRegistered) {
-        //         Akonadi::CollectionPropertiesDialog::registerPage(new CalendarSupport::CollectionGeneralPageFactory);
-        //         Akonadi::CollectionPropertiesDialog::registerPage(new PimCommon::CollectionAclPageFactory);
-        //         pageRegistered = true;
-        //     }
-        // }
 
         //Since we have no ETM based selection model we simply emulate one to tell the actionmanager about the current collection
         auto itemModel = new QStandardItemModel(parent);

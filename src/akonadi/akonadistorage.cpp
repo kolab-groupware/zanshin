@@ -46,6 +46,7 @@
 #include <Akonadi/TagAttribute>
 #include <Akonadi/RelationDeleteJob>
 #include <Akonadi/AttributeFactory>
+#include <pimcommon/acl/imapaclattribute.h>
 #include <akonadi/collectionidentificationattribute.h>
 #include "akonadi/akonadicollectionfetchjobinterface.h"
 #include "akonadi/akonadicollectionsearchjobinterface.h"
@@ -255,6 +256,7 @@ public:
 Storage::Storage()
 {
     AttributeFactory::registerAttribute<CollectionIdentificationAttribute>();
+    Akonadi::AttributeFactory::registerAttribute<PimCommon::ImapAclAttribute>();
 }
 
 Storage::~Storage()
