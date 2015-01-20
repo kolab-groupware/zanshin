@@ -72,6 +72,7 @@ include_directories (
 set(KDEPIM_STATIC_LIBS
   zanshinkdepimstatic
   zanshinpimcommonstatic
+  zanshincalendarsupportstatic
   ${KDEPIMLIBS_KRESOURCES_LIBS}
   ${KDEPIMLIBS_KABC_LIBS}
   ${KDEPIMLIBS_KPIMUTILS_LIBS}

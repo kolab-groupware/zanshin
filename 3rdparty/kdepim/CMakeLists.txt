@@ -27,3 +27,4 @@ endif()
 
 add_subdirectory(libkdepim)
 add_subdirectory(pimcommon)
+add_subdirectory(calendarsupport)
