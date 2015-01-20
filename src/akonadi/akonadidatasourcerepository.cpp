@@ -41,6 +41,7 @@
 #include <akonadi/attributefactory.h>
 #include <pimcommon/acl/collectionaclpage.h>
 #include <pimcommon/acl/imapaclattribute.h>
+#include <calendarsupport/collectiongeneralpage.h>
 
 
 using namespace Akonadi;
@@ -80,8 +81,7 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
     {
         static bool pageRegistered = false;
         if (!pageRegistered) {
-            kDebug() << "registering pages";
-            // Akonadi::CollectionPropertiesDialog::registerPage(new CalendarSupport::CollectionGeneralPageFactory);
+            Akonadi::CollectionPropertiesDialog::registerPage(new CalendarSupport::CollectionGeneralPageFactory);
             Akonadi::CollectionPropertiesDialog::registerPage(new PimCommon::CollectionAclPageFactory);
             pageRegistered = true;
         }
