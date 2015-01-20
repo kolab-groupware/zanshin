@@ -66,10 +66,12 @@ include_directories (
     ${Boost_INCLUDE_DIR}
     3rdparty/kdepim/
     3rdparty/kdepim/libkdepim/
+    3rdparty/kdepim/pimcommon/
 )
 
 set(KDEPIM_STATIC_LIBS
   zanshinkdepimstatic
+  zanshinpimcommonstatic
   ${KDEPIMLIBS_KRESOURCES_LIBS}
   ${KDEPIMLIBS_KABC_LIBS}
   ${KDEPIMLIBS_KPIMUTILS_LIBS}
