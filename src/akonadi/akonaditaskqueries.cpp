@@ -30,9 +30,191 @@
 #include "akonadiserializer.h"
 #include "akonadistorage.h"
 
+#include <QPointer>
+#include <KCalCore/Todo>
+
 #include "utils/jobhandler.h"
 
 using namespace Akonadi;
+
+AkonadiItemSource::AkonadiItemSource(MonitorInterface *monitor)
+    : QObject(),
+    m_monitor(monitor),
+    m_populated(false),
+    m_populationInProgress(false)
+{
+    isToplevel = [](const Akonadi::Collection &col) {
+        if (col == Akonadi::Collection::root()) {
+            return true;
+        }
+        // if (col.name() == "Other Users") {
+        //     return true;
+        // }
+        return false;
+    };
+}
+
+Akonadi::Collection::Id AkonadiItemSource::id(const Akonadi::Collection &col) const
+{
+    if (isToplevel(col)) {
+        return 0;
+    }
+    return col.id();
+}
+
+void AkonadiItemSource::findChildren(const Item &item)
+{
+    // Akonadi::Collection parent = item.parentCollection();
+    // Q_ASSERT(parent.isValid());
+    // TODO extract parent task
+    QString parent;
+    try {
+        auto todo = item.payload<KCalCore::Todo::Ptr>();
+        parent = todo->uid();
+    } catch (...) {
+
+    }
+    populate([this, parent] {
+        for (auto item : m_items[parent]) {
+            emit added(item, parent);
+        }
+    });
+}
+
+void AkonadiItemSource::setFilter(const std::function<bool(const Akonadi::Item &)> &filter)
+{
+    isWantedItem = filter;
+}
+
+void AkonadiItemSource::setItemFetcher(const std::function<void(const std::function<void(bool, const Akonadi::Item::List&)> &)> &fetcher)
+{
+    fetchItems = fetcher;
+}
+
+void AkonadiItemSource::populate(const std::function<void()> &callback)
+{
+    if (m_populated) {
+        callback();
+    } else if (m_populationInProgress) {
+        m_pendingCallbacks << callback;
+    } else {
+        m_populationInProgress = true;
+        m_pendingCallbacks << callback;
+        QPointer<AkonadiItemSource> handle(this);
+
+        fetchItems([this, handle](bool error, const Akonadi::Item::List &items){
+            //Since the this pointer might be invalid meanwhile, we have to double check
+            if (!handle) {
+                return;
+            }
+            if (error) {
+                m_pendingCallbacks.clear();
+                return;
+            }
+            for (auto item : items) {
+                try {
+                    auto todo = item.payload<KCalCore::Todo::Ptr>();
+                    m_items[todo->relatedTo()].append(item);
+                } catch (...) {
+
+                }
+            }
+            m_populated = true;
+            // if (m_monitor) {
+            //     connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onAdded(Akonadi::Collection)));
+            //     connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onRemoved(Akonadi::Collection)));
+            //     connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onChanged(Akonadi::Collection)));
+            // }
+            for (auto callback : m_pendingCallbacks) {
+                callback();
+            }
+            m_pendingCallbacks.clear();
+        });
+
+    }
+}
+
+// void AkonadiItemSource::onAdded(const Collection &col)
+// {
+// }
+// 
+// void AkonadiItemSource::onRemoved(const Collection &col)
+// {
+// }
+// 
+// void AkonadiItemSource::onChanged(const Collection &col)
+// {
+// }
+
+
+TaskTreeQuery::TaskTreeQuery(SerializerInterface *serializer, const QSharedPointer<AkonadiItemSource> &source)
+    : QObject(),
+    m_serializer(serializer),
+    m_source(source)
+{
+    connect(m_source.data(), SIGNAL(added(Akonadi::Item, QString)), this, SLOT(onAdded(Akonadi::Item, QString)));
+    connect(m_source.data(), SIGNAL(removed(Akonadi::Item, QString)), this, SLOT(onRemoved(Akonadi::Item, QString)));
+    connect(m_source.data(), SIGNAL(changed(Akonadi::Item, QString)), this, SLOT(onChanged(Akonadi::Item, QString)));
+}
+
+void TaskTreeQuery::findChildren(const Akonadi::Item &item)
+{
+    if (m_source) {
+        m_source->findChildren(item);
+    }
+}
+
+void TaskTreeQuery::reset(const QSharedPointer<AkonadiItemSource> &source)
+{
+    disconnect(m_source.data(), SIGNAL(added(Akonadi::Item, QString)), this, SLOT(onAdded(Akonadi::Item, QString)));
+    disconnect(m_source.data(), SIGNAL(removed(Akonadi::Item, QString)), this, SLOT(onRemoved(Akonadi::Item, QString)));
+    disconnect(m_source.data(), SIGNAL(changed(Akonadi::Item, QString)), this, SLOT(onChanged(Akonadi::Item, QString)));
+
+    m_source = source;
+    foreach(auto query, m_findChildren.values()) {
+        query->reset();
+    }
+
+    connect(m_source.data(), SIGNAL(added(Akonadi::Item, QString)), this, SLOT(onAdded(Akonadi::Item, QString)));
+    connect(m_source.data(), SIGNAL(removed(Akonadi::Item, QString)), this, SLOT(onRemoved(Akonadi::Item, QString)));
+    connect(m_source.data(), SIGNAL(changed(Akonadi::Item, QString)), this, SLOT(onChanged(Akonadi::Item, QString)));
+}
+
+TaskTreeQuery::Result::Ptr TaskTreeQuery::findChildren(Domain::Task::Ptr parent, const std::function<void(Query::Ptr, const Akonadi::Collection &root)> &setupFunction)
+{
+    const auto parentUid = parent->property("todoUid").toString();
+    const auto item = m_serializer->createItemFromTask(parent);
+    if (!m_findChildren.contains(parentUid)) {
+        auto query = Query::Ptr::create();
+        m_findChildren.insert(parentUid, query);
+        setupFunction(query, item.parentCollection());
+    }
+    return m_findChildren.value(parentUid)->result();
+}
+
+void TaskTreeQuery::onAdded(const Akonadi::Item &item, const QString &parent)
+{
+    auto query = m_findChildren.find(parent);
+    if (query != m_findChildren.end()) {
+        (*query)->onAdded(item);
+    }
+}
+
+void TaskTreeQuery::onRemoved(const Akonadi::Item &item, const QString &parent)
+{
+    auto query = m_findChildren.find(parent);
+    if (query != m_findChildren.end()) {
+        (*query)->onRemoved(item);
+    }
+}
+
+void TaskTreeQuery::onChanged(const Akonadi::Item &item, const QString &parent)
+{
+    auto query = m_findChildren.find(parent);
+    if (query != m_findChildren.end()) {
+        (*query)->onChanged(item);
+    }
+}
 
 TaskQueries::TaskQueries(QObject *parent)
     : QObject(parent),
@@ -64,6 +246,37 @@ TaskQueries::~TaskQueries()
         delete m_serializer;
         delete m_monitor;
     }
+}
+
+QSharedPointer<TaskTreeQuery> TaskQueries::getTaskTree(const Akonadi::Collection &parent) const
+{
+    if (!m_treeQueries.contains(parent.id())) {
+        TaskQueries *self = const_cast<TaskQueries*>(this);
+        self->m_treeQueries.insert(parent.id(), QSharedPointer<TaskTreeQuery>(new TaskTreeQuery(m_serializer, findTaskTree(parent))));
+    }
+    return m_treeQueries.value(parent.id());
+}
+
+QSharedPointer<AkonadiItemSource> TaskQueries::findTaskTree(const Akonadi::Collection &parentCollection) const
+{
+    auto source = QSharedPointer<AkonadiItemSource>(new AkonadiItemSource(m_monitor));
+    source->setFilter([this](const Item &) {
+        //We can't filter by parent task here...
+        return true;
+    });
+    source->setItemFetcher([this, parentCollection](const std::function<void(bool, const Akonadi::Item::List&)> &resultHandler) {
+        auto job = m_storage->fetchItems(parentCollection);
+        Utils::JobHandler::install(job->kjob(), [job, resultHandler] {
+            if (job->kjob()->error()) {
+                kWarning() << "Failed to fetch collections " << job->kjob()->errorString();
+                resultHandler(true, Akonadi::Item::List());
+                return;
+            }
+            resultHandler(false, job->items());
+        });
+    });
+
+    return source;
 }
 
 TaskQueries::TaskResult::Ptr TaskQueries::findAll() const
@@ -115,35 +328,16 @@ TaskQueries::TaskResult::Ptr TaskQueries::findAll() const
 
 TaskQueries::TaskResult::Ptr TaskQueries::findChildren(Domain::Task::Ptr task) const
 {
-    Akonadi::Item item = m_serializer->createItemFromTask(task);   
-    if (!m_findChildren.contains(item.id())) {
-        TaskQuery::Ptr query;
-
-        {
-            TaskQueries *self = const_cast<TaskQueries*>(this);
-            query = self->createTaskQuery();
-            self->m_findChildren.insert(item.id(), query);
-        }
-
-        query->setFetchFunction([this, item] (const TaskQuery::AddFunction &add) {
-            ItemFetchJobInterface *job = m_storage->fetchItem(item);
-            Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                if (job->kjob()->error() != KJob::NoError)
-                    return;
-
-                Q_ASSERT(job->items().size() == 1);
-                auto item = job->items()[0];
-                Q_ASSERT(item.parentCollection().isValid());
-                ItemFetchJobInterface *job = m_storage->fetchItems(item.parentCollection());
-                Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                    if (job->kjob()->error() != KJob::NoError)
-                        return;
-
-                    for (auto item : job->items())
-                        add(item);
-                });
-            });
+    auto item = m_serializer->createItemFromTask(task);
+    Q_ASSERT(item.parentCollection().isValid());
+    auto treeQuery = getTaskTree(item.parentCollection());
+    return treeQuery->findChildren(task, [this, item, task, treeQuery](TaskQuery::Ptr query, const Akonadi::Collection &root) {
+        query->setFetchFunction([this, item, treeQuery] (const TaskQuery::AddFunction &add) {
+            //We don't need the add function because we use the usual delivery method via the onAdded slot used for updates
+            Q_UNUSED(add);
+            treeQuery->findChildren(item);
         });
+
         query->setConvertFunction([this] (const Akonadi::Item &item) {
             return m_serializer->createTaskFromItem(item);
         });
@@ -156,9 +350,7 @@ TaskQueries::TaskResult::Ptr TaskQueries::findChildren(Domain::Task::Ptr task) c
         query->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Task::Ptr &task) {
             return m_serializer->representsItem(task, item);
         });
-    }
-
-    return m_findChildren.value(item.id())->result();
+    });
 }
 
 TaskQueries::TaskResult::Ptr TaskQueries::findTopLevel() const

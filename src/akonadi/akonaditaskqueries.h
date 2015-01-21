@@ -40,6 +40,8 @@ class Item;
 class MonitorInterface;
 class SerializerInterface;
 class StorageInterface;
+class TaskTreeQuery;
+class AkonadiItemSource;
 
 class TaskQueries : public QObject, public Domain::TaskQueries
 {
@@ -68,6 +70,8 @@ private slots:
 
 private:
     TaskQuery::Ptr createTaskQuery();
+    QSharedPointer<TaskTreeQuery> getTaskTree(const Akonadi::Collection &) const;
+    QSharedPointer<AkonadiItemSource> findTaskTree(const Akonadi::Collection &) const;
 
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
@@ -78,6 +82,77 @@ private:
     QHash<Akonadi::Entity::Id, TaskQuery::Ptr> m_findChildren;
     TaskQuery::Ptr m_findTopLevel;
     TaskQuery::List m_taskQueries;
+    QHash<Akonadi::Collection::Id, QSharedPointer<TaskTreeQuery> > m_treeQueries;
+};
+
+// This represents a reactive result set for an akonadi query, which supports being recursively queried.
+// (and currently omits any other way of querying)
+// The result set will automatically update itself on changes in the store (therefore the monitor)
+// This is essentilally what akonadi should provide with a proper query interface.
+class AkonadiItemSource : public QObject
+{
+    Q_OBJECT
+public:
+    AkonadiItemSource(MonitorInterface *monitor);
+
+    void findChildren(const Akonadi::Item &parent);
+
+    //Defines what parts match the tree. Implement to filter monitor notifications outside of the tree.
+    //The filter is recursive, meaning that if a parent is filtered, children will automatically match the filter as well.
+    void setFilter(const std::function<bool(const Akonadi::Item &)> &);
+
+    //Defines what is initially fetched to populate the tree.
+    void setItemFetcher(const std::function<void(const std::function<void(bool, const Akonadi::Item::List&)> &)> &fetcher);
+
+signals:
+    void added(Akonadi::Item, QString);
+    void removed(Akonadi::Item, QString);
+    void changed(Akonadi::Item, QString);
+
+// private slots:
+//     void onAdded(const Akonadi::Item &);
+//     void onRemoved(const Akonadi::Item &);
+//     void onChanged(const Akonadi::Item &);
+
+private:
+    Akonadi::Collection::Id id(const Akonadi::Collection &col) const;
+    //Internally trigger the fetchFunction and then call the appropriate signals/callbacks
+    void populate(const std::function<void()> &callback);
+    QHash<QString /*parent*/, Item::List /*children*/> m_items;
+    MonitorInterface *m_monitor;
+    bool m_populated;
+    bool m_populationInProgress;
+    QList <std::function<void()> > m_pendingCallbacks;
+    std::function<bool(const Akonadi::Item &)> isWantedItem;
+    std::function<bool(const Akonadi::Collection &)> isToplevel;
+    std::function<void(const std::function<void(bool, const Akonadi::Item::List&)> &)> fetchItems;
+};
+
+//Maps the signals to the appropriate query
+
+class TaskTreeQuery : public QObject
+{
+    Q_OBJECT
+public:
+    typedef Domain::LiveQuery<Akonadi::Item, Domain::Task::Ptr> Query;
+    typedef Domain::QueryResultProvider<Domain::Task::Ptr> Provider;
+    typedef Domain::QueryResult<Domain::Task::Ptr> Result;
+
+    TaskTreeQuery(SerializerInterface *, const QSharedPointer<AkonadiItemSource> &source);
+    void reset(const QSharedPointer<AkonadiItemSource> &source);
+
+    Result::Ptr findChildren(Domain::Task::Ptr source, const std::function<void(typename Query::Ptr, const Akonadi::Collection &root)> &setupFunction);
+    void findChildren(const Item &parent);
+
+private slots:
+    void onAdded(const Akonadi::Item &, const QString &parent);
+    void onRemoved(const Akonadi::Item &, const QString &parent);
+    void onChanged(const Akonadi::Item &, const QString &parent);
+
+private:
+    QHash<QString, typename Query::Ptr> m_findChildren;
+    SerializerInterface *m_serializer;
+    QSharedPointer<AkonadiItemSource> m_source;
 };
 
 }
