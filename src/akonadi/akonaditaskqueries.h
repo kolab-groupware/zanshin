@@ -109,10 +109,10 @@ signals:
     void removed(Akonadi::Item, QString);
     void changed(Akonadi::Item, QString);
 
-// private slots:
-//     void onAdded(const Akonadi::Item &);
-//     void onRemoved(const Akonadi::Item &);
-//     void onChanged(const Akonadi::Item &);
+private slots:
+    void onAdded(const Akonadi::Item &);
+    void onRemoved(const Akonadi::Item &);
+    void onChanged(const Akonadi::Item &);
 
 private:
     Akonadi::Collection::Id id(const Akonadi::Collection &col) const;

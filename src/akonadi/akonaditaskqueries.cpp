@@ -64,9 +64,6 @@ Akonadi::Collection::Id AkonadiItemSource::id(const Akonadi::Collection &col) co
 
 void AkonadiItemSource::findChildren(const Item &item)
 {
-    // Akonadi::Collection parent = item.parentCollection();
-    // Q_ASSERT(parent.isValid());
-    // TODO extract parent task
     QString parent;
     try {
         auto todo = item.payload<KCalCore::Todo::Ptr>();
@@ -120,11 +117,12 @@ void AkonadiItemSource::populate(const std::function<void()> &callback)
                 }
             }
             m_populated = true;
-            // if (m_monitor) {
-            //     connect(m_monitor, SIGNAL(collectionAdded(Akonadi::Collection)), this, SLOT(onAdded(Akonadi::Collection)));
-            //     connect(m_monitor, SIGNAL(collectionRemoved(Akonadi::Collection)), this, SLOT(onRemoved(Akonadi::Collection)));
-            //     connect(m_monitor, SIGNAL(collectionChanged(Akonadi::Collection)), this, SLOT(onChanged(Akonadi::Collection)));
-            // }
+            if (m_monitor) {
+                connect(m_monitor, SIGNAL(itemAdded(Akonadi::Item)), this, SLOT(onAdded(Akonadi::Item)));
+                connect(m_monitor, SIGNAL(itemRemoved(Akonadi::Item)), this, SLOT(onRemoved(Akonadi::Item)));
+                connect(m_monitor, SIGNAL(itemChanged(Akonadi::Item)), this, SLOT(onChanged(Akonadi::Item)));
+                connect(m_monitor, SIGNAL(itemMoved(Akonadi::Item)), this, SLOT(onChanged(Akonadi::Item)));
+            }
             for (auto callback : m_pendingCallbacks) {
                 callback();
             }
@@ -134,17 +132,38 @@ void AkonadiItemSource::populate(const std::function<void()> &callback)
     }
 }
 
-// void AkonadiItemSource::onAdded(const Collection &col)
-// {
-// }
-// 
-// void AkonadiItemSource::onRemoved(const Collection &col)
-// {
-// }
-// 
-// void AkonadiItemSource::onChanged(const Collection &col)
-// {
-// }
+void AkonadiItemSource::onAdded(const Item &item)
+{
+    if (!isWantedItem(item)) {
+        return;
+    }
+    QString parent;
+    try {
+        auto todo = item.payload<KCalCore::Todo::Ptr>();
+        parent = todo->relatedTo();
+    } catch (...) {
+
+    }
+    emit added(item, parent);
+}
+
+void AkonadiItemSource::onRemoved(const Item &item)
+{
+    QString parent;
+    emit removed(item, parent);
+}
+
+void AkonadiItemSource::onChanged(const Item &item)
+{
+    QString parent;
+    try {
+        auto todo = item.payload<KCalCore::Todo::Ptr>();
+        parent = todo->relatedTo();
+    } catch (...) {
+
+    }
+    emit changed(item, parent);
+}
 
 
 TaskTreeQuery::TaskTreeQuery(SerializerInterface *serializer, const QSharedPointer<AkonadiItemSource> &source)
@@ -202,17 +221,15 @@ void TaskTreeQuery::onAdded(const Akonadi::Item &item, const QString &parent)
 
 void TaskTreeQuery::onRemoved(const Akonadi::Item &item, const QString &parent)
 {
-    auto query = m_findChildren.find(parent);
-    if (query != m_findChildren.end()) {
-        (*query)->onRemoved(item);
+    for (auto query : m_findChildren.values()) {
+        query->onRemoved(item);
     }
 }
 
 void TaskTreeQuery::onChanged(const Akonadi::Item &item, const QString &parent)
 {
-    auto query = m_findChildren.find(parent);
-    if (query != m_findChildren.end()) {
-        (*query)->onChanged(item);
+    for (auto query : m_findChildren.values()) {
+        query->onChanged(item);
     }
 }
 
@@ -260,9 +277,8 @@ QSharedPointer<TaskTreeQuery> TaskQueries::getTaskTree(const Akonadi::Collection
 QSharedPointer<AkonadiItemSource> TaskQueries::findTaskTree(const Akonadi::Collection &parentCollection) const
 {
     auto source = QSharedPointer<AkonadiItemSource>(new AkonadiItemSource(m_monitor));
-    source->setFilter([this](const Item &) {
-        //We can't filter by parent task here...
-        return true;
+    source->setFilter([this, parentCollection](const Item &item) {
+        return (parentCollection.id() == item.parentCollection().id());
     });
     source->setItemFetcher([this, parentCollection](const std::function<void(bool, const Akonadi::Item::List&)> &resultHandler) {
         auto job = m_storage->fetchItems(parentCollection);
