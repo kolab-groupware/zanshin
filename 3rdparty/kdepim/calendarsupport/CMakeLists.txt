@@ -16,8 +16,6 @@ kde4_add_library(zanshincalendarsupportstatic STATIC ${calendarsupport_LIB_SRCS}
 
 target_link_libraries(
   zanshincalendarsupportstatic
-  kdepimdbusinterfaces
-  kdepim
   ${KDEPIMLIBS_AKONADI_LIBS}
   ${KDEPIMLIBS_KCALCORE_LIBS}
   ${KDEPIMLIBS_KCALUTILS_LIBS}
@@ -32,5 +30,6 @@ target_link_libraries(
   ${KDE4_KIO_LIBS}
   ${KDE4_KUTILS_LIBS}
   akonadi-calendar
+  zanshinkdepimstatic
 )
 
