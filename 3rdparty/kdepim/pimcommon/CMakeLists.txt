@@ -42,7 +42,6 @@ target_link_libraries(zanshinpimcommonstatic
     ${KDEPIMLIBS_KIMAP_LIBS}
     ${KDEPIMLIBS_KPIMUTILS_LIBS}
     ${KDE4_KDEUI_LIBS}
-    ${QT_QTWEBKIT_LIBRARY}
     ${QJSON_LIBRARIES}
     ${KDE4_SOLID_LIBS}
     ${KDE4_KNEWSTUFF3_LIBS}
