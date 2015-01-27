@@ -175,10 +175,7 @@ TagQueries::ArtifactResult::Ptr TagQueries::findTopLevelArtifacts(Domain::Tag::P
             }
         });
         query->setPredicateFunction([this, tag] (const Akonadi::Item &item) {
-            if (m_serializer->isTaskItem(item)) {
-                return false;
-            }
-            if (!m_serializer->isNoteItem(item)) {
+            if (!m_serializer->isTaskItem(item) && !m_serializer->isNoteItem(item)) {
                 return false;
             }
             return m_serializer->isTagChild(tag, item);
