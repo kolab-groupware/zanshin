@@ -45,6 +45,7 @@ public:
 
     KJob *associate(Domain::Tag::Ptr parent, Domain::Artifact::Ptr child) Q_DECL_OVERRIDE;
     KJob *dissociate(Domain::Tag::Ptr parent, Domain::Artifact::Ptr child) Q_DECL_OVERRIDE;
+    KJob *dissociate(Domain::Artifact::Ptr child) Q_DECL_OVERRIDE;
 
 private:
     StorageInterface *m_storage;

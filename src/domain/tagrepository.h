@@ -42,6 +42,7 @@ public:
 
     virtual KJob *associate(Tag::Ptr parent, Artifact::Ptr child) = 0;
     virtual KJob *dissociate(Tag::Ptr parent, Artifact::Ptr child) = 0;
+    virtual KJob *dissociate(Artifact::Ptr child) = 0;
 };
 
 }

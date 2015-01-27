@@ -308,6 +308,7 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
                         m_taskRepository->dissociate(task);
                     });
                 }
+                m_tagRepository->dissociate(droppedArtifact);
             }
             return true;
         }
