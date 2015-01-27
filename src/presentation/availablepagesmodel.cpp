@@ -172,9 +172,10 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
     if (m_mode != NotesOnly) {
         m_rootsProvider->append(m_projectsObject);
     }
-    if (m_mode != NotesOnly) {
-        m_rootsProvider->append(m_contextsObject);
-    }
+    //For the kolab client we ignore contexts for now
+    // if (m_mode != NotesOnly) {
+    //     m_rootsProvider->append(m_contextsObject);
+    // }
     m_rootsProvider->append(m_tagsObject);
 
     auto query = [this](const QObjectPtr &object) -> Domain::QueryResultInterface<QObjectPtr>::Ptr {
