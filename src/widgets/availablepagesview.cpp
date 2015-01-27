@@ -61,14 +61,14 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
 
     QAction *addAction = new QAction(this);
     addAction->setObjectName("addAction");
-    addAction->setText(tr("New page"));
+    addAction->setText(tr("New"));
     addAction->setIcon(QIcon::fromTheme("list-add"));
     connect(addAction, SIGNAL(triggered()), this, SLOT(onAddTriggered()));
     m_actionBar->addAction(addAction);
 
     QAction *removeAction = new QAction(this);
     removeAction->setObjectName("removeAction");
-    removeAction->setText(tr("Remove page"));
+    removeAction->setText(tr("Remove"));
     removeAction->setIcon(QIcon::fromTheme("list-remove"));
     connect(removeAction, SIGNAL(triggered()), this, SLOT(onRemoveTriggered()));
     m_actionBar->addAction(removeAction);
