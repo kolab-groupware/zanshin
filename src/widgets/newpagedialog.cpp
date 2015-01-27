@@ -41,7 +41,7 @@ NewPageDialog::NewPageDialog(QWidget *parent)
     QObject::connect(ui->typeCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeIndexChanged(int)));
     onNameTextChanged(m_name);
 
-    ui->typeCombo->addItem(tr("Project"), QVariant::fromValue<PageType>(Project));
+    // ui->typeCombo->addItem(tr("Project"), QVariant::fromValue<PageType>(Project));
     // ui->typeCombo->addItem(tr("Context"), QVariant::fromValue<PageType>(Context));
     ui->typeCombo->addItem(tr("Tag"), QVariant::fromValue<PageType>(Tag));
 }

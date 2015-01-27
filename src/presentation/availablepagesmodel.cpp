@@ -169,9 +169,10 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
 
     m_rootsProvider = Domain::QueryResultProvider<QObjectPtr>::Ptr::create();
     m_rootsProvider->append(m_inboxObject);
-    if (m_mode != NotesOnly) {
-        m_rootsProvider->append(m_projectsObject);
-    }
+    //For the kolab client we ignore projects for now
+    // if (m_mode != NotesOnly) {
+    //     m_rootsProvider->append(m_projectsObject);
+    // }
     //For the kolab client we ignore contexts for now
     // if (m_mode != NotesOnly) {
     //     m_rootsProvider->append(m_contextsObject);
