@@ -31,6 +31,9 @@
 #include <QToolBar>
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QMenu>
+#include <QContextMenuEvent>
+#include <QDebug>
 
 #include "presentation/metatypes.h"
 #include "presentation/querytreemodelbase.h"
@@ -45,11 +48,48 @@
 using namespace Widgets;
 using namespace Presentation;
 
+class AvailablePagesTreeView : public QTreeView {
+public:
+    AvailablePagesView *m_pageView;
+
+    AvailablePagesTreeView(AvailablePagesView *parent) : QTreeView(parent), m_pageView(parent) {}
+
+    void contextMenuEvent(QContextMenuEvent *event) Q_DECL_OVERRIDE
+    {
+        if (!model()) {
+            return;
+        }
+
+        const QModelIndex index = indexAt(event->pos());
+
+        QObjectPtr current;
+        if (index.isValid()) { // popup not over empty space
+            const QVariant data = index.data(Presentation::QueryTreeModelBase::ObjectRole);
+            current = data.value<QObjectPtr>();
+        }
+
+        if (m_pageView) {
+            QMenu *popup = new QMenu(this);
+            m_pageView->configurePopupMenu(popup, current);
+            // QMetaObject::invokeMethod(m_pageView, "configurePopupMenu",
+            //                         Q_ARG(QMenu*, popup),
+            //                         Q_ARG(Domain::Artifact::Ptr, current));
+            if (popup) {
+                qDebug() << "popup " << popup->isEmpty();
+                if (!popup->isEmpty()) {
+                    popup->exec(event->globalPos());
+                }
+                delete popup;
+            }
+        }
+    }
+};
+
 AvailablePagesView::AvailablePagesView(QWidget *parent)
     : QWidget(parent),
       m_model(0),
       m_sources(0),
-      m_pagesView(new QTreeView(this)),
+      m_pagesView(new AvailablePagesTreeView(this)),
       m_actionBar(new QToolBar(this))
 {
     m_pagesView->setObjectName("pagesView");
@@ -72,6 +112,7 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
     removeAction->setIcon(QIcon::fromTheme("list-remove"));
     connect(removeAction, SIGNAL(triggered()), this, SLOT(onRemoveTriggered()));
     m_actionBar->addAction(removeAction);
+    this->addAction(removeAction);
 
     QHBoxLayout *actionBarLayout = new QHBoxLayout;
     actionBarLayout->setAlignment(Qt::AlignRight);
@@ -86,6 +127,12 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
         return DialogPtr(new NewPageDialog(parent));
     };
     m_messageBoxInterface = MessageBox::Ptr::create();
+}
+
+void AvailablePagesView::configurePopupMenu(QMenu *menu, const QObjectPtr &object)
+{
+    Q_UNUSED(object);
+    menu->addActions(actions());
 }
 
 QObject *AvailablePagesView::model() const

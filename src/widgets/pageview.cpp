@@ -30,6 +30,9 @@
 #include <QTreeView>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QMenu>
+#include <QContextMenuEvent>
+#include <QDebug>
 
 #include "filterwidget.h"
 #include "itemdelegate.h"
@@ -41,11 +44,47 @@
 
 using namespace Widgets;
 
+class PageTreeView : public QTreeView {
+public:
+    PageView *m_pageView;
+
+    PageTreeView(PageView *parent) : QTreeView(parent), m_pageView(parent) {}
+
+    void contextMenuEvent(QContextMenuEvent *event) Q_DECL_OVERRIDE
+    {
+        if (!model()) {
+            return;
+        }
+
+        const QModelIndex index = indexAt(event->pos());
+
+        Domain::Artifact::Ptr current;
+        if (index.isValid()) { // popup not over empty space
+            const QVariant data = index.data(Presentation::QueryTreeModelBase::ObjectRole);
+            current = data.value<Domain::Artifact::Ptr>();
+        }
+
+        if (m_pageView) {
+            QMenu *popup = new QMenu(this);
+            m_pageView->configurePopupMenu(popup, current);
+            // QMetaObject::invokeMethod(m_pageView, "configurePopupMenu",
+            //                         Q_ARG(QMenu*, popup),
+            //                         Q_ARG(Domain::Artifact::Ptr, current));
+            if (popup) {
+                if (!popup->isEmpty()) {
+                    popup->exec(event->globalPos());
+                }
+                delete popup;
+            }
+        }
+    }
+};
+
 PageView::PageView(QWidget *parent, ApplicationMode mode)
     : QWidget(parent),
       m_model(0),
       m_filterWidget(new FilterWidget(this)),
-      m_centralView(new QTreeView(this)),
+      m_centralView(new PageTreeView(this)),
       m_quickAddEdit(new QLineEdit(this)),
       m_mode(mode)
 {
@@ -75,6 +114,8 @@ PageView::PageView(QWidget *parent, ApplicationMode mode)
 
     QAction *removeItemAction = new QAction(this);
     removeItemAction->setShortcut(Qt::Key_Delete);
+    removeItemAction->setText(tr("Delete"));
+    removeItemAction->setIcon(QIcon::fromTheme("list-remove"));
     connect(removeItemAction, SIGNAL(triggered()), this, SLOT(onRemoveItemRequested()));
     addAction(removeItemAction);
 
@@ -84,6 +125,12 @@ PageView::PageView(QWidget *parent, ApplicationMode mode)
 QObject *PageView::model() const
 {
     return m_model;
+}
+
+void PageView::configurePopupMenu(QMenu *menu, const Domain::Artifact::Ptr &artifact)
+{
+    Q_UNUSED(artifact);
+    menu->addActions(actions());
 }
 
 void PageView::setModel(QObject *model)

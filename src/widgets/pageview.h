@@ -38,6 +38,7 @@ class QLineEdit;
 class QModelIndex;
 class QTreeView;
 class QMessageBox;
+class QMenu;
 
 namespace Widgets {
 
@@ -60,6 +61,7 @@ public:
 public slots:
     void setModel(QObject *model);
     void setMessageBoxInterface(const MessageBoxInterface::Ptr &interface);
+    void configurePopupMenu(QMenu *menu, const Domain::Artifact::Ptr &artifact);
 
 signals:
     void currentArtifactChanged(const Domain::Artifact::Ptr &artifact);

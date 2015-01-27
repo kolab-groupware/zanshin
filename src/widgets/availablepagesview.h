@@ -38,6 +38,7 @@ class QAbstractItemModel;
 class QModelIndex;
 class QToolBar;
 class QTreeView;
+class QMenu;
 
 namespace Widgets {
 
@@ -63,6 +64,7 @@ public slots:
     void setDefaultProjectSource(const Domain::DataSource::Ptr &source);
     void setDialogFactory(const DialogFactory &factory);
     void setMessageBoxInterface(const MessageBoxInterface::Ptr &interface);
+    void configurePopupMenu(QMenu *menu, const QSharedPointer<QObject> &object);
 
 signals:
     void currentPageChanged(QObject *page);
