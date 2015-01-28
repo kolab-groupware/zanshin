@@ -113,6 +113,8 @@ public:
     static QByteArray contextTagType();
 
     virtual Akonadi::Item createItemFromArtifact(Domain::Artifact::Ptr artifact) = 0;
+
+    virtual bool isAkonadiTag(const Akonadi::Tag &tag) const = 0;
 };
 
 }

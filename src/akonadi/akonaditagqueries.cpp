@@ -111,7 +111,7 @@ TagQueries::TagResult::Ptr TagQueries::findAll() const
             m_serializer->updateTagFromAkonadiTag(tag, akonadiTag);
         });
         m_findAll->setPredicateFunction([this] (const Akonadi::Tag &akonadiTag) {
-            return akonadiTag.type() == Akonadi::Tag::PLAIN;
+            return m_serializer->isAkonadiTag(akonadiTag);
         });
         m_findAll->setRepresentsFunction([this] (const Akonadi::Tag &akonadiTag, const Domain::Tag::Ptr &tag) {
             return m_serializer->representsAkonadiTag(tag, akonadiTag);

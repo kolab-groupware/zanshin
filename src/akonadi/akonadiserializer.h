@@ -94,9 +94,9 @@ public:
     bool representsAkonadiRelation(Domain::Relation::Ptr relation, const QPair<Item, Relation> &akonadiRelation) const Q_DECL_OVERRIDE;
     Akonadi::Relation createAkonadiRelationFromRelation(Domain::Relation::Ptr) Q_DECL_OVERRIDE;
 
+    bool isAkonadiTag(const Akonadi::Tag &tag) const Q_DECL_OVERRIDE;
 private:
     bool isContext(const Akonadi::Tag &tag) const;
-    bool isAkonadiTag(const Akonadi::Tag &tag) const;
 };
 
 }
