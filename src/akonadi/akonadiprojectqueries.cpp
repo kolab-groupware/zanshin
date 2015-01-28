@@ -139,6 +139,8 @@ ProjectQueries::ArtifactResult::Ptr ProjectQueries::findTopLevelArtifacts(Domain
                     return;
 
                 for (auto collection : job->collections()) {
+                    if (!m_serializer->isSelectedCollection(collection))
+                        continue;
                     ItemFetchJobInterface *job = m_storage->fetchItems(collection);
                     Utils::JobHandler::install(job->kjob(), [this, job, add] {
                         if (job->kjob()->error() != KJob::NoError)
