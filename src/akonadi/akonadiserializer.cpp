@@ -589,7 +589,7 @@ bool Serializer::isContext(const Akonadi::Tag &tag) const
 
 bool Serializer::isAkonadiTag(const Tag &tag) const
 {
-    return tag.type() == Akonadi::Tag::PLAIN;
+    return tag.type() == Akonadi::Tag::PLAIN || Akonadi::Tag::GENERIC;
 }
 
 bool Serializer::isContextTag(const Domain::Context::Ptr &context, const Akonadi::Tag &tag) const
@@ -629,10 +629,7 @@ void Serializer::updateTagFromAkonadiTag(Domain::Tag::Ptr tag, Akonadi::Tag akon
 
 Akonadi::Tag Serializer::createAkonadiTagFromTag(Domain::Tag::Ptr tag)
 {
-    auto akonadiTag = Akonadi::Tag();
-    akonadiTag.setName(tag->name());
-    akonadiTag.setType(Akonadi::Tag::PLAIN);
-    akonadiTag.setGid(QByteArray(tag->name().toLatin1()));
+    auto akonadiTag = Akonadi::Tag::genericTag(tag->name());
 
     const auto tagProperty = tag->property("tagId");
     if (tagProperty.isValid())
