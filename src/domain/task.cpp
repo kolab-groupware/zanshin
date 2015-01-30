@@ -29,7 +29,8 @@ using namespace Domain;
 Task::Task(QObject *parent)
     : Artifact(parent),
     m_progress(0),
-    m_status(None)
+    m_status(None),
+    m_recurrence(0)
 {
 }
 
@@ -126,7 +127,7 @@ Recurrence::Ptr Task::recurrence() const
     return m_recurrence;
 }
 
-void Task::setRecurrence(const Recurrence &recurrence)
+void Task::setRecurrence(const Domain::Recurrence::Ptr &recurrence)
 {
     if (m_recurrence == recurrence) {
         return;
@@ -197,3 +198,19 @@ void Task::Delegate::setEmail(const QString &email)
     m_email = email;
 }
 
+Recurrence::Recurrence(QObject *parent)
+    : QObject(parent)
+{
+
+}
+
+Recurrence::Recurrence(const Recurrence &recurrence)
+    : QObject(recurrence.parent())
+{
+
+}
+
+Recurrence::~Recurrence()
+{
+
+}

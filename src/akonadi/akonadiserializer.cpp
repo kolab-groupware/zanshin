@@ -250,6 +250,115 @@ static KCalCore::Incidence::Status toKCalStatus(Domain::Task::Status status)
     return KCalCore::Incidence::StatusNone;
 }
 
+Domain::Recurrence::Weekday fromWeekDay(int wday)
+{
+    switch (wday) {
+        case 1:
+            return Domain::Recurrence::Monday;
+        case 2:
+            return Domain::Recurrence::Tuesday;
+        case 3:
+            return Domain::Recurrence::Wednesday;
+        case 4:
+            return Domain::Recurrence::Thursday;
+        case 5:
+            return Domain::Recurrence::Friday;
+        case 6:
+            return Domain::Recurrence::Saturday;
+        case 7:
+            return Domain::Recurrence::Sunday;
+        default:
+            qFatal("unhandled wday");
+            Q_ASSERT(0);
+    }
+    return Domain::Recurrence::Monday;
+}
+
+Domain::Recurrence::Frequency fromRecurrenceType(KCalCore::RecurrenceRule::PeriodType freq)
+{
+    switch(freq) {
+        case KCalCore::RecurrenceRule::rNone:
+            qWarning() << "no recurrence?";
+            break;
+        case KCalCore::RecurrenceRule::rYearly:
+            return Domain::Recurrence::Frequency::Yearly;
+        case KCalCore::RecurrenceRule::rMonthly:
+            return Domain::Recurrence::Frequency::Monthly;
+        case KCalCore::RecurrenceRule::rWeekly:
+            return Domain::Recurrence::Frequency::Weekly;
+        case KCalCore::RecurrenceRule::rDaily:
+            return Domain::Recurrence::Frequency::Daily;
+        case KCalCore::RecurrenceRule::rHourly:
+            return Domain::Recurrence::Frequency::Hourly;
+        case KCalCore::RecurrenceRule::rMinutely:
+            return Domain::Recurrence::Frequency::Minutely;
+        case KCalCore::RecurrenceRule::rSecondly:
+            return Domain::Recurrence::Frequency::Secondly;
+        default:
+            qFatal("unhandled recurrenceType");
+            Q_ASSERT(0);
+    }
+    return Domain::Recurrence::Frequency::None;
+}
+
+Domain::Recurrence::Ptr fromKCalRecurrence(KCalCore::Recurrence *rec)
+{
+    Domain::Recurrence recurrence;
+
+    recurrence.setAllDay(rec->allDay());
+    recurrence.setInterval(rec->frequency());
+
+    QList<QDateTime> rdates;
+    foreach (const KDateTime &dt, rec->rDateTimes()) {
+        rdates.append(dt.dateTime());
+    }
+    foreach (const QDate &dt, rec->rDates()) {
+        rdates.append(QDateTime(dt));
+    }
+    recurrence.setRecurrenceDates(rdates);
+
+    QList<QDateTime> exdates;
+    foreach (const KDateTime &dt, rec->exDateTimes()) {
+        exdates.append(dt.dateTime());
+    }
+    foreach (const QDate &dt, rec->exDates()) {
+        exdates.append(QDateTime(dt));
+    }
+    recurrence.setExceptionsDates(exdates);
+
+    KCalCore::RecurrenceRule *defaultRR = rec->defaultRRule(false);
+
+    if (!defaultRR) {
+        if (defaultRR->duration() != 0) { //Inidcates if end date is set or not
+            if (defaultRR->duration() > 0) {
+                recurrence.setCount(defaultRR->duration());
+            }
+        } else {
+            recurrence.setEnd(defaultRR->endDt().dateTime());
+        }
+        recurrence.setWeekStart(fromWeekDay(defaultRR->weekStart()));
+        recurrence.setFrequency(fromRecurrenceType(defaultRR->recurrenceType()));
+
+        recurrence.setBysecond(defaultRR->bySeconds());
+        recurrence.setByminute(defaultRR->byMinutes());
+        recurrence.setByhour(defaultRR->byHours());
+        recurrence.setBymonthday(defaultRR->byMonthDays());
+        recurrence.setByyearday(defaultRR->byYearDays());
+        recurrence.setByweekno(defaultRR->byWeekNumbers());
+        recurrence.setBymonth(defaultRR->byMonths());
+
+        /*
+        QList<Domain::Recurrence::Weekday> daypos;
+        foreach (const KCalCore::RecurrenceRule::WDayPos &dp, defaultRR->byDays()) {
+            daypos.append(fromWeekDayPos(dp));
+        }
+        recurrence.setByday(daypos);
+        */
+    }
+
+    return Domain::Recurrence::Ptr(new Domain::Recurrence(recurrence));
+}
+
 void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
 {
     if (!isTaskItem(item))
@@ -278,7 +387,15 @@ void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
             task->setDelegate(Domain::Task::Delegate((*delegate)->name(), (*delegate)->email()));
         }
     }
+    if (todo->recurs()) {
+        Domain::Recurrence::Ptr recurrence(fromKCalRecurrence(todo->recurrence()));
+        task->setRecurrence(recurrence);
+    } else {
+        task->setRecurrence(Domain::Recurrence::Ptr(0));
+    }
 }
+
+
 
 bool Serializer::isTaskChild(Domain::Task::Ptr task, Akonadi::Item item)
 {
