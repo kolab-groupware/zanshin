@@ -40,6 +40,9 @@ public:
     void paint(QPainter *painter,
                const QStyleOptionViewItem &option,
                const QModelIndex &index) const;
+private:
+    QPixmap m_notePixmap;
+    QPixmap m_recurPixmap;
 };
 
 }

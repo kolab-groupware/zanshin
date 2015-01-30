@@ -27,6 +27,8 @@
 #include <QApplication>
 #include <QStyleOptionViewItemV4>
 
+#include <KIconLoader>
+
 #include "domain/note.h"
 #include "domain/task.h"
 #include "presentation/querytreemodelbase.h"
@@ -36,6 +38,8 @@ using namespace Widgets;
 ItemDelegate::ItemDelegate(QObject *parent)
     : QStyledItemDelegate(parent)
 {
+    m_notePixmap = KIconLoader().loadIcon(QLatin1String("text-plain"), KIconLoader::Small);
+    m_recurPixmap = KIconLoader().loadIcon(QLatin1String("appointment-recurring"), KIconLoader::Small);
 }
 
 QSize ItemDelegate::sizeHint(const QStyleOptionViewItem &option,
@@ -44,7 +48,23 @@ QSize ItemDelegate::sizeHint(const QStyleOptionViewItem &option,
     // Make sure they all get the height needed for a check indicator
     QStyleOptionViewItemV4 opt = option;
     opt.features = QStyleOptionViewItemV4::HasCheckIndicator;
+
+    Domain::Task::Ptr task;
+    Domain::Note::Ptr note;
+    QVariant data = index.data(Presentation::QueryTreeModelBase::ObjectRole);
+    auto artifact = data.value<Domain::Artifact::Ptr>();
+    if (artifact) {
+        task = artifact.dynamicCast<Domain::Task>();
+        note = artifact.dynamicCast<Domain::Note>();
+    } else {
+        task = data.value<Domain::Task::Ptr>();
+        note = data.value<Domain::Note::Ptr>();
+    }
+    if (task && task->recurrence() || note) {
+        opt.features |= QStyleOptionViewItemV4::HasDecoration;
+    }
     QSize res = QStyledItemDelegate::sizeHint(opt, index);
+    res.setHeight(m_notePixmap.height() + 4);
     return res;
 }
 
@@ -67,8 +87,11 @@ void ItemDelegate::paint(QPainter *painter,
         task = data.value<Domain::Task::Ptr>();
         note = data.value<Domain::Note::Ptr>();
     }
-
     if (task) {
+        if (task->recurrence()) {
+            opt.features |= QStyleOptionViewItemV4::HasDecoration;
+            opt.icon = m_recurPixmap;
+        }
         if (task->isDone()) {
             opt.font.setStrikeOut(true);
         } else {
@@ -99,7 +122,7 @@ void ItemDelegate::paint(QPainter *painter,
 
     if (note) {
         opt.features |= QStyleOptionViewItemV4::HasDecoration;
-        opt.icon = QIcon::fromTheme("text-plain");
+        opt.icon = m_notePixmap;
     }
 
     const QWidget *widget = opt.widget;
