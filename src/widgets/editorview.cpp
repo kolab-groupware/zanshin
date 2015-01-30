@@ -33,6 +33,7 @@
 #include <QSpinBox>
 #include <QUrl>
 #include <KRun>
+#include <QDebug>
 #include "kdateedit.h"
 #include "addressline/addresseelineedit.h"
 #include "presentation/metatypes.h"
@@ -174,6 +175,7 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
     connect(m_model, SIGNAL(progressChanged(int)), this, SLOT(onProgressChanged()));
     connect(m_model, SIGNAL(statusChanged(int)), this, SLOT(onStatusChanged()));
+    connect(m_model, SIGNAL(recurrenceChanged(Domain::Recurrence::Ptr)), this, SLOT(onRecurrenceChanged()));
     connect(m_model, SIGNAL(relationsChanged(QList<Domain::Relation::Ptr>)), this, SLOT(onRelationsChanged()));
 
     connect(this, SIGNAL(titleChanged(QString)), m_model, SLOT(setTitle(QString)));
@@ -276,6 +278,13 @@ void EditorView::onRelationsChanged()
         m_relationWidgets << widget;
     }
 }
+
+void EditorView::onRecurrenceChanged()
+{
+    const auto recurrence = m_model->property("recurrence").value<Domain::Recurrence::Ptr>();
+    qDebug() << "recurrenceChanged needs to be impemented";
+}
+
 
 void EditorView::onRemoveRelationClicked()
 {

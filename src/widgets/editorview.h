@@ -75,6 +75,7 @@ private slots:
     void onProgressChanged();
     void onStatusChanged();
     void onRelationsChanged();
+    void onRecurrenceChanged();
 
     void onTextEditChanged();
     void onStartEditEntered(const QDate &start);

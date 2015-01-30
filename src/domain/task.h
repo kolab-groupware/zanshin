@@ -105,8 +105,28 @@ public:
     QList<int> bymonth() const;
 
     void setRecurrenceDates(const QList<QDateTime> &rdates);
+    QList<QDateTime> recurrenceDates() const;
 
-    void setExceptionsDates(const QList<QDateTime> &exceptions);
+    void setExceptionDates(const QList<QDateTime> &exceptions);
+    QList<QDateTime> exceptionDates() const;
+
+private:
+    Frequency m_frequency;
+    Weekday m_weekStart;
+    bool m_allDay;
+    QDateTime m_end;
+    int m_count;
+    int m_interval;
+    QList<int> m_bysecond;
+    QList<int> m_byminute;
+    QList<int> m_byhour;
+    QList<Weekday> m_byday;
+    QList<int> m_bymonthday;
+    QList<int> m_byyearday;
+    QList<int> m_byweekno;
+    QList<int> m_bymonth;
+    QList<QDateTime> m_recurrenceDates;
+    QList<QDateTime> m_exceptionDates;
 };
 
 class Task : public Artifact
@@ -195,4 +215,6 @@ Q_DECLARE_METATYPE(Domain::Task::Ptr)
 Q_DECLARE_METATYPE(Domain::Task::List)
 Q_DECLARE_METATYPE(Domain::Task::Delegate)
 
+Q_DECLARE_METATYPE(Domain::Recurrence::Ptr)
+Q_DECLARE_METATYPE(Domain::Recurrence::List)
 #endif // DOMAIN_TASK_H
