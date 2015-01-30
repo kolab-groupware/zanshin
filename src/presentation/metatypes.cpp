@@ -40,4 +40,5 @@ void MetaTypes::registerAll()
     qRegisterMetaType<Domain::DataSource::Ptr>();
     qRegisterMetaType<Domain::Task::Delegate>();
     qRegisterMetaType<QList<Domain::Relation::Ptr> >();
+    qRegisterMetaType<Domain::Recurrence::Ptr>();
 }

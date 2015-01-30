@@ -78,6 +78,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     m_progress = 0;
     m_status = Domain::Task::None;
     m_relations.clear();
+    m_recurrence = Domain::Recurrence::Ptr(0);
 
     m_artifact = artifact;
 
@@ -99,6 +100,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
         m_delegate = task->delegate();
         m_progress = task->progress();
         m_status = task->status();
+        m_recurrence = task->recurrence();
 
         connect(m_artifact.data(), SIGNAL(startDateChanged(QDateTime)),
                 this, SLOT(onStartDateChanged(QDateTime)));
@@ -110,6 +112,8 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
                 this, SLOT(onProgressChanged(int)));
         connect(m_artifact.data(), SIGNAL(statusChanged(int)),
                 this, SLOT(onStatusChanged(int)));
+        connect(m_artifact.data(), SIGNAL(recurrenceChanged(Domain::Recurrence::Ptr)),
+                this, SLOT(onRecurrenceChanged(Domain::Recurrence::Ptr)));
     }
 
     auto relationQuery = m_relationQueries->findRelations(m_artifact);
@@ -129,6 +133,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     emit progressChanged(m_progress);
     emit statusChanged(m_status);
     emit relationsChanged(m_relations);
+    emit recurrenceChanged(m_recurrence);
 }
 
 void ArtifactEditorModel::addRelation(const Domain::Relation::Ptr &relation)
@@ -182,6 +187,11 @@ int ArtifactEditorModel::progress() const
 int ArtifactEditorModel::status() const
 {
     return m_status;
+}
+
+Domain::Recurrence::Ptr ArtifactEditorModel::recurrence() const
+{
+    return m_recurrence;
 }
 
 int ArtifactEditorModel::autoSaveDelay()
@@ -253,6 +263,16 @@ void ArtifactEditorModel::setStatus(int status)
     setSaveNeeded(true);
 }
 
+void ArtifactEditorModel::setRecurrence(const Domain::Recurrence::Ptr &recurrence)
+{
+    if (m_recurrence == recurrence ||
+           (m_recurrence && recurrence && *m_recurrence == *recurrence)) {
+        return;
+    }
+    onRecurrenceChanged(recurrence);
+    setSaveNeeded(true);
+}
+
 QList<Domain::Relation::Ptr> ArtifactEditorModel::relations() const
 {
     return m_relations;
@@ -300,6 +320,12 @@ void ArtifactEditorModel::onStatusChanged(int status)
     emit statusChanged(status);
 }
 
+void ArtifactEditorModel::onRecurrenceChanged(const Domain::Recurrence::Ptr &recurrence)
+{
+    m_recurrence = recurrence;
+    emit recurrenceChanged(recurrence);
+}
+
 void ArtifactEditorModel::save()
 {
     if (!isSaveNeeded())
@@ -316,6 +342,7 @@ void ArtifactEditorModel::save()
         task->setDelegate(m_delegate);
         task->setProgress(m_progress);
         task->setStatus(m_status);
+        task->setRecurrence(m_recurrence);
         m_taskRepository->update(task);
     } else {
         auto note = m_artifact.objectCast<Domain::Note>();

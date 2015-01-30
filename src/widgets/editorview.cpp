@@ -162,6 +162,7 @@ void EditorView::setModel(QObject *model)
     onDelegateTextChanged();
     onProgressChanged();
     onStatusChanged();
+    onRecurrenceChanged();
     onRelationsChanged();
 
     connect(m_model, SIGNAL(artifactChanged(Domain::Artifact::Ptr)),

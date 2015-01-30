@@ -130,7 +130,8 @@ Recurrence::Ptr Task::recurrence() const
 
 void Task::setRecurrence(const Domain::Recurrence::Ptr &recurrence)
 {
-    if (m_recurrence == recurrence) {
+    if (m_recurrence == recurrence ||
+           (m_recurrence && recurrence && *m_recurrence == *recurrence)) {
         return;
     }
 
@@ -205,30 +206,73 @@ Recurrence::Recurrence(QObject *parent)
 
 }
 
-Recurrence::Recurrence(const Recurrence &recurrence)
-    : QObject(recurrence.parent())
+Recurrence::Recurrence(const Recurrence &other)
+    : QObject(other.parent())
+    , m_frequency(other.m_frequency)
+    , m_weekStart(other.m_weekStart)
+    , m_allDay(other.m_allDay)
+    , m_end(other.m_end)
+    , m_count(other.m_count)
+    , m_interval(other.m_interval)
+    , m_bysecond(other.m_bysecond)
+    , m_byminute(other.m_byminute)
+    , m_byhour(other.m_byhour)
+    , m_byday(other.m_byday)
+    , m_bymonthday(other.m_bymonthday)
+    , m_byyearday(other.m_byyearday)
+    , m_byweekno(other.m_byweekno)
+    , m_bymonth(other.m_bymonth)
+    , m_recurrenceDates(other.m_recurrenceDates)
+    , m_exceptionDates(other.m_exceptionDates)
 {
-    this->m_frequency = recurrence.m_frequency;
-    this->m_weekStart = recurrence.m_weekStart;
-    this->m_allDay = recurrence.m_allDay;
-    this->m_end = recurrence.m_end;
-    this->m_count = recurrence.m_count;
-    this->m_interval = recurrence.m_interval;
-    this->m_bysecond = recurrence.m_bysecond;
-    this->m_byminute = recurrence.m_byminute;
-    this->m_byhour = recurrence.m_byhour;
-    this->m_byday = recurrence.m_byday;
-    this->m_bymonthday = recurrence.m_bymonthday;
-    this->m_byyearday = recurrence.m_byyearday;
-    this->m_byweekno = recurrence.m_byweekno;
-    this->m_bymonth = recurrence.m_bymonth;
-    this->m_recurrenceDates = recurrence.m_recurrenceDates;
-    this->m_exceptionDates = recurrence.m_exceptionDates;
+
 }
 
 Recurrence::~Recurrence()
 {
 
+}
+
+Recurrence &Recurrence::operator=(const Recurrence &other)
+{
+    Recurrence copy(other);
+    std::swap(m_frequency, copy.m_frequency);
+    std::swap(m_weekStart, copy.m_weekStart);
+    std::swap(m_allDay, copy.m_allDay);
+    std::swap(m_end, copy.m_end);
+    std::swap(m_count, copy.m_count);
+    std::swap(m_interval, copy.m_interval);
+    std::swap(m_bysecond, copy.m_bysecond);
+    std::swap(m_byminute, copy.m_byminute);
+    std::swap(m_byhour, copy.m_byhour);
+    std::swap(m_byday, copy.m_byday);
+    std::swap(m_bymonthday, copy.m_bymonthday);
+    std::swap(m_byyearday, copy.m_byyearday);
+    std::swap(m_byweekno, copy.m_byweekno);
+    std::swap(m_bymonth, copy.m_bymonth);
+    std::swap(m_recurrenceDates, copy.m_recurrenceDates);
+    std::swap(m_exceptionDates, copy.m_exceptionDates);
+    return *this;
+}
+
+bool Recurrence::operator==(const Recurrence &other) const
+{
+    return m_frequency == other.m_frequency
+        && m_weekStart == other.m_weekStart
+        && m_allDay == other.m_allDay
+        && m_end == other.m_end
+        && m_count == other.m_count
+        && m_interval == other.m_interval
+        && m_bysecond == other.m_bysecond
+        && m_byminute == other.m_byminute
+        && m_byhour == other.m_byhour
+        && m_byday == other.m_byday
+        && m_bymonthday == other.m_bymonthday
+        && m_byyearday == other.m_byyearday
+        && m_byweekno == other.m_byweekno
+        && m_bymonth == other.m_bymonth
+        && m_recurrenceDates == other.m_recurrenceDates
+        && m_exceptionDates == other.m_exceptionDates;
 }
 
 void Recurrence::setFrequency(Recurrence::Frequency frequency)

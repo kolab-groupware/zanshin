@@ -59,8 +59,11 @@ public:
     };
 
     explicit Recurrence(QObject *parent = 0);
-    explicit Recurrence(const Domain::Recurrence &recurrence);
+    explicit Recurrence(const Domain::Recurrence &other);
     virtual ~Recurrence();
+
+    Recurrence &operator=(const Recurrence &other);
+    bool operator==(const Recurrence &other) const;
 
     void setFrequency(Frequency);
     Frequency frequency() const;
