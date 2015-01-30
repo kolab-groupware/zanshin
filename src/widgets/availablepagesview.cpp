@@ -110,6 +110,7 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
     removeAction->setObjectName("removeAction");
     removeAction->setText(tr("Remove"));
     removeAction->setIcon(QIcon::fromTheme("list-remove"));
+    removeAction->setShortcut(Qt::Key_Delete);
     connect(removeAction, SIGNAL(triggered()), this, SLOT(onRemoveTriggered()));
     m_actionBar->addAction(removeAction);
     this->addAction(removeAction);
