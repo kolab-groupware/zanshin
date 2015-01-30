@@ -130,6 +130,9 @@ void Serializer::updateDataSourceFromCollection(Domain::DataSource::Ptr dataSour
 
 Collection Serializer::createCollectionFromDataSource(Domain::DataSource::Ptr dataSource)
 {
+    if (!dataSource) {
+        return Akonadi::Collection();
+    }
     auto collection = dataSource->property("collection").value<Collection>();
 
     collection.attribute<Akonadi::TimestampAttribute>(Akonadi::Collection::AddIfMissing);

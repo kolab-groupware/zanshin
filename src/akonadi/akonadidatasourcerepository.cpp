@@ -116,6 +116,9 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
         }
         
         const auto collection = m_serializer->createCollectionFromDataSource(selectedSource);
+        if (!collection.isValid()) {
+            return;
+        }
 
         //Since we have no ETM based selection model we simply emulate one to tell the actionmanager about the current collection
         auto itemModel = new QStandardItemModel(parent);
