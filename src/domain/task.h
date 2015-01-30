@@ -30,12 +30,89 @@
 
 namespace Domain {
 
+class Recurrence : public QObject
+{
+    Q_OBJECT
+public:
+    typedef QSharedPointer<Recurrence> Ptr;
+    typedef QList<Recurrence::Ptr> List;
+
+    enum Frequency {
+        Yearly,
+        Monthly,
+        Weekly,
+        Daily,
+        Hourly,
+        Minutely,
+        Secondly
+    };
+
+    enum Weekday {
+        Monday,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday
+    };
+
+    explicit Recurrence(QObject *parent = 0);
+    virtual ~Recurrence();
+
+    void setFrequency(Frequency);
+    Frequency frequency() const;
+
+    void setWeekStart(Weekday);
+    Weekday weekStart() const;
+
+    void setEnd(const QDateTime &);
+    QDateTime end() const;
+
+    void setCount(int count);
+    int count() const;
+
+    void setInterval(int interval);
+    int interval() const;
+
+    void setBysecond(const QList<int> &);
+    QList<int> bysecond() const;
+
+    void setByminute(const QList<int> &);
+    QList<int> byminute() const;
+
+    void setByhour(const QList<int> &);
+    QList<int> byhour() const;
+
+    void setByday(const QList<Weekday> &);
+    QList<Weekday> byday() const;
+
+    void setBymonthday(const QList<int> &);
+    QList<int> bymonthday() const;
+
+    void setByyearday(const QList<int> &);
+    QList<int> byyearday() const;
+
+    void setByweekno(const QList<int> &);
+    QList<int> byweekno() const;
+
+    void setBymonth(const QList<int> &);
+    QList<int> bymonth() const;
+
+    void setRDates(const QList<QDate> &rdates);
+    void setRDates(const QList<QDateTime> &rdates);
+
+    void setExceptions(const QList<QDate> &exceptions);
+    void setExceptions(const QList<QDateTime> &exceptions);
+};
+
 class Task : public Artifact
 {
     Q_OBJECT
     Q_PROPERTY(QDateTime startDate READ startDate WRITE setStartDate NOTIFY startDateChanged)
     Q_PROPERTY(QDateTime dueDate READ dueDate WRITE setDueDate NOTIFY dueDateChanged)
     Q_PROPERTY(Domain::Task::Delegate delegate READ delegate WRITE setDelegate NOTIFY delegateChanged)
+    Q_PROPERTY(Domain::Recurrence recurrence READ recurrence WRITE setRecurrence NOTIFY recurrenceChanged)
 public:
     typedef QSharedPointer<Task> Ptr;
     typedef QList<Task::Ptr> List;
@@ -81,6 +158,7 @@ public:
     Delegate delegate() const;
     int progress() const;
     Status status() const;
+    Recurrence::Ptr recurrence() const;
 
 public slots:
     void setDone(bool done);
@@ -89,18 +167,25 @@ public slots:
     void setDelegate(const Domain::Task::Delegate &delegate);
     void setProgress(int progress);
     void setStatus(int status);
+    void setRecurrence(const Recurrence::Ptr &recurrence);
 
 signals:
     void startDateChanged(const QDateTime &startDate);
     void dueDateChanged(const QDateTime &dueDate);
     void delegateChanged(const Domain::Task::Delegate &delegate);
     void progressChanged(int progress);
-    void statusChanged(int status);
+    void statusChanged(int status);egate(const Domain::Task::Delegate &delegate);
+    void setProgress(int progress);
+    void setStatus(int status);
+    void setRecurrence(const Recurrence &recurrence);
+
+    void recurrenceChanged(const Recurrence::Ptr &recurrence);
 
 private:
     QDateTime m_startDate;
     QDateTime m_dueDate;
     Delegate m_delegate;
+    Recurrence::Ptr m_recurrence;
     int m_progress;
     Status m_status;
 };

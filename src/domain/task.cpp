@@ -121,6 +121,21 @@ void Task::setStatus(int status)
     emit statusChanged(status);
 }
 
+Recurrence::Ptr Task::recurrence() const
+{
+    return m_recurrence;
+}
+
+void Task::setRecurrence(const Recurrence &recurrence)
+{
+    if (m_recurrence == recurrence) {
+        return;
+    }
+
+    m_recurrence = recurrence;
+    emit recurrenceChanged(recurrence);
+}
+
 
 Task::Delegate::Delegate()
 {
