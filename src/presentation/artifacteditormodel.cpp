@@ -25,6 +25,7 @@
 #include "artifacteditormodel.h"
 
 #include <QTimer>
+#include <QDebug>
 
 #include "domain/task.h"
 #include "domain/taskrepository.h"
@@ -299,6 +300,45 @@ void ArtifactEditorModel::setFrequency(Domain::Recurrence::Frequency frequency, 
         } else {
             recurrence->setFrequency(frequency);
             recurrence->setInterval(intervall);
+            switch(frequency) {
+            case Domain::Recurrence::Yearly:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setByweekno(QList<int>());
+                break;
+            case Domain::Recurrence::Monthly:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setBymonth(QList<int>());
+                break;
+            case Domain::Recurrence::Weekly:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setByweekno(QList<int>());
+                recurrence->setBymonth(QList<int>());
+                break;
+            case Domain::Recurrence::Daily:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setByweekno(QList<int>());
+                recurrence->setBymonth(QList<int>());
+                break;
+           }
             setRecurrence(recurrence);
         }
     }
@@ -342,6 +382,19 @@ void ArtifactEditorModel::setRepeatEnd(int count)
     if (!m_recurrence || recurrence->count() != count || recurrence->end().isValid()) {
         recurrence->setCount(count);
         recurrence->setEnd(QDateTime());
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setByDay(const QList<Domain::Recurrence::Weekday> &dayList)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->byday() != dayList) {
+        recurrence->setByday(dayList);
         setRecurrence(recurrence);
     }
 }

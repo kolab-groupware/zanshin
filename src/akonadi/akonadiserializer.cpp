@@ -36,6 +36,8 @@
 #include "akonadi/akonadiapplicationselectedattribute.h"
 #include "akonadi/akonaditimestampattribute.h"
 
+#include <QBitArray>
+
 using namespace Akonadi;
 
 Serializer::Serializer()
@@ -396,13 +398,14 @@ Domain::Recurrence::Ptr fromKCalRecurrence(const KCalCore::Recurrence *rec)
         recurrence.setByweekno(defaultRR->byWeekNumbers());
         recurrence.setBymonth(defaultRR->byMonths());
 
-        /*
         QList<Domain::Recurrence::Weekday> daypos;
-        foreach (const KCalCore::RecurrenceRule::WDayPos &dp, defaultRR->byDays()) {
-            daypos.append(fromWeekDayPos(dp));
+        const auto days = rec->days();
+        for (int i = 0; i < 7; i++) {
+            if (days.at(i)) {
+                daypos.append((Domain::Recurrence::Weekday) (Domain::Recurrence::Monday+i));
+            }
         }
         recurrence.setByday(daypos);
-        */
     }
 
     return Domain::Recurrence::Ptr(new Domain::Recurrence(recurrence));
@@ -498,14 +501,13 @@ void updateKCalRecurrence(const Domain::Recurrence::Ptr &from, KCalCore::Recurre
         defaultRR->setByMonths(from->bymonth());
     }
 
-    /*    if (!rrule.byday().empty()) {
-        QList<KCalCore::RecurrenceRule::WDayPos> daypos;
-        foreach(const Kolab::DayPos &dp, rrule.byday()) {
-            daypos.append(toWeekDayPos(dp));
+    if (!from->byday().empty()) {
+        QBitArray days(7, 0);
+        foreach(auto day, from->byday()) {
+            days.setBit(day - Domain::Recurrence::Monday);
         }
-        defaultRR->setByDays(daypos);
+        recurrence->addMonthlyPos(0, days);
     }
-    */
 
     foreach (const auto &dt, from->recurrenceDates()) {
         if (dt.time() == QTime(0,0,0)) {

@@ -204,6 +204,8 @@ void EditorView::setModel(QObject *model)
         m_model, SLOT(setNoRepeat()));
     connect(m_recurrenceWidget, SIGNAL(exceptionDatesChanged(QList<QDateTime>)),
         m_model, SLOT(setExceptionDates(QList<QDateTime>)));
+    connect(m_recurrenceWidget, SIGNAL(byDayChanged(QList<Domain::Recurrence::Weekday>)),
+        m_model, SLOT(setByDay(QList<Domain::Recurrence::Weekday>)));
 }
 
 void EditorView::onArtifactChanged()
@@ -307,6 +309,8 @@ void EditorView::onRecurrenceChanged()
         m_recurrenceWidget->setRecurrenceType(recurrence->frequency());
         m_recurrenceWidget->setRecurrenceIntervall(recurrence->interval());
         m_recurrenceWidget->setExceptionDateTimes(recurrence->exceptionDates());
+
+        m_recurrenceWidget->setByDay(recurrence->byday());
 
         if (recurrence->end().isValid()) {
             m_recurrenceWidget->setEnd(1);

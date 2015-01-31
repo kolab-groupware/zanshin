@@ -98,6 +98,7 @@ public slots:
     void setRepeatEnd(int count);
     void setNoRepeat();
     void setExceptionDates(const QList<QDateTime> &exceptionDates);
+    void setByDay(const QList< Domain::Recurrence::Weekday > &dayList);
 
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);

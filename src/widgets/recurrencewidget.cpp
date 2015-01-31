@@ -92,6 +92,8 @@ RecurrenceWidget::RecurrenceWidget(QWidget *parent)
              SLOT(updateRemoveExceptionButton()) );
     connect( ui->mRecurrenceTypeCombo, SIGNAL(currentIndexChanged(int)),
              SLOT(handleRecurrenceTypeChange(int)));
+    connect ( ui->mWeekDayCombo, SIGNAL(checkedItemsChanged(QStringList)),
+              SLOT(handleWeekDayComboChanged()));
     connect( ui->mRecurrenceEndDate, SIGNAL(dateChanged(QDate)),
              SLOT(handleEndDateChange(QDate)));
     connect( ui->mRecurrenceEndCombo, SIGNAL(currentIndexChanged(int)),
@@ -160,7 +162,6 @@ void RecurrenceWidget::setExceptionDateTimes(const QList<QDateTime> &exceptionDa
 
 void RecurrenceWidget::setEnd(const QDateTime &end)
 {
-    qDebug() << "set enddate:" << end.date();
     ui->mRecurrenceEndDate->setDate(end.date());
     ui->mRecurrenceEndCombo->setCurrentIndex(RepeatTime);
     ui->mRecurrenceEndStack->setCurrentIndex(RepeatTime);
@@ -194,7 +195,21 @@ void RecurrenceWidget::clear()
     ui->mExceptionAddButton->setEnabled(true);
     ui->mExceptionList->clear();
     updateRemoveExceptionButton();
+
+    QBitArray days(7, 0);
+    ui->mWeekDayCombo->setDays(days);
+
     fillCombos();
+}
+
+void RecurrenceWidget::setByDay(const QList< Domain::Recurrence::Weekday > &dayList)
+{
+    QBitArray days(7, 0);
+    foreach(auto day, dayList) {
+        days.setBit(day - Domain::Recurrence::Monday);
+    }
+
+    ui->mWeekDayCombo->setDays(days);
 }
 
 void RecurrenceWidget::addException()
@@ -230,7 +245,6 @@ void RecurrenceWidget::handleEndDateChange(const QDate &date)
 
 void RecurrenceWidget::handleRepeatTypeChange(int currentIndex)
 {
-    qDebug() << "handleRepeatTypeChange";
     switch(currentIndex) {
     case RepeatCount:
         emit endChanged(ui->mEndDurationEdit->value());
@@ -295,6 +309,20 @@ void RecurrenceWidget::handleRecurrenceTypeChange(int currentIndex)
   emitFrequencyChanged();
 }
 
+void RecurrenceWidget::handleWeekDayComboChanged()
+{
+    QList <Domain::Recurrence::Weekday> days;
+    QBitArray dayBits = ui->mWeekDayCombo->days();
+    for ( int i = 0; i < 7; ++i ) {
+        if (dayBits.testBit(i)) {
+            days.append((Domain::Recurrence::Weekday) (Domain::Recurrence::Monday + i));
+        }
+    }
+
+    emit byDayChanged(days);
+}
+
+
 void RecurrenceWidget::removeExceptions()
 {
   QList<QListWidgetItem *> selectedExceptions = ui->mExceptionList->selectedItems();
@@ -319,7 +347,6 @@ void RecurrenceWidget::emitExceptionDatesChanged()
       QListWidgetItem *item = ui->mExceptionList->item(i);
       dates.append(item->data(Qt::EditRole).value<QDateTime>());
   }
-  qDebug() << dates;
   emit exceptionDatesChanged(dates);
 }
 
