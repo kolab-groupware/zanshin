@@ -6,6 +6,7 @@ set(widgets_SRCS
     datasourcedelegate.cpp
     editorview.cpp
     filterwidget.cpp
+    recurrencewidget.cpp
     itemdelegate.cpp
     messagebox.cpp
     messageboxinterface.cpp
@@ -16,6 +17,7 @@ set(widgets_SRCS
 
 qt4_wrap_ui(widgets_SRCS
     filterwidget.ui
+    recurrencewidget.ui
     newpagedialog.ui
 )
 

@@ -23,6 +23,7 @@
 
 
 #include "editorview.h"
+#include "recurrencewidget.h"
 
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -94,6 +95,12 @@ EditorView::EditorView(QWidget *parent)
     setLayout(layout);
 
     QVBoxLayout *vbox = new QVBoxLayout;
+    m_recurrenceTask = new QLabel(tr("This is one occurence of a recurrenting task"));
+    m_recurrenceTask->setVisible(false);
+    vbox->addWidget(m_recurrenceTask);
+    m_recurrenceWidget = new RecurrenceWidget;
+    m_recurrenceWidget->setVisible(false);
+    vbox->addWidget(m_recurrenceWidget);
     auto delegateHBox = new QHBoxLayout;
     delegateHBox->addWidget(new QLabel(tr("Delegate to"), m_taskGroup));
     delegateHBox->addWidget(m_delegateEdit);
@@ -161,9 +168,9 @@ void EditorView::setModel(QObject *model)
     onDueDateChanged();
     onDelegateTextChanged();
     onProgressChanged();
-    onStatusChanged();
     onRecurrenceChanged();
     onRelationsChanged();
+    onStatusChanged();
 
     connect(m_model, SIGNAL(artifactChanged(Domain::Artifact::Ptr)),
             this, SLOT(onArtifactChanged()));
@@ -172,6 +179,7 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(titleChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(textChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(startDateChanged(QDateTime)), this, SLOT(onStartDateChanged()));
+    connect(m_model, SIGNAL(startDateChanged(QDateTime)), m_recurrenceWidget, SLOT(onStartDateChanged(QDateTime)));
     connect(m_model, SIGNAL(dueDateChanged(QDateTime)), this, SLOT(onDueDateChanged()));
     connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
     connect(m_model, SIGNAL(progressChanged(int)), this, SLOT(onProgressChanged()));
@@ -283,7 +291,18 @@ void EditorView::onRelationsChanged()
 void EditorView::onRecurrenceChanged()
 {
     const auto recurrence = m_model->property("recurrence").value<Domain::Recurrence::Ptr>();
-    qDebug() << "recurrenceChanged needs to be impemented";
+
+    if (recurrence && !m_statusComboBox->itemData(5).isValid()) {
+        m_statusComboBox->addItem(tr("Complete all recurrences"), Domain::Task::FullComplete);
+        onStatusChanged();
+        m_recurrenceTask->setVisible(true);
+        m_recurrenceWidget->setVisible(true);
+        m_recurrenceWidget->setRecurrenceType(recurrence->frequency());
+    } else if (!recurrence && m_statusComboBox->itemData(5).isValid()) {
+        m_statusComboBox->removeItem(5);
+        m_recurrenceTask->setVisible(false);
+        m_recurrenceWidget->setVisible(false);
+    }
 }
 
 

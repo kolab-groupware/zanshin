@@ -241,6 +241,7 @@ static KCalCore::Incidence::Status toKCalStatus(Domain::Task::Status status)
         case Domain::Task::Cancelled:
             return KCalCore::Incidence::StatusCanceled;
         case Domain::Task::Complete:
+        case Domain::Task::FullComplete:
             return KCalCore::Incidence::StatusCompleted;
         case Domain::Task::NeedsAction:
             return KCalCore::Incidence::StatusNeedsAction;
@@ -438,6 +439,9 @@ void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
     if (todo->recurs()) {
         Domain::Recurrence::Ptr recurrence(fromKCalRecurrence(todo->recurrence()));
         task->setRecurrence(recurrence);
+        if (task->status() == Domain::Task::Complete) {
+            task->setStatus(Domain::Task::FullComplete);
+        }
     } else {
         task->setRecurrence(Domain::Recurrence::Ptr(0));
     }
@@ -531,6 +535,9 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
     todo->setStatus(toKCalStatus(task->status()));
     if (task->recurrence()) {
         updateKCalRecurrence(task->recurrence(), todo->recurrence());
+        if (task->status() == Domain::Task::Complete) {
+            todo->setStatus(KCalCore::Incidence::StatusNone);
+        }
     }
 
     if (task->property("todoUid").isValid()) {

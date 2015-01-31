@@ -148,6 +148,7 @@ public:
         NeedsAction,
         InProcess,
         Complete,
+        FullComplete,
         Cancelled
     };
 

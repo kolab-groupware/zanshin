@@ -41,7 +41,11 @@ Task::~Task()
 
 bool Task::isDone() const
 {
-    return (status() == Complete);
+    if (!recurrence()) {
+        return (status() == Complete);
+    } else {
+        return (status() == FullComplete);
+    }
 }
 
 void Task::setDone(bool done)

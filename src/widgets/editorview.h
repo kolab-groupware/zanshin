@@ -45,6 +45,8 @@ namespace KPIM {
 
 namespace Widgets {
 
+class RecurrenceWidget;
+
 class EditorView : public QWidget
 {
     Q_OBJECT
@@ -102,6 +104,8 @@ private:
     QSpinBox *m_progressEdit;
     QList<QWidget*> m_relationWidgets;
     QVBoxLayout *m_relationsLayout;
+    QLabel *m_recurrenceTask;
+    RecurrenceWidget *m_recurrenceWidget;
 };
 
 }
