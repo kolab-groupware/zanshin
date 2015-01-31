@@ -177,7 +177,10 @@ public:
     };
 
     explicit Task(QObject *parent = 0);
+    Task(const Task &other);
     virtual ~Task();
+
+    Task &operator=(const Task &other);
 
     bool isDone() const;
     QDateTime startDate() const;

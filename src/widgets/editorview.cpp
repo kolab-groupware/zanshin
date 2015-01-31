@@ -313,14 +313,14 @@ void EditorView::onRecurrenceChanged()
         m_recurrenceWidget->setByDay(recurrence->byday());
 
         if (recurrence->end().isValid()) {
-            m_recurrenceWidget->setEnd(1);
+            m_recurrenceWidget->setEnd(recurrence->count());
             m_recurrenceWidget->setEnd(recurrence->end());
         } else if (recurrence->count() > 0) {
-            m_recurrenceWidget->setEnd(QDateTime::currentDateTime());
+            m_recurrenceWidget->setEnd(QDateTime());
             m_recurrenceWidget->setEnd(recurrence->count());
         } else {
             m_recurrenceWidget->setEnd(1);
-            m_recurrenceWidget->setEnd(QDateTime::currentDateTime());
+            m_recurrenceWidget->setEnd(QDateTime());
             m_recurrenceWidget->setNoEnd();
         }
     } else {

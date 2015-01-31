@@ -25,6 +25,7 @@
 #include "akonaditaskrepository.h"
 
 #include <Akonadi/Item>
+#include <KCalCore/Todo>
 
 #include "akonadicollectionfetchjobinterface.h"
 #include "akonadiitemfetchjobinterface.h"
@@ -153,9 +154,57 @@ KJob *TaskRepository::createInTag(Domain::Task::Ptr task, Domain::Tag::Ptr tag)
 
 KJob *TaskRepository::update(Domain::Task::Ptr task)
 {
-    auto item = m_serializer->createItemFromTask(task);
-    Q_ASSERT(item.isValid());
-    return m_storage->updateItem(item);
+    if (task->recurrence() && task->status() == Domain::Task::Complete) {
+        /* one ocurrence is completed
+         *
+         * copy current task with:
+         *  * status = completed
+         *  * recurrence deleted
+         *  * parentTask = recurrence Task
+         *
+         * the recurrence task:
+         *  * set next start/due date
+         */
+        Domain::Task::Ptr ocurrence(new Domain::Task);
+        *ocurrence = *task;
+        ocurrence->setRecurrence(Domain::Recurrence::Ptr(0));
+        ocurrence->setStatus(Domain::Task::Complete);
+        ocurrence->setProperty("relatedUid", task->property("todoUid"));
+        ocurrence->setProperty("parentCollectionId", task->property("parentCollectionId"));
+
+        task->setStatus(Domain::Task::None);
+        auto tempItem = m_serializer->createItemFromTask(task);
+        Q_ASSERT(tempItem.isValid());
+        const KCalCore::Todo::Ptr todo = tempItem.payload<KCalCore::Todo::Ptr>();
+        QDateTime nextStartDate = todo->recurrence()->getNextDateTime(todo->dtDue().isValid()?todo->dtDue():todo->dtStart()).dateTime();
+
+        if (nextStartDate.isValid()) {
+            if (task->dueDate().isValid()) {
+                QDateTime nextDueDate = nextStartDate.addDays(task->startDate().daysTo(task->dueDate()));
+                task->setDueDate(nextDueDate);
+            }
+            task->setStartDate(nextStartDate);
+        } else {
+            task->setStatus(Domain::Task::Complete);
+        }
+
+        if (task->recurrence()->count() > 1) {
+            task->recurrence()->setCount(task->recurrence()->count()-1);
+        } else if (task->recurrence()->count() == 1) {
+            task->setStatus(Domain::Task::Complete);
+        }
+
+        auto item = m_serializer->createItemFromTask(task);
+        Q_ASSERT(item.isValid());
+        auto job = new CompositeJob();
+        job->install(create(ocurrence),[] {});
+        job->install(m_storage->updateItem(item), [] {});
+        return job;
+    } else {
+        auto item = m_serializer->createItemFromTask(task);
+        Q_ASSERT(item.isValid());
+        return m_storage->updateItem(item);
+    }
 }
 
 KJob *TaskRepository::remove(Domain::Task::Ptr task)

@@ -35,8 +35,34 @@ Task::Task(QObject *parent)
 
 }
 
+Task::Task(const Task &other)
+    : Artifact(other.parent())
+    , m_startDate(other.m_startDate)
+    , m_dueDate(other.m_dueDate)
+    , m_delegate(other.m_delegate)
+    , m_recurrence(other.m_recurrence)
+    , m_progress(other.m_progress)
+    , m_status(other.m_status)
+{
+
+}
+
 Task::~Task()
 {
+}
+
+Task &Task::operator=(const Task &other)
+{
+    Task copy(other);
+    std::swap(m_startDate, copy.m_startDate);
+    std::swap(m_dueDate, copy.m_dueDate);
+    std::swap(m_delegate, copy.m_delegate);
+    std::swap(m_recurrence, copy.m_recurrence);
+    std::swap(m_progress, copy.m_progress);
+    std::swap(m_status, copy.m_status);
+    setText(other.text());
+    setTitle(other.title());
+    return *this;
 }
 
 bool Task::isDone() const

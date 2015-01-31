@@ -537,9 +537,6 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
     todo->setStatus(toKCalStatus(task->status()));
     if (task->recurrence()) {
         updateKCalRecurrence(task->recurrence(), todo->recurrence());
-        if (task->status() == Domain::Task::Complete) {
-            todo->setStatus(KCalCore::Incidence::StatusNone);
-        }
     }
 
     if (task->property("todoUid").isValid()) {
