@@ -206,6 +206,8 @@ void Task::Delegate::setEmail(const QString &email)
 
 Recurrence::Recurrence(QObject *parent)
     : QObject(parent)
+    , m_count(0)
+    , m_interval(0)
 {
 
 }

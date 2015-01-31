@@ -37,7 +37,13 @@ enum RecurrenceType {
   RecurrenceTypeDaily,
   RecurrenceTypeWeekly,
   RecurrenceTypeMonthly,
-  RecurrenceTypeYearly,
+  RecurrenceTypeYearly
+};
+
+enum RepeatType {
+    RepeatNone = 0,
+    RepeatTime,
+    RepeatCount
 };
 
 RecurrenceWidget::RecurrenceWidget(QWidget *parent)
@@ -46,15 +52,7 @@ RecurrenceWidget::RecurrenceWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->mRecurrenceTypeCombo->setCurrentIndex(RecurrenceTypeNone);
-    ui->mRecurrenceEndCombo->setCurrentIndex(0);
-    ui->mRecurrenceEndStack->setCurrentIndex(0);
-    ui->mRepeatStack->setCurrentIndex(0);
-    ui->mEndDurationEdit->setValue(1);
-    handleEndAfterOccurrencesChange(1);
-    toggleRecurrenceWidgets(RecurrenceTypeNone);
-    ui->mExceptionAddButton->setEnabled(true);
-    fillCombos();
+    clear();
 
     connect( ui->mExceptionAddButton, SIGNAL(clicked()),
              SLOT(addException()));
@@ -79,6 +77,12 @@ RecurrenceWidget::~RecurrenceWidget()
     delete ui;
 }
 
+void RecurrenceWidget::setStartDate(const QDateTime &date)
+{
+    fillCombos();
+    ui->mExceptionDateEdit->setDate(date.date());
+}
+
 void RecurrenceWidget::setRecurrenceType(Domain::Recurrence::Frequency frequency)
 {
     int type = RecurrenceTypeNone;
@@ -99,8 +103,62 @@ void RecurrenceWidget::setRecurrenceType(Domain::Recurrence::Frequency frequency
         qDebug() << "Unhandled recurrence type";
     };
     ui->mRecurrenceTypeCombo->setCurrentIndex(type);
+    ui->mRepeatStack->setCurrentIndex(type);
+    handleRecurrenceTypeChange(type);
 }
 
+void RecurrenceWidget::setRecurrenceIntervall(int intervall)
+{
+    ui->mFrequencyEdit->setValue(intervall);
+}
+
+void RecurrenceWidget::setExceptionDateTimes(const QList<QDateTime> &exceptionDates)
+{
+    ui->mExceptionList->clear();
+    foreach (auto datetime, exceptionDates) {
+        const QString dateStr = KGlobal::locale()->formatDate( datetime.date() );
+        if(ui->mExceptionList->findItems(dateStr, Qt::MatchExactly).isEmpty()) {
+            ui->mExceptionList->addItem(dateStr);
+        }
+    }
+}
+
+void RecurrenceWidget::setEnd(const QDateTime &end)
+{
+    qDebug() << "set enddate:" << end.date();
+    ui->mRecurrenceEndDate->setDate(end.date());
+    ui->mRecurrenceEndCombo->setCurrentIndex(RepeatTime);
+    ui->mRecurrenceEndStack->setCurrentIndex(RepeatTime);
+}
+
+void RecurrenceWidget::setEnd(int count)
+{
+    ui->mEndDurationEdit->setValue(count);
+    ui->mRecurrenceEndCombo->setCurrentIndex(RepeatCount);
+    ui->mRecurrenceEndStack->setCurrentIndex(RepeatCount);
+}
+
+void RecurrenceWidget::setNoEnd()
+{
+    ui->mRecurrenceEndCombo->setCurrentIndex(RepeatNone);
+    ui->mRecurrenceEndStack->setCurrentIndex(RepeatNone);
+}
+
+void RecurrenceWidget::clear()
+{
+    ui->mRecurrenceTypeCombo->setCurrentIndex(RecurrenceTypeNone);
+    ui->mRepeatStack->setCurrentIndex(RecurrenceTypeNone);
+    toggleRecurrenceWidgets(RecurrenceTypeNone);
+
+    ui->mRecurrenceEndCombo->setCurrentIndex(RepeatNone);
+    ui->mRecurrenceEndStack->setCurrentIndex(RepeatNone);
+    ui->mEndDurationEdit->setValue(1);
+    handleEndAfterOccurrencesChange(1);
+
+    ui->mExceptionAddButton->setEnabled(true);
+    ui->mExceptionList->clear();
+    fillCombos();
+}
 
 void RecurrenceWidget::addException()
 {
@@ -188,12 +246,6 @@ void RecurrenceWidget::removeExceptions()
 void RecurrenceWidget::updateRemoveExceptionButton()
 {
   ui->mExceptionRemoveButton->setEnabled(ui->mExceptionList->selectedItems().count() > 0);
-}
-
-void RecurrenceWidget::onStartDateChanged(const QDateTime &date)
-{
-    fillCombos();
-    ui->mExceptionDateEdit->setDate(date.date());
 }
 
 

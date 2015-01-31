@@ -43,8 +43,14 @@ public:
     virtual ~RecurrenceWidget();
 
 public slots:
-    void onStartDateChanged(const QDateTime &date);
+    void setStartDate(const QDateTime &date);
     void setRecurrenceType(Domain::Recurrence::Frequency frequency);
+    void setRecurrenceIntervall(int intervall);
+    void setExceptionDateTimes(const QList<QDateTime> &exceptionDates);
+    void setEnd(const QDateTime &end);
+    void setEnd(int count);
+    void setNoEnd();
+    void clear();
 
 private slots:
     void handleExceptionDateChange(const QDate &date);

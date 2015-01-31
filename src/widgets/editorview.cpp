@@ -98,9 +98,6 @@ EditorView::EditorView(QWidget *parent)
     m_recurrenceTask = new QLabel(tr("This is one occurence of a recurrenting task"));
     m_recurrenceTask->setVisible(false);
     vbox->addWidget(m_recurrenceTask);
-    m_recurrenceWidget = new RecurrenceWidget;
-    m_recurrenceWidget->setVisible(false);
-    vbox->addWidget(m_recurrenceWidget);
     auto delegateHBox = new QHBoxLayout;
     delegateHBox->addWidget(new QLabel(tr("Delegate to"), m_taskGroup));
     delegateHBox->addWidget(m_delegateEdit);
@@ -123,6 +120,8 @@ EditorView::EditorView(QWidget *parent)
     statusHBox->addWidget(new QLabel(tr("Status"), m_taskGroup));
     statusHBox->addWidget(m_statusComboBox, 1);
     vbox->addLayout(statusHBox);
+    m_recurrenceWidget = new RecurrenceWidget;
+    vbox->addWidget(m_recurrenceWidget);
     m_taskGroup->setLayout(vbox);
 
     // Make sure our minimum width is always the one with
@@ -291,17 +290,31 @@ void EditorView::onRelationsChanged()
 void EditorView::onRecurrenceChanged()
 {
     const auto recurrence = m_model->property("recurrence").value<Domain::Recurrence::Ptr>();
+    if (recurrence) {
+        m_recurrenceWidget->setRecurrenceType(recurrence->frequency());
+        m_recurrenceWidget->setRecurrenceIntervall(recurrence->interval());
+        if (recurrence->end().isValid()) {
+            qDebug() << "end date";
+            m_recurrenceWidget->setEnd(recurrence->end());
+        } else if (recurrence->count() > 0) {
+            qDebug() << "end count";
+            m_recurrenceWidget->setEnd(recurrence->count());
+        } else {
+            qDebug() << "no end";
+            m_recurrenceWidget->setNoEnd();
+        }
+        m_recurrenceWidget->setExceptionDateTimes(recurrence->exceptionDates());
+    } else {
+        m_recurrenceWidget->clear();
+    }
 
     if (recurrence && !m_statusComboBox->itemData(5).isValid()) {
         m_statusComboBox->addItem(tr("Complete all recurrences"), Domain::Task::FullComplete);
         onStatusChanged();
         m_recurrenceTask->setVisible(true);
-        m_recurrenceWidget->setVisible(true);
-        m_recurrenceWidget->setRecurrenceType(recurrence->frequency());
     } else if (!recurrence && m_statusComboBox->itemData(5).isValid()) {
         m_statusComboBox->removeItem(5);
         m_recurrenceTask->setVisible(false);
-        m_recurrenceWidget->setVisible(false);
     }
 }
 
