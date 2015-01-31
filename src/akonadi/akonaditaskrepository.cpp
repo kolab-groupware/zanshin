@@ -170,7 +170,6 @@ KJob *TaskRepository::update(Domain::Task::Ptr task)
         ocurrence->setRecurrence(Domain::Recurrence::Ptr(0));
         ocurrence->setStatus(Domain::Task::Complete);
         ocurrence->setProperty("relatedUid", task->property("todoUid"));
-        ocurrence->setProperty("parentCollectionId", task->property("parentCollectionId"));
 
         task->setStatus(Domain::Task::None);
         auto tempItem = m_serializer->createItemFromTask(task);
@@ -196,8 +195,12 @@ KJob *TaskRepository::update(Domain::Task::Ptr task)
 
         auto item = m_serializer->createItemFromTask(task);
         Q_ASSERT(item.isValid());
+        auto itemOcurrence = m_serializer->createItemFromTask(ocurrence);
+        Q_ASSERT(!itemOcurrence.isValid());
+        auto collection = Akonadi::Collection(task->property("parentCollectionId").value<Entity::Id>());
+
         auto job = new CompositeJob();
-        job->install(create(ocurrence),[] {});
+        job->install(m_storage->createItem(itemOcurrence, collection),[] {});
         job->install(m_storage->updateItem(item), [] {});
         return job;
     } else {
