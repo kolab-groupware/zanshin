@@ -206,6 +206,9 @@ void Task::Delegate::setEmail(const QString &email)
 
 Recurrence::Recurrence(QObject *parent)
     : QObject(parent)
+    , m_frequency(Recurrence::None)
+    , m_weekStart(Recurrence::Monday)
+    , m_allDay(true)
     , m_count(0)
     , m_interval(0)
 {

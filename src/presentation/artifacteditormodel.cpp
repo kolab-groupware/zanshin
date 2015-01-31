@@ -273,6 +273,80 @@ void ArtifactEditorModel::setRecurrence(const Domain::Recurrence::Ptr &recurrenc
     setSaveNeeded(true);
 }
 
+void ArtifactEditorModel::setExceptionDates(const QList<QDateTime> &exceptionDates)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->exceptionDates() != exceptionDates) {
+        recurrence->setExceptionDates(exceptionDates);
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setFrequency(Domain::Recurrence::Frequency frequency, int intervall)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->frequency() != frequency || recurrence->interval() != intervall) {
+        if (frequency == Domain::Recurrence::None) {
+            setRecurrence(Domain::Recurrence::Ptr(0));
+        } else {
+            recurrence->setFrequency(frequency);
+            recurrence->setInterval(intervall);
+            setRecurrence(recurrence);
+        }
+    }
+}
+
+void ArtifactEditorModel::setNoRepeat()
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->count() != 0  || recurrence->end().isValid()) {
+        recurrence->setCount(0);
+        recurrence->setEnd(QDateTime());
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setRepeatEnd(QDateTime endDate)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->end().date() != endDate.date() || recurrence->count() != 0 ) {
+        recurrence->setEnd(endDate);
+        recurrence->setCount(0);
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setRepeatEnd(int count)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->count() != count || recurrence->end().isValid()) {
+        recurrence->setCount(count);
+        recurrence->setEnd(QDateTime());
+        setRecurrence(recurrence);
+    }
+}
+
+
 QList<Domain::Relation::Ptr> ArtifactEditorModel::relations() const
 {
     return m_relations;

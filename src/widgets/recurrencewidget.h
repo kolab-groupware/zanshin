@@ -52,6 +52,13 @@ public slots:
     void setNoEnd();
     void clear();
 
+signals:
+    void frequencyChanged(Domain::Recurrence::Frequency frequency, int intervall);
+    void endChanged(QDateTime endDate);
+    void endChanged(int count);
+    void noEnd();
+    void exceptionDatesChanged(const QList<QDateTime> &exceptionDates);
+
 private slots:
     void handleExceptionDateChange(const QDate &date);
     void handleFrequencyChange();
@@ -60,10 +67,14 @@ private slots:
     void updateRemoveExceptionButton();
     void removeExceptions();
     void addException();
+    void handleEndDateChange(const QDate &date);
+    void handleRepeatTypeChange(int);
 
 private:
     void toggleRecurrenceWidgets(int currentIndex);
     void fillCombos();
+    void emitFrequencyChanged();
+    void emitExceptionDatesChanged();
 
     Ui::RecurrenceWidget *ui;
 };

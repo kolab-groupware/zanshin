@@ -93,6 +93,12 @@ public slots:
     void removeRelation(const Domain::Relation::Ptr &);
     void setRecurrence(const Domain::Recurrence::Ptr&);
 
+    void setFrequency(Domain::Recurrence::Frequency frequency, int intervall);
+    void setRepeatEnd(QDateTime endDate);
+    void setRepeatEnd(int count);
+    void setNoRepeat();
+    void setExceptionDates(const QList<QDateTime> &exceptionDates);
+
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);
     void hasTaskPropertiesChanged(bool hasTaskProperties);

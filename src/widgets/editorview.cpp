@@ -178,7 +178,7 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(titleChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(textChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(startDateChanged(QDateTime)), this, SLOT(onStartDateChanged()));
-    connect(m_model, SIGNAL(startDateChanged(QDateTime)), m_recurrenceWidget, SLOT(onStartDateChanged(QDateTime)));
+    connect(m_model, SIGNAL(startDateChanged(QDateTime)), m_recurrenceWidget, SLOT(setStartDate(QDateTime)));
     connect(m_model, SIGNAL(dueDateChanged(QDateTime)), this, SLOT(onDueDateChanged()));
     connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
     connect(m_model, SIGNAL(progressChanged(int)), this, SLOT(onProgressChanged()));
@@ -193,6 +193,17 @@ void EditorView::setModel(QObject *model)
     connect(this, SIGNAL(delegateChanged(QString, QString)), m_model, SLOT(setDelegate(QString, QString)));
     connect(this, SIGNAL(progressChanged(int)), m_model, SLOT(setProgress(int)));
     connect(this, SIGNAL(statusChanged(int)), m_model, SLOT(setStatus(int)));
+
+    connect(m_recurrenceWidget, SIGNAL(frequencyChanged(Domain::Recurrence::Frequency,int)),
+        m_model, SLOT(setFrequency(Domain::Recurrence::Frequency, int)));
+    connect(m_recurrenceWidget, SIGNAL(endChanged(QDateTime)),
+        m_model, SLOT(setRepeatEnd(QDateTime)));
+    connect(m_recurrenceWidget, SIGNAL(endChanged(int)),
+        m_model, SLOT(setRepeatEnd(int)));
+    connect(m_recurrenceWidget, SIGNAL(noEnd()),
+        m_model, SLOT(setNoRepeat()));
+    connect(m_recurrenceWidget, SIGNAL(exceptionDatesChanged(QList<QDateTime>)),
+        m_model, SLOT(setExceptionDates(QList<QDateTime>)));
 }
 
 void EditorView::onArtifactChanged()
@@ -290,26 +301,31 @@ void EditorView::onRelationsChanged()
 void EditorView::onRecurrenceChanged()
 {
     const auto recurrence = m_model->property("recurrence").value<Domain::Recurrence::Ptr>();
+
+    m_recurrenceWidget->blockSignals(true);
     if (recurrence) {
         m_recurrenceWidget->setRecurrenceType(recurrence->frequency());
         m_recurrenceWidget->setRecurrenceIntervall(recurrence->interval());
+        m_recurrenceWidget->setExceptionDateTimes(recurrence->exceptionDates());
+
         if (recurrence->end().isValid()) {
-            qDebug() << "end date";
+            m_recurrenceWidget->setEnd(1);
             m_recurrenceWidget->setEnd(recurrence->end());
         } else if (recurrence->count() > 0) {
-            qDebug() << "end count";
+            m_recurrenceWidget->setEnd(QDateTime::currentDateTime());
             m_recurrenceWidget->setEnd(recurrence->count());
         } else {
-            qDebug() << "no end";
+            m_recurrenceWidget->setEnd(1);
+            m_recurrenceWidget->setEnd(QDateTime::currentDateTime());
             m_recurrenceWidget->setNoEnd();
         }
-        m_recurrenceWidget->setExceptionDateTimes(recurrence->exceptionDates());
     } else {
         m_recurrenceWidget->clear();
     }
+    m_recurrenceWidget->blockSignals(false);
 
     if (recurrence && !m_statusComboBox->itemData(5).isValid()) {
-        m_statusComboBox->addItem(tr("Complete all recurrences"), Domain::Task::FullComplete);
+        m_statusComboBox->addItem(tr("All ocurrences completed"), Domain::Task::FullComplete);
         onStatusChanged();
         m_recurrenceTask->setVisible(true);
     } else if (!recurrence && m_statusComboBox->itemData(5).isValid()) {
