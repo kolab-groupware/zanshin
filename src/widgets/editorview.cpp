@@ -23,6 +23,7 @@
 
 
 #include "editorview.h"
+#include "recurrencewidget.h"
 
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -33,6 +34,7 @@
 #include <QSpinBox>
 #include <QUrl>
 #include <KRun>
+#include <QDebug>
 #include "kdateedit.h"
 #include "addressline/addresseelineedit.h"
 #include "presentation/metatypes.h"
@@ -93,6 +95,9 @@ EditorView::EditorView(QWidget *parent)
     setLayout(layout);
 
     QVBoxLayout *vbox = new QVBoxLayout;
+    m_recurrenceTask = new QLabel(tr("This is one occurence of a recurrenting task"));
+    m_recurrenceTask->setVisible(false);
+    vbox->addWidget(m_recurrenceTask);
     auto delegateHBox = new QHBoxLayout;
     delegateHBox->addWidget(new QLabel(tr("Delegate to"), m_taskGroup));
     delegateHBox->addWidget(m_delegateEdit);
@@ -115,6 +120,8 @@ EditorView::EditorView(QWidget *parent)
     statusHBox->addWidget(new QLabel(tr("Status"), m_taskGroup));
     statusHBox->addWidget(m_statusComboBox, 1);
     vbox->addLayout(statusHBox);
+    m_recurrenceWidget = new RecurrenceWidget;
+    vbox->addWidget(m_recurrenceWidget);
     m_taskGroup->setLayout(vbox);
 
     // Make sure our minimum width is always the one with
@@ -160,8 +167,9 @@ void EditorView::setModel(QObject *model)
     onDueDateChanged();
     onDelegateTextChanged();
     onProgressChanged();
-    onStatusChanged();
+    onRecurrenceChanged();
     onRelationsChanged();
+    onStatusChanged();
 
     connect(m_model, SIGNAL(artifactChanged(Domain::Artifact::Ptr)),
             this, SLOT(onArtifactChanged()));
@@ -170,10 +178,12 @@ void EditorView::setModel(QObject *model)
     connect(m_model, SIGNAL(titleChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(textChanged(QString)), this, SLOT(onTextOrTitleChanged()));
     connect(m_model, SIGNAL(startDateChanged(QDateTime)), this, SLOT(onStartDateChanged()));
+    connect(m_model, SIGNAL(startDateChanged(QDateTime)), m_recurrenceWidget, SLOT(setStartDate(QDateTime)));
     connect(m_model, SIGNAL(dueDateChanged(QDateTime)), this, SLOT(onDueDateChanged()));
     connect(m_model, SIGNAL(delegateTextChanged(QString)), this, SLOT(onDelegateTextChanged()));
     connect(m_model, SIGNAL(progressChanged(int)), this, SLOT(onProgressChanged()));
     connect(m_model, SIGNAL(statusChanged(int)), this, SLOT(onStatusChanged()));
+    connect(m_model, SIGNAL(recurrenceChanged(Domain::Recurrence::Ptr)), this, SLOT(onRecurrenceChanged()));
     connect(m_model, SIGNAL(relationsChanged(QList<Domain::Relation::Ptr>)), this, SLOT(onRelationsChanged()));
 
     connect(this, SIGNAL(titleChanged(QString)), m_model, SLOT(setTitle(QString)));
@@ -183,6 +193,19 @@ void EditorView::setModel(QObject *model)
     connect(this, SIGNAL(delegateChanged(QString, QString)), m_model, SLOT(setDelegate(QString, QString)));
     connect(this, SIGNAL(progressChanged(int)), m_model, SLOT(setProgress(int)));
     connect(this, SIGNAL(statusChanged(int)), m_model, SLOT(setStatus(int)));
+
+    connect(m_recurrenceWidget, SIGNAL(frequencyChanged(Domain::Recurrence::Frequency,int)),
+        m_model, SLOT(setFrequency(Domain::Recurrence::Frequency, int)));
+    connect(m_recurrenceWidget, SIGNAL(endChanged(QDateTime)),
+        m_model, SLOT(setRepeatEnd(QDateTime)));
+    connect(m_recurrenceWidget, SIGNAL(endChanged(int)),
+        m_model, SLOT(setRepeatEnd(int)));
+    connect(m_recurrenceWidget, SIGNAL(noEnd()),
+        m_model, SLOT(setRepeatEndless()));
+    connect(m_recurrenceWidget, SIGNAL(exceptionDatesChanged(QList<QDateTime>)),
+        m_model, SLOT(setExceptionDates(QList<QDateTime>)));
+    connect(m_recurrenceWidget, SIGNAL(byDayChanged(QList<Domain::Recurrence::Weekday>)),
+        m_model, SLOT(setByDay(QList<Domain::Recurrence::Weekday>)));
 }
 
 void EditorView::onArtifactChanged()
@@ -276,6 +299,41 @@ void EditorView::onRelationsChanged()
         m_relationWidgets << widget;
     }
 }
+
+void EditorView::onRecurrenceChanged()
+{
+    const auto recurrence = m_model->property("recurrence").value<Domain::Recurrence::Ptr>();
+
+    m_recurrenceWidget->blockSignals(true);
+    if (recurrence) {
+        m_recurrenceWidget->setRecurrenceType(recurrence->frequency());
+        m_recurrenceWidget->setRecurrenceIntervall(recurrence->interval());
+        m_recurrenceWidget->setExceptionDateTimes(recurrence->exceptionDates());
+
+        m_recurrenceWidget->setByDay(recurrence->byday());
+
+        if (recurrence->end().isValid()) {
+            m_recurrenceWidget->setEnd(recurrence->end());
+        } else if (recurrence->count() >= 0) {
+            m_recurrenceWidget->setEnd(recurrence->count());
+        } else if (recurrence->count() == -1) {
+            m_recurrenceWidget->setNoEnd();
+        }
+    } else {
+        m_recurrenceWidget->clear();
+    }
+    m_recurrenceWidget->blockSignals(false);
+
+    if (recurrence && !m_statusComboBox->itemData(5).isValid()) {
+        m_statusComboBox->addItem(tr("All ocurrences completed"), Domain::Task::FullComplete);
+        onStatusChanged();
+        m_recurrenceTask->setVisible(true);
+    } else if (!recurrence && m_statusComboBox->itemData(5).isValid()) {
+        m_statusComboBox->removeItem(5);
+        m_recurrenceTask->setVisible(false);
+    }
+}
+
 
 void EditorView::onRemoveRelationClicked()
 {

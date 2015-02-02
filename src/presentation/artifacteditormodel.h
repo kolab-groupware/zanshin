@@ -55,6 +55,7 @@ class ArtifactEditorModel : public QObject
     Q_PROPERTY(int progress READ progress WRITE setProgress NOTIFY progressChanged)
     Q_PROPERTY(int status READ status WRITE setStatus NOTIFY statusChanged)
     Q_PROPERTY(QList<Domain::Relation::Ptr> relations READ relations NOTIFY relationsChanged)
+    Q_PROPERTY(Domain::Recurrence::Ptr recurrence READ recurrence WRITE setRecurrence NOTIFY recurrenceChanged)
 public:
     explicit ArtifactEditorModel(Domain::TaskRepository *taskRepository,
                                  Domain::NoteRepository *noteRepository,
@@ -76,6 +77,7 @@ public:
     int progress() const;
     int status() const;
     QList<Domain::Relation::Ptr> relations() const;
+    Domain::Recurrence::Ptr recurrence() const;
 
     static int autoSaveDelay();
 
@@ -89,6 +91,15 @@ public slots:
     void setProgress(int progress);
     void setStatus(int status);
     void removeRelation(const Domain::Relation::Ptr &);
+    void setRecurrence(const Domain::Recurrence::Ptr&);
+
+    void setFrequency(Domain::Recurrence::Frequency frequency, int intervall);
+    void setRepeatEnd(QDateTime endDate);
+    void setRepeatEnd(int count);
+    void setRepeatEndless();
+    void setNoRepeat();
+    void setExceptionDates(const QList<QDateTime> &exceptionDates);
+    void setByDay(const QList< Domain::Recurrence::Weekday > &dayList);
 
 signals:
     void artifactChanged(const Domain::Artifact::Ptr &artifact);
@@ -101,6 +112,7 @@ signals:
     void progressChanged(int progress);
     void statusChanged(int status);
     void relationsChanged(const QList<Domain::Relation::Ptr> &relations);
+    void recurrenceChanged(const Domain::Recurrence::Ptr &recurrence);
 
 private slots:
     void onTextChanged(const QString &text);
@@ -110,6 +122,7 @@ private slots:
     void onDelegateChanged(const Domain::Task::Delegate &delegate);
     void onProgressChanged(int status);
     void onStatusChanged(int status);
+    void onRecurrenceChanged(const Domain::Recurrence::Ptr &recurrence);
 
     void save();
 
@@ -134,6 +147,7 @@ private:
     int m_progress;
     Domain::Task::Status m_status;
     QList<Domain::Relation::Ptr> m_relations;
+    Domain::Recurrence::Ptr m_recurrence;
 
     QTimer *m_saveTimer;
     bool m_saveNeeded;

@@ -25,6 +25,7 @@
 #include "artifacteditormodel.h"
 
 #include <QTimer>
+#include <QDebug>
 
 #include "domain/task.h"
 #include "domain/taskrepository.h"
@@ -78,6 +79,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     m_progress = 0;
     m_status = Domain::Task::None;
     m_relations.clear();
+    m_recurrence = Domain::Recurrence::Ptr(0);
 
     m_artifact = artifact;
 
@@ -99,6 +101,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
         m_delegate = task->delegate();
         m_progress = task->progress();
         m_status = task->status();
+        m_recurrence = task->recurrence();
 
         connect(m_artifact.data(), SIGNAL(startDateChanged(QDateTime)),
                 this, SLOT(onStartDateChanged(QDateTime)));
@@ -110,6 +113,8 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
                 this, SLOT(onProgressChanged(int)));
         connect(m_artifact.data(), SIGNAL(statusChanged(int)),
                 this, SLOT(onStatusChanged(int)));
+        connect(m_artifact.data(), SIGNAL(recurrenceChanged(Domain::Recurrence::Ptr)),
+                this, SLOT(onRecurrenceChanged(Domain::Recurrence::Ptr)));
     }
 
     auto relationQuery = m_relationQueries->findRelations(m_artifact);
@@ -129,6 +134,7 @@ void ArtifactEditorModel::setArtifact(const Domain::Artifact::Ptr &artifact)
     emit progressChanged(m_progress);
     emit statusChanged(m_status);
     emit relationsChanged(m_relations);
+    emit recurrenceChanged(m_recurrence);
 }
 
 void ArtifactEditorModel::addRelation(const Domain::Relation::Ptr &relation)
@@ -182,6 +188,11 @@ int ArtifactEditorModel::progress() const
 int ArtifactEditorModel::status() const
 {
     return m_status;
+}
+
+Domain::Recurrence::Ptr ArtifactEditorModel::recurrence() const
+{
+    return m_recurrence;
 }
 
 int ArtifactEditorModel::autoSaveDelay()
@@ -253,6 +264,156 @@ void ArtifactEditorModel::setStatus(int status)
     setSaveNeeded(true);
 }
 
+void ArtifactEditorModel::setRecurrence(const Domain::Recurrence::Ptr &recurrence)
+{
+    if (m_recurrence == recurrence ||
+           (m_recurrence && recurrence && *m_recurrence == *recurrence)) {
+        return;
+    }
+    onRecurrenceChanged(recurrence);
+    setSaveNeeded(true);
+}
+
+void ArtifactEditorModel::setExceptionDates(const QList<QDateTime> &exceptionDates)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->exceptionDates() != exceptionDates) {
+        recurrence->setExceptionDates(exceptionDates);
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setFrequency(Domain::Recurrence::Frequency frequency, int intervall)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->frequency() != frequency || recurrence->interval() != intervall) {
+        if (frequency == Domain::Recurrence::None) {
+            setRecurrence(Domain::Recurrence::Ptr(0));
+        } else {
+            recurrence->setFrequency(frequency);
+            recurrence->setInterval(intervall);
+            switch(frequency) {
+            case Domain::Recurrence::Yearly:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setByweekno(QList<int>());
+                break;
+            case Domain::Recurrence::Monthly:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setBymonth(QList<int>());
+                break;
+            case Domain::Recurrence::Weekly:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setByweekno(QList<int>());
+                recurrence->setBymonth(QList<int>());
+                break;
+            case Domain::Recurrence::Daily:
+                recurrence->setBysecond(QList<int>());
+                recurrence->setByminute(QList<int>());
+                recurrence->setByhour(QList<int>());
+                recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+                recurrence->setBymonthday(QList<int>());
+                recurrence->setByyearday(QList<int>());
+                recurrence->setByweekno(QList<int>());
+                recurrence->setBymonth(QList<int>());
+                break;
+           }
+            setRecurrence(recurrence);
+        }
+    }
+}
+
+void ArtifactEditorModel::setNoRepeat()
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->count() != 0  || recurrence->end().isValid()) {
+        recurrence->setCount(0);
+        recurrence->setEnd(QDateTime());
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setRepeatEnd(QDateTime endDate)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->end().date() != endDate.date() || recurrence->count() != 0 ) {
+        recurrence->setEnd(endDate);
+        recurrence->setCount(0);
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setRepeatEnd(int count)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->count() != count || recurrence->end().isValid()) {
+        recurrence->setCount(count);
+        recurrence->setEnd(QDateTime());
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setRepeatEndless()
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->count() != -1 || recurrence->end().isValid()) {
+        recurrence->setCount(-1);
+        recurrence->setEnd(QDateTime());
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setByDay(const QList<Domain::Recurrence::Weekday> &dayList)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->byday() != dayList) {
+        recurrence->setByday(dayList);
+        setRecurrence(recurrence);
+    }
+}
+
+
 QList<Domain::Relation::Ptr> ArtifactEditorModel::relations() const
 {
     return m_relations;
@@ -300,6 +461,12 @@ void ArtifactEditorModel::onStatusChanged(int status)
     emit statusChanged(status);
 }
 
+void ArtifactEditorModel::onRecurrenceChanged(const Domain::Recurrence::Ptr &recurrence)
+{
+    m_recurrence = recurrence;
+    emit recurrenceChanged(recurrence);
+}
+
 void ArtifactEditorModel::save()
 {
     if (!isSaveNeeded())
@@ -316,6 +483,7 @@ void ArtifactEditorModel::save()
         task->setDelegate(m_delegate);
         task->setProgress(m_progress);
         task->setStatus(m_status);
+        task->setRecurrence(m_recurrence);
         m_taskRepository->update(task);
     } else {
         auto note = m_artifact.objectCast<Domain::Note>();

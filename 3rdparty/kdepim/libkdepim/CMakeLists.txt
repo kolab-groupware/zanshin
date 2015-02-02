@@ -33,6 +33,8 @@ set(kdepim_LIB_SRCS
    ldap/ldapclientsearchconfig.cpp
    kdateedit.cpp
    kdatepickerpopup.cpp
+   widgets/kcheckcombobox.cpp
+   widgets/kweekdaycheckcombo.cpp
 )
 
 if (KDEPIM_INPROCESS_LDAP)
