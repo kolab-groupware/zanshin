@@ -95,9 +95,6 @@ EditorView::EditorView(QWidget *parent)
     setLayout(layout);
 
     QVBoxLayout *vbox = new QVBoxLayout;
-    m_recurrenceTask = new QLabel(tr("This is one occurence of a recurrenting task"));
-    m_recurrenceTask->setVisible(false);
-    vbox->addWidget(m_recurrenceTask);
     auto delegateHBox = new QHBoxLayout;
     delegateHBox->addWidget(new QLabel(tr("Delegate to"), m_taskGroup));
     delegateHBox->addWidget(m_delegateEdit);
@@ -327,10 +324,8 @@ void EditorView::onRecurrenceChanged()
     if (recurrence && !m_statusComboBox->itemData(5).isValid()) {
         m_statusComboBox->addItem(tr("All ocurrences completed"), Domain::Task::FullComplete);
         onStatusChanged();
-        m_recurrenceTask->setVisible(true);
     } else if (!recurrence && m_statusComboBox->itemData(5).isValid()) {
         m_statusComboBox->removeItem(5);
-        m_recurrenceTask->setVisible(false);
     }
 }
 

@@ -104,7 +104,6 @@ private:
     QSpinBox *m_progressEdit;
     QList<QWidget*> m_relationWidgets;
     QVBoxLayout *m_relationsLayout;
-    QLabel *m_recurrenceTask;
     RecurrenceWidget *m_recurrenceWidget;
 };
 
