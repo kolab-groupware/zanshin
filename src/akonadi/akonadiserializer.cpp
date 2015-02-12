@@ -404,10 +404,13 @@ Domain::Recurrence::Ptr fromKCalRecurrence(const KCalCore::Recurrence *rec)
         recurrence.setBymonth(defaultRR->byMonths());
 
         QList<Domain::Recurrence::Weekday> daypos;
-        const auto days = rec->days();
-        for (int i = 0; i < 7; i++) {
-            if (days.at(i)) {
-                daypos.append((Domain::Recurrence::Weekday) (Domain::Recurrence::Monday+i));
+        const auto positions = rec->monthPositions();
+        if (!positions.isEmpty()) {
+            recurrence.setByDayPosition((Domain::Recurrence::WeekPosition) positions.at(0).pos());
+            for (int i = positions.size()-1; i > -1; i--) {
+                if (positions.at(i).pos() == recurrence.byDayPosition()) {
+                    daypos.append((Domain::Recurrence::Weekday) (Domain::Recurrence::Monday + positions.at(i).day() - 1));
+                }
             }
         }
         recurrence.setByday(daypos);
@@ -479,6 +482,7 @@ void updateKCalRecurrence(const Domain::Recurrence::Ptr &from, KCalCore::Recurre
     recurrence->setAllDay(from->allDay());
 
     if (from->end().isValid()) {
+        recurrence->setDuration(0);
         recurrence->setEndDateTime(KDateTime(from->end()));
     } else {
         recurrence->setDuration(from->count());
@@ -511,7 +515,7 @@ void updateKCalRecurrence(const Domain::Recurrence::Ptr &from, KCalCore::Recurre
         foreach(auto day, from->byday()) {
             days.setBit(day - Domain::Recurrence::Monday);
         }
-        recurrence->addMonthlyPos(0, days);
+        recurrence->addMonthlyPos(from->byDayPosition(), days);
     }
 
     foreach (const auto &dt, from->recurrenceDates()) {

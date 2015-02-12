@@ -237,6 +237,7 @@ Recurrence::Recurrence(QObject *parent)
     , m_allDay(true)
     , m_count(0)
     , m_interval(0)
+    , m_weekPosition(All)
 {
 
 }
@@ -253,6 +254,7 @@ Recurrence::Recurrence(const Recurrence &other)
     , m_byminute(other.m_byminute)
     , m_byhour(other.m_byhour)
     , m_byday(other.m_byday)
+    , m_weekPosition(other.m_weekPosition)
     , m_bymonthday(other.m_bymonthday)
     , m_byyearday(other.m_byyearday)
     , m_byweekno(other.m_byweekno)
@@ -281,6 +283,7 @@ Recurrence &Recurrence::operator=(const Recurrence &other)
     std::swap(m_byminute, copy.m_byminute);
     std::swap(m_byhour, copy.m_byhour);
     std::swap(m_byday, copy.m_byday);
+    std::swap(m_weekPosition, copy.m_weekPosition);
     std::swap(m_bymonthday, copy.m_bymonthday);
     std::swap(m_byyearday, copy.m_byyearday);
     std::swap(m_byweekno, copy.m_byweekno);
@@ -302,6 +305,7 @@ bool Recurrence::operator==(const Recurrence &other) const
         && m_byminute == other.m_byminute
         && m_byhour == other.m_byhour
         && m_byday == other.m_byday
+        && m_weekPosition == other.m_weekPosition
         && m_bymonthday == other.m_bymonthday
         && m_byyearday == other.m_byyearday
         && m_byweekno == other.m_byweekno
@@ -408,6 +412,16 @@ void Recurrence::setByday(const QList<Recurrence::Weekday> &byday)
 QList<Recurrence::Weekday> Recurrence::byday() const
 {
     return m_byday;
+}
+
+Recurrence::WeekPosition Recurrence::byDayPosition()
+{
+    return m_weekPosition;
+}
+
+void Recurrence::setByDayPosition(Recurrence::WeekPosition weekPosition)
+{
+    m_weekPosition = weekPosition;
 }
 
 void Recurrence::setBymonthday(const QList<int> &bymonthday)

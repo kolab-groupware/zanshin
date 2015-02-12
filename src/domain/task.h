@@ -58,6 +58,15 @@ public:
         Sunday
     };
 
+    enum WeekPosition {
+        All = 0,
+        First = 1,
+        Second = 2,
+        Third = 3,
+        Fourth = 4,
+        Last = -1
+    };
+
     explicit Recurrence(QObject *parent = 0);
     explicit Recurrence(const Domain::Recurrence &other);
     virtual ~Recurrence();
@@ -95,6 +104,10 @@ public:
     void setByday(const QList<Weekday> &);
     QList<Weekday> byday() const;
 
+    //What Weeks in moth are matching
+    void setByDayPosition(WeekPosition);
+    WeekPosition byDayPosition();
+
     void setBymonthday(const QList<int> &);
     QList<int> bymonthday() const;
 
@@ -124,6 +137,7 @@ private:
     QList<int> m_byminute;
     QList<int> m_byhour;
     QList<Weekday> m_byday;
+    WeekPosition m_weekPosition;
     QList<int> m_bymonthday;
     QList<int> m_byyearday;
     QList<int> m_byweekno;

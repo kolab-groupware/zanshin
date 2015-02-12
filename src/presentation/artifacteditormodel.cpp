@@ -407,12 +407,64 @@ void ArtifactEditorModel::setByDay(const QList<Domain::Recurrence::Weekday> &day
         *recurrence = *m_recurrence;
     }
 
-    if (!m_recurrence || recurrence->byday() != dayList) {
+    if (!m_recurrence || recurrence->byday() != dayList ||
+        (recurrence->frequency() == Domain::Recurrence::Monthly && !recurrence->bymonthday().isEmpty())) {
         recurrence->setByday(dayList);
+        if (!recurrence->byday().isEmpty() && recurrence->frequency() == Domain::Recurrence::Monthly) {
+            recurrence->setBymonthday(QList<int>());
+        }
         setRecurrence(recurrence);
     }
 }
 
+void ArtifactEditorModel::setByMonth(const QList<int> &monthList)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->bymonth() != monthList) {
+        recurrence->setBymonth(monthList);
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setByMonthDays(const QList<int> &dayList)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->bymonthday() != dayList
+        || (recurrence->frequency() == Domain::Recurrence::Monthly && !recurrence->byday().isEmpty())) {
+        recurrence->setBymonthday(dayList);
+
+        if (!recurrence->bymonthday().isEmpty() && recurrence->frequency() == Domain::Recurrence::Monthly) {
+            recurrence->setByday(QList<Domain::Recurrence::Weekday>());
+        }
+
+        setRecurrence(recurrence);
+    }
+}
+
+void ArtifactEditorModel::setByDayPosition(Domain::Recurrence::WeekPosition position)
+{
+    Domain::Recurrence::Ptr recurrence(new Domain::Recurrence);
+    if (m_recurrence) {
+        *recurrence = *m_recurrence;
+    }
+
+    if (!m_recurrence || recurrence->byDayPosition() != position) {
+        if (!recurrence->byday().isEmpty()) {
+            recurrence->setByDayPosition(position);
+            setRecurrence(recurrence);
+        } else {                                        // Till there are no days to save, we keep this only in memory
+            m_recurrence->setByDayPosition(position);
+        }
+    }
+}
 
 QList<Domain::Relation::Ptr> ArtifactEditorModel::relations() const
 {

@@ -46,6 +46,16 @@ enum RepeatType {
     RepeatCount
 };
 
+enum EveryType {
+    None = -1,
+    First,
+    Second,
+    Third,
+    Fourth,
+    Last,
+    Every
+};
+
 class DateWidgetItem : public QListWidgetItem
 {
 public:
@@ -80,6 +90,7 @@ RecurrenceWidget::RecurrenceWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
+    fillCombos();
     clear();
 
     connect( ui->mExceptionAddButton, SIGNAL(clicked()),
@@ -94,6 +105,10 @@ RecurrenceWidget::RecurrenceWidget(QWidget *parent)
              SLOT(handleRecurrenceTypeChange(int)));
     connect ( ui->mWeekDayCombo, SIGNAL(checkedItemsChanged(QStringList)),
               SLOT(handleWeekDayComboChanged()));
+    connect ( ui->mMonthlyEveryWeekday, SIGNAL(checkedItemsChanged(QStringList)),
+              SLOT(handleWeekDayComboChanged()));
+    connect ( ui->mYearlyEveryWeekday, SIGNAL(checkedItemsChanged(QStringList)),
+              SLOT(handleWeekDayComboChanged()));
     connect( ui->mRecurrenceEndDate, SIGNAL(dateChanged(QDate)),
              SLOT(handleEndDateChange(QDate)));
     connect( ui->mRecurrenceEndCombo, SIGNAL(currentIndexChanged(int)),
@@ -102,6 +117,16 @@ RecurrenceWidget::RecurrenceWidget(QWidget *parent)
              SLOT(handleEndAfterOccurrencesChange(int)) );
     connect( ui->mFrequencyEdit, SIGNAL(valueChanged(int)),
              SLOT(handleFrequencyChange()) );
+    connect( ui->mYearlyEveryCombo, SIGNAL(currentIndexChanged(int)),
+             SLOT(handleYearlyEveryComboChanged(int)));
+    connect( ui->mYearlyEachCombo, SIGNAL(checkedItemsChanged(QStringList)),
+             SLOT(handleYearlyEachComboChanged()));
+    connect( ui->mMonthlyEachCombo, SIGNAL(checkedItemsChanged(QStringList)),
+             SLOT(handleMonthlyEachComboChanged()));
+    connect( ui->mYearlyEveryCombo, SIGNAL(currentIndexChanged(int)),
+             SLOT(handleEveryComboChanged(int)));
+    connect( ui->mMonthlyEveryCombo, SIGNAL(currentIndexChanged(int)),
+             SLOT(handleEveryComboChanged(int)));
 }
 
 RecurrenceWidget::~RecurrenceWidget()
@@ -111,7 +136,6 @@ RecurrenceWidget::~RecurrenceWidget()
 
 void RecurrenceWidget::setStartDate(const QDateTime &date)
 {
-    fillCombos();
     ui->mExceptionDateEdit->setDate(date.date());
 }
 
@@ -198,8 +222,16 @@ void RecurrenceWidget::clear()
 
     QBitArray days(7, 0);
     ui->mWeekDayCombo->setDays(days);
+    ui->mMonthlyEveryWeekday->setDays(days);
+    ui->mYearlyEveryWeekday->setDays(days);
 
-    fillCombos();
+    ui->mMonthlyEachRadio->setChecked(true);
+    ui->mMonthlyEveryCombo->setCurrentIndex(0);
+    ui->mYearlyEveryCombo->setCurrentIndex(0);
+    ui->mYearlyEveryWeekday->setEnabled(false);
+
+    ui->mMonthlyEachCombo->setCheckedItems(QStringList());
+    ui->mYearlyEachCombo->setCheckedItems(QStringList());
 }
 
 void RecurrenceWidget::setByDay(const QList< Domain::Recurrence::Weekday > &dayList)
@@ -210,6 +242,77 @@ void RecurrenceWidget::setByDay(const QList< Domain::Recurrence::Weekday > &dayL
     }
 
     ui->mWeekDayCombo->setDays(days);
+    ui->mMonthlyEveryWeekday->setDays(days);
+    ui->mYearlyEveryWeekday->setDays(days);
+
+    if (dayList.isEmpty()) {
+        ui->mYearlyEveryCombo->setCurrentIndex(0);
+    } else {
+        ui->mMonthlyEveryRadio->setChecked(true);
+    }
+}
+
+void RecurrenceWidget::setByDayPosition(const Domain::Recurrence::WeekPosition weekPosition)
+{
+    EveryType type;
+    switch(weekPosition) {
+    case Domain::Recurrence::WeekPosition::First:
+        type = First;
+        break;
+    case Domain::Recurrence::WeekPosition::Second:
+        type = Second;
+        break;
+    case Domain::Recurrence::WeekPosition::Third:
+        type = Third;
+        break;
+    case Domain::Recurrence::WeekPosition::Fourth:
+        type = Fourth;
+        break;
+    case Domain::Recurrence::WeekPosition::Last:
+        type = Last;
+        break;
+    default:
+        type = Every;
+    }
+
+    for(int i= ui->mYearlyEveryCombo->model()->rowCount()-1; i> -1; i--) {
+        if (ui->mYearlyEveryCombo->itemData(i, Qt::UserRole).toInt() == type) {
+            ui->mYearlyEveryCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    for(int i= ui->mMonthlyEveryCombo->model()->rowCount()-1; i> -1; i--) {
+        if (ui->mMonthlyEveryCombo->itemData(i, Qt::UserRole).toInt() == type) {
+            ui->mMonthlyEveryCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+}
+
+void RecurrenceWidget::setByMonth(const QList< int > &monthList)
+{
+    for(int i= ui->mYearlyEachCombo->model()->rowCount()-1; i> -1; i--) {
+        if (monthList.contains(ui->mYearlyEachCombo->itemData(i, Qt::UserRole).toInt())) {
+            ui->mYearlyEachCombo->setItemCheckState(i,Qt::Checked);
+        } else {
+         ui->mYearlyEachCombo->setItemCheckState(i,Qt::Unchecked);
+        }
+    }
+}
+
+void RecurrenceWidget::setByMonthDay(const QList< int > &dayList)
+{
+    for(int i= ui->mMonthlyEachCombo->model()->rowCount()-1; i> -1; i--) {
+        if (dayList.contains(ui->mMonthlyEachCombo->itemData(i, Qt::UserRole).toInt())) {
+            ui->mMonthlyEachCombo->setItemCheckState(i,Qt::Checked);
+        } else {
+         ui->mMonthlyEachCombo->setItemCheckState(i,Qt::Unchecked);
+        }
+    }
+    if (!dayList.isEmpty()) {
+        ui->mMonthlyEachRadio->setChecked(true);
+    }
 }
 
 void RecurrenceWidget::addException()
@@ -312,7 +415,7 @@ void RecurrenceWidget::handleRecurrenceTypeChange(int currentIndex)
 void RecurrenceWidget::handleWeekDayComboChanged()
 {
     QList <Domain::Recurrence::Weekday> days;
-    QBitArray dayBits = ui->mWeekDayCombo->days();
+    QBitArray dayBits = static_cast<KPIM::KWeekdayCheckCombo*>(QObject::sender())->days();
     for ( int i = 0; i < 7; ++i ) {
         if (dayBits.testBit(i)) {
             days.append((Domain::Recurrence::Weekday) (Domain::Recurrence::Monday + i));
@@ -322,6 +425,58 @@ void RecurrenceWidget::handleWeekDayComboChanged()
     emit byDayChanged(days);
 }
 
+void RecurrenceWidget::handleYearlyEachComboChanged()
+{
+    QList<int> months;
+    foreach (auto month, ui->mYearlyEachCombo->checkedItems(Qt::UserRole)) {
+        months << month.toInt();
+    }
+
+    emit byMonthChanged(months);
+}
+
+void RecurrenceWidget::handleEveryComboChanged(int currentIndex)
+{
+    QComboBox *sender = static_cast<QComboBox*>(QObject::sender());
+    switch(sender->itemData(currentIndex).toInt()) {
+    case First:
+        emit byDayPositionChanged(Domain::Recurrence::WeekPosition::First);
+        break;
+    case Second:
+        emit byDayPositionChanged(Domain::Recurrence::WeekPosition::Second);
+        break;
+    case Third:
+        emit byDayPositionChanged(Domain::Recurrence::WeekPosition::Third);
+        break;
+    case Fourth:
+        emit byDayPositionChanged(Domain::Recurrence::WeekPosition::Fourth);
+        break;
+    case Last:
+        emit byDayPositionChanged(Domain::Recurrence::WeekPosition::Last);
+        break;
+    case Every:
+        emit byDayPositionChanged(Domain::Recurrence::WeekPosition::All);
+        break;
+    case None:
+    default:
+        emit byDayChanged(QList<Domain::Recurrence::Weekday>());
+    }
+}
+
+void RecurrenceWidget::handleYearlyEveryComboChanged(int currentIndex)
+{
+    ui->mYearlyEveryWeekday->setEnabled( ui->mYearlyEveryCombo->itemData(currentIndex).toInt() == None ? false : true);
+}
+
+void RecurrenceWidget::handleMonthlyEachComboChanged()
+{
+    QList<int> days;
+    foreach (auto day, ui->mMonthlyEachCombo->checkedItems(Qt::UserRole)) {
+        days << day.toInt();
+    }
+
+    emit byMonthDaysChanged(days);
+}
 
 void RecurrenceWidget::removeExceptions()
 {
@@ -392,86 +547,58 @@ void RecurrenceWidget::toggleRecurrenceWidgets(int currentIndex)
 
 void RecurrenceWidget::fillCombos()
 {
-/*
-  const KCalendarSystem *calSys = KGlobal::locale()->calendar();
-  // Next the monthly combo. This contains the following elements:
-  // - nth day of the month
-  // - (month.lastDay() - n)th day of the month
-  // - the ith ${weekday} of the month
-  // - the (month.weekCount() - i)th day of the month
-  const int currentMonthlyIndex = ui->mMonthlyCombo->currentIndex();
-  ui->mMonthlyCombo->clear();
-  const QDate date = mDateTime->startDate();
+    const KCalendarSystem *calSys = KGlobal::locale()->calendar();
 
-  QString item = subsOrdinal(
-    ki18nc( "example: the 30th", "the %1" ), dayOfMonthFromStart() ).toString();
-  ui->mMonthlyCombo->addItem( item );
+    ui->mMonthlyEachCombo->clear();
+    ui->mYearlyEachCombo->clear();
+    ui->mMonthlyEveryCombo->clear();
+    ui->mYearlyEveryCombo->clear();
 
-  item = subsOrdinal( ki18nc( "example: the 4th to last day",
-                              "the %1 to last day" ), dayOfMonthFromEnd() ).toString();
-  ui->mMonthlyCombo->addItem( item );
+    ui->mMonthlyEachCombo->blockSignals(true);
+    ui->mYearlyEachCombo->blockSignals(true);
+    ui->mMonthlyEveryCombo->blockSignals(true);
+    ui->mYearlyEveryCombo->blockSignals(true);
 
-  item = subsOrdinal(
-    ki18nc( "example: the 5th Wednesday", "the %1 %2" ), monthWeekFromStart() ).
-         subs(
-           calSys->weekDayName( date.dayOfWeek(), KCalendarSystem::LongDayName ) ).toString();
-  ui->mMonthlyCombo->addItem( item );
+    for(int i=1; i < 32; i++) {
+        ui->mMonthlyEachCombo->addItem(QString::number(i), i);
+    }
 
-  if ( monthWeekFromEnd() == 1 ) {
-    item = ki18nc( "example: the last Wednesday", "the last %1" ).
-           subs( calSys->weekDayName(
-                   date.dayOfWeek(), KCalendarSystem::LongDayName ) ).toString();
-  } else {
-    item = subsOrdinal(
-      ki18nc( "example: the 5th to last Wednesday", "the %1 to last %2" ), monthWeekFromEnd() ).
-           subs( calSys->weekDayName(
-                   date.dayOfWeek(), KCalendarSystem::LongDayName ) ).toString();
-  }
-  ui->mMonthlyCombo->addItem( item );
-  ui->mMonthlyCombo->setCurrentIndex( currentMonthlyIndex == -1 ? 0 : currentMonthlyIndex );
+    int year = QDate::currentDate().year();
+    for(int i=1; i < 13; i++) {
+        ui->mYearlyEachCombo->addItem(calSys->monthName(i, year), i);
+    }
 
-  // Finally the yearly combo. This contains the following options:
-  // - ${n}th of ${long-month-name}
-  // - ${month.lastDay() - n}th last day of ${long-month-name}
-  // - the ${i}th ${weekday} of ${long-month-name}
-  // - the ${month.weekCount() - i}th day of ${long-month-name}
-  // - the ${m}th day of the year
-  const int currentYearlyIndex = ui->mYearlyCombo->currentIndex();
-  ui->mYearlyCombo->clear();
-  const QString longMonthName = calSys->monthName( date );
-  item = subsOrdinal( ki18nc( "example: the 5th of June", "the %1 of %2" ), date.day() ).
-         subs( longMonthName ).toString();
-  ui->mYearlyCombo->addItem( item );
+    ui->mYearlyEveryCombo->addItem(i18nc("no every recurrence on weekday","None"),None);
+    for(int i=0; i < 6; i++) {
+        QString every;
+        switch(i) {
+        case First:
+            every = i18nc("every first week of month or year", "first");
+            break;
+        case Second:
+            every = i18nc("every second week of month or year", "second");
+            break;
+        case Third:
+            every = i18nc("every third week of month or year", "third");
+            break;
+        case Fourth:
+            every = i18nc("every fourth week of month or year", "fourth");
+            break;
+        case Last:
+            every = i18nc("every last week of month or year", "last");
+            break;
+        case Every:
+            every = i18nc("every week of month or year", "every");
+            break;
+        }
 
-  item = subsOrdinal(
-    ki18nc( "example: the 3rd to last day of June", "the %1 to last day of %2" ),
-    date.daysInMonth() - date.day() ).subs( longMonthName ).toString();
-  ui->mYearlyCombo->addItem( item );
+        ui->mYearlyEveryCombo->addItem(every, i);
+        ui->mMonthlyEveryCombo->addItem(every, i);
+    }
 
-  item = subsOrdinal(
-    ki18nc( "example: the 4th Wednesday of June", "the %1 %2 of %3" ), monthWeekFromStart() ).
-         subs( calSys->weekDayName( date.dayOfWeek(), KCalendarSystem::LongDayName ) ).
-         subs( longMonthName ).toString();
-  ui->mYearlyCombo->addItem( item );
-
-  if ( monthWeekFromEnd() == 1 ) {
-    item = ki18nc( "example: the last Wednesday of June", "the last %1 of %2" ).
-           subs( calSys->weekDayName( date.dayOfWeek(), KCalendarSystem::LongDayName ) ).
-           subs( longMonthName ).toString();
-  } else {
-    item = subsOrdinal(
-      ki18nc( "example: the 4th to last Wednesday of June", "the %1 to last %2 of %3 " ),
-      monthWeekFromEnd() ).
-           subs( calSys->weekDayName( date.dayOfWeek(), KCalendarSystem::LongDayName ) ).
-           subs( longMonthName ).toString();
-  }
-  ui->mYearlyCombo->addItem( item );
-
-  item = subsOrdinal(
-    ki18nc( "example: the 15th day of the year", "the %1 day of the year" ),
-    date.dayOfYear() ).toString();
-  ui->mYearlyCombo->addItem( item );
-  ui->mYearlyCombo->setCurrentIndex( currentYearlyIndex == -1 ? 0 : currentYearlyIndex );
-  */
+    ui->mMonthlyEachCombo->blockSignals(false);
+    ui->mYearlyEachCombo->blockSignals(false);
+    ui->mMonthlyEveryCombo->blockSignals(false);
+    ui->mYearlyEveryCombo->blockSignals(false);
 }
 

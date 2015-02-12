@@ -52,6 +52,9 @@ public slots:
     void setNoEnd();
     void clear();
     void setByDay(const QList<Domain::Recurrence::Weekday> &dayList);
+    void setByDayPosition(const Domain::Recurrence::WeekPosition weekPosition);
+    void setByMonth(const QList<int> &monthList);
+    void setByMonthDay(const QList<int> &dayList);
 
 signals:
     void frequencyChanged(Domain::Recurrence::Frequency frequency, int intervall);
@@ -60,6 +63,9 @@ signals:
     void noEnd();
     void exceptionDatesChanged(const QList<QDateTime> &exceptionDates);
     void byDayChanged(const QList<Domain::Recurrence::Weekday> &dayList);
+    void byMonthChanged(const QList<int> &monthList);
+    void byMonthDaysChanged(const QList<int> &dayList);
+    void byDayPositionChanged(Domain::Recurrence::WeekPosition);
 
 private slots:
     void handleExceptionDateChange(const QDate &date);
@@ -72,6 +78,10 @@ private slots:
     void handleEndDateChange(const QDate &date);
     void handleRepeatTypeChange(int);
     void handleWeekDayComboChanged();
+    void handleYearlyEveryComboChanged(int);
+    void handleYearlyEachComboChanged();
+    void handleMonthlyEachComboChanged();
+    void handleEveryComboChanged(int);
 
 private:
     void toggleRecurrenceWidgets(int currentIndex);
