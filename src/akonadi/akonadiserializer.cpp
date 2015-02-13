@@ -545,6 +545,7 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
     todo->setPercentComplete(task->progress());
     todo->setStatus(toKCalStatus(task->status()));
     if (task->recurrence()) {
+        todo->setDtRecurrence(KDateTime(task->startDate()));
         updateKCalRecurrence(task->recurrence(), todo->recurrence());
     }
 
