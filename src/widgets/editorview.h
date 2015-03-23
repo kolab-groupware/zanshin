@@ -31,7 +31,8 @@
 
 class QAbstractButton;
 class QLabel;
-class QPlainTextEdit;
+class QTextEdit;
+class QLineEdit;
 class QComboBox;
 class QSpinBox;
 class QVBoxLayout;
@@ -94,7 +95,8 @@ private:
     QObject *m_model;
 
     QLabel *m_delegateLabel;
-    QPlainTextEdit *m_textEdit;
+    QLineEdit *m_titleEdit;
+    QTextEdit *m_textEdit;
     QWidget *m_taskGroup;
     KPIM::KDateEdit *m_startDateEdit;
     KPIM::KDateEdit *m_dueDateEdit;

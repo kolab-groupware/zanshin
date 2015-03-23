@@ -28,7 +28,8 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QLabel>
-#include <QPlainTextEdit>
+#include <QTextEdit>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QComboBox>
 #include <QSpinBox>
@@ -50,7 +51,8 @@ EditorView::EditorView(QWidget *parent)
     : QWidget(parent),
       m_model(0),
       m_delegateLabel(new QLabel(this)),
-      m_textEdit(new QPlainTextEdit(this)),
+      m_titleEdit(new QLineEdit(this)),
+      m_textEdit(new QTextEdit(this)),
       m_taskGroup(new QWidget(this)),
       m_startDateEdit(new KPIM::KDateEdit(m_taskGroup)),
       m_dueDateEdit(new KPIM::KDateEdit(m_taskGroup)),
@@ -70,6 +72,7 @@ EditorView::EditorView(QWidget *parent)
     m_delegateLabel->setObjectName("delegateLabel");
     m_delegateEdit->setObjectName("delegateEdit");
     m_textEdit->setObjectName("textEdit");
+    m_titleEdit->setObjectName("titleEdit");
     m_startDateEdit->setObjectName("startDateEdit");
     m_dueDateEdit->setObjectName("dueDateEdit");
     m_startTodayButton->setObjectName("startTodayButton");
@@ -89,6 +92,7 @@ EditorView::EditorView(QWidget *parent)
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(m_delegateLabel);
+    layout->addWidget(m_titleEdit);
     layout->addWidget(m_textEdit);
     layout->addLayout(m_relationsLayout);
     layout->addWidget(m_taskGroup);
@@ -130,6 +134,7 @@ EditorView::EditorView(QWidget *parent)
     m_taskGroup->setVisible(false);
 
     connect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
+    connect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
     connect(m_startDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onStartEditEntered(QDate)));
     connect(m_dueDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onDueEditEntered(QDate)));
     connect(m_startTodayButton, SIGNAL(clicked()), this, SLOT(onStartTodayClicked()));
@@ -224,12 +229,20 @@ void EditorView::onHasTaskPropertiesChanged()
 
 void EditorView::onTextOrTitleChanged()
 {
-    const QString text = m_model->property("title").toString()
-                       + "\n"
-                       + m_model->property("text").toString();
+    //We have to temporarilly disconnect these signals to avoid triggering a save when setting the content of the editor.
+    disconnect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
+    disconnect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
 
-    if (text != m_textEdit->toPlainText())
-        m_textEdit->setPlainText(text);
+    const QString text = m_model->property("text").toString();
+    if (text != m_textEdit->toHtml())
+        m_textEdit->setText(text);
+
+    const QString title = m_model->property("title").toString();
+    if (title != m_titleEdit->text())
+        m_titleEdit->setText(title);
+
+    connect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
+    connect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
 }
 
 void EditorView::onStartDateChanged()
@@ -353,12 +366,8 @@ void EditorView::onLinkActivated(const QString &link)
 
 void EditorView::onTextEditChanged()
 {
-    const QString plainText = m_textEdit->toPlainText();
-    const int index = plainText.indexOf('\n');
-    const QString title = plainText.left(index);
-    const QString text = plainText.mid(index + 1);
-    emit titleChanged(title);
-    emit textChanged(text);
+    emit titleChanged(m_titleEdit->text());
+    emit textChanged(m_textEdit->toHtml());
 }
 
 void EditorView::onStartEditEntered(const QDate &start)
