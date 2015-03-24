@@ -31,7 +31,6 @@
 
 class QAbstractButton;
 class QLabel;
-class QTextEdit;
 class QLineEdit;
 class QComboBox;
 class QSpinBox;
@@ -47,12 +46,14 @@ namespace KPIM {
 namespace Widgets {
 
 class RecurrenceWidget;
+class EditorWidget;
 
 class EditorView : public QWidget
 {
     Q_OBJECT
 public:
     explicit EditorView(QWidget *parent = 0);
+    virtual ~EditorView() {};
 
     QObject *model() const;
 
@@ -96,7 +97,7 @@ private:
 
     QLabel *m_delegateLabel;
     QLineEdit *m_titleEdit;
-    QTextEdit *m_textEdit;
+    EditorWidget *m_textEdit;
     QWidget *m_taskGroup;
     KPIM::KDateEdit *m_startDateEdit;
     KPIM::KDateEdit *m_dueDateEdit;

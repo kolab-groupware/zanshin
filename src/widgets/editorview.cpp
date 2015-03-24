@@ -24,6 +24,7 @@
 
 #include "editorview.h"
 #include "recurrencewidget.h"
+#include "editorwidget.h"
 
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -36,6 +37,9 @@
 #include <QUrl>
 #include <KRun>
 #include <QDebug>
+#include <KStandardDirs>
+#include <KActionCollection>
+#include <KRichTextWidget>
 #include "kdateedit.h"
 #include "addressline/addresseelineedit.h"
 #include "presentation/metatypes.h"
@@ -52,7 +56,7 @@ EditorView::EditorView(QWidget *parent)
       m_model(0),
       m_delegateLabel(new QLabel(this)),
       m_titleEdit(new QLineEdit(this)),
-      m_textEdit(new QTextEdit(this)),
+      m_textEdit(new EditorWidget(this)),
       m_taskGroup(new QWidget(this)),
       m_startDateEdit(new KPIM::KDateEdit(m_taskGroup)),
       m_dueDateEdit(new KPIM::KDateEdit(m_taskGroup)),
@@ -133,7 +137,11 @@ EditorView::EditorView(QWidget *parent)
     m_delegateLabel->setVisible(false);
     m_taskGroup->setVisible(false);
 
-    connect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
+    auto actionCollection = new KActionCollection(0, KComponentData());
+    m_textEdit->createActions(actionCollection);
+    addActions(actionCollection->actions());
+
+    connect(m_textEdit->editor(), SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
     connect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
     connect(m_startDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onStartEditEntered(QDate)));
     connect(m_dueDateEdit, SIGNAL(dateEntered(QDate)), this, SLOT(onDueEditEntered(QDate)));
@@ -230,18 +238,18 @@ void EditorView::onHasTaskPropertiesChanged()
 void EditorView::onTextOrTitleChanged()
 {
     //We have to temporarilly disconnect these signals to avoid triggering a save when setting the content of the editor.
-    disconnect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
+    disconnect(m_textEdit->editor(), SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
     disconnect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
 
     const QString text = m_model->property("text").toString();
-    if (text != m_textEdit->toHtml())
-        m_textEdit->setText(text);
+    if (text != m_textEdit->editor()->toHtml())
+        m_textEdit->editor()->setText(text);
 
     const QString title = m_model->property("title").toString();
     if (title != m_titleEdit->text())
         m_titleEdit->setText(title);
 
-    connect(m_textEdit, SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
+    connect(m_textEdit->editor(), SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
     connect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
 }
 
@@ -367,7 +375,7 @@ void EditorView::onLinkActivated(const QString &link)
 void EditorView::onTextEditChanged()
 {
     emit titleChanged(m_titleEdit->text());
-    emit textChanged(m_textEdit->toHtml());
+    emit textChanged(m_textEdit->editor()->toHtml());
 }
 
 void EditorView::onStartEditEntered(const QDate &start)

@@ -69,6 +69,9 @@ NotesPart::NotesPart(QWidget *parentWidget, QObject *parent, const QVariantList 
     foreach (QAction *action, components->configureActions()) {
         actionCollection()->addAction(action->objectName(), action);
     }
+    foreach (QAction *action, components->editorView()->actions()) {
+        actionCollection()->addAction(action->objectName(), action);
+    }
 
     setXMLFile(KStandardDirs::locate("data", "zanshin/zanshin-notes_part.rc"));
 }

@@ -5,6 +5,7 @@ set(widgets_SRCS
     datasourcecombobox.cpp
     datasourcedelegate.cpp
     editorview.cpp
+    editorwidget.cpp
     filterwidget.cpp
     recurrencewidget.cpp
     itemdelegate.cpp

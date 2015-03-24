@@ -91,9 +91,12 @@ int main(int argc, char **argv)
     foreach (QAction *action, components->configureActions()) {
         configureMenu->addAction(action);
     }
+    foreach (QAction *action, components->editorView()->actions()) {
+        configureMenu->addAction(action);
+    }
 
     QToolButton *configureButton = 0;
-    if (!components->configureActions().isEmpty()) {
+    if (!configureMenu->isEmpty()) {
         configureButton= new QToolButton(widget);
         configureButton->setIcon(QIcon::fromTheme("configure"));
         configureButton->setText(QObject::tr("Settings"));
