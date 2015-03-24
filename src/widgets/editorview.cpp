@@ -38,7 +38,7 @@
 #include <KRun>
 #include <QDebug>
 #include <KStandardDirs>
-#include <KActionCollection>
+#include <KIcon>
 #include <KRichTextWidget>
 #include "kdateedit.h"
 #include "addressline/addresseelineedit.h"
@@ -137,9 +137,28 @@ EditorView::EditorView(QWidget *parent)
     m_delegateLabel->setVisible(false);
     m_taskGroup->setVisible(false);
 
-    auto actionCollection = new KActionCollection(0, KComponentData());
-    m_textEdit->createActions(actionCollection);
-    addActions(actionCollection->actions());
+    auto editMenu = new QMenu;
+
+    for(auto action : m_textEdit->editActions()) {
+        editMenu->addAction(action);
+    }
+
+    auto menuAction = new QAction(0);
+    menuAction->setText(tr("Edit"));
+    menuAction->setMenu(editMenu);
+    addAction(menuAction);
+
+    for(auto action : m_textEdit->actions()) {
+        addAction(action);
+    }
+
+    connect(m_textEdit, SIGNAL(fullscreenToggled(bool)), SLOT(toggleFullscreenEditor()));
+    auto action = new QAction(this);
+    action->setText(tr("Fullscreen &Editor"));
+    action->setIcon(KIcon("go-up"));
+    action->setShortcut(QKeySequence(Qt::Key_F5));
+    connect(action, SIGNAL(triggered()), SLOT(toggleFullscreenEditor()));
+    addAction(action);
 
     connect(m_textEdit->editor(), SIGNAL(textChanged()), this, SLOT(onTextEditChanged()));
     connect(m_titleEdit, SIGNAL(editingFinished()), this, SLOT(onTextEditChanged()));
@@ -151,6 +170,18 @@ EditorView::EditorView(QWidget *parent)
     connect(m_statusComboBox, SIGNAL(activated(int)), this, SLOT(onStatusChanged(int)));
 
     setEnabled(false);
+}
+
+void EditorView::toggleFullscreenEditor()
+{
+    if (m_textEdit->windowState() & Qt::WindowFullScreen) {
+        m_textEdit->setParent(this);
+        static_cast<QVBoxLayout*>(layout())->insertWidget(2, m_textEdit);
+    } else {
+        m_textEdit->setParent(0);
+    }
+    m_textEdit->setWindowState(m_textEdit->windowState() ^ Qt::WindowFullScreen);
+    m_textEdit->show();
 }
 
 QObject *EditorView::model() const

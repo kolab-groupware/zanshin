@@ -44,7 +44,7 @@ public:
     EditorWidget(QWidget *parent = 0);
 
     KRichTextWidget *editor();
-    void createActions(KActionCollection *actionCollection);
+    QList<QAction*> editActions() const;
 
 public slots:
     void toggleToolbarVisibility();
@@ -62,6 +62,7 @@ private:
     QToolButton *m_fullscreenButton;
     KToolBar *m_toolbar;
     const QColor m_defaultColor;
+    QList<QAction*> m_editActions;
 };
 
 }

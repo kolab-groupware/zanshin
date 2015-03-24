@@ -76,52 +76,58 @@ EditorWidget::EditorWidget(QWidget *parent)
     setLayout(l);
 
     setAutoFillBackground(true);
-}
 
-
-void EditorWidget::createActions(KActionCollection *actionCollection)
-{
+    auto actionCollection = new KActionCollection(0, KComponentData());
     m_editor->createActions(actionCollection); //for the toolbar in this window
 
-    QHBoxLayout *l = new QHBoxLayout(this);
-    l->setContentsMargins(0, 0, 0, 0);
-    l->setSpacing(0);
-    m_toolbar = new KToolBar("TextEditorToolbar", this);
-    m_toolbar->addAction(actionCollection->action("format_text_bold"));
-    m_toolbar->addAction(actionCollection->action("format_text_italic"));
-    m_toolbar->addAction(actionCollection->action("format_text_underline"));
-    m_toolbar->addAction(actionCollection->action("format_text_strikeout"));
-    m_toolbar->addAction(actionCollection->action("format_text_foreground_color"));
-    m_toolbar->addAction(actionCollection->action("format_text_background_color"));
-    m_toolbar->addSeparator();
-    m_toolbar->addAction(actionCollection->action("format_list_style"));
-    m_toolbar->addAction(actionCollection->action("format_list_indent_more"));
-    m_toolbar->addAction(actionCollection->action("format_list_indent_less"));
-    m_toolbar->addSeparator();
-    m_toolbar->addAction(actionCollection->action("format_font_family"));
-    m_toolbar->addAction(actionCollection->action("format_font_size"));
-    m_toolbar->addSeparator();
-    m_toolbar->addAction(actionCollection->action("format_painter"));
-    m_toolbar->addAction(actionCollection->action("manage_link"));
-    m_toolbar->addAction(actionCollection->action("insert_horizontal_rule"));
+    {
+        QHBoxLayout *l = new QHBoxLayout(this);
+        l->setContentsMargins(0, 0, 0, 0);
+        l->setSpacing(0);
+        m_toolbar = new KToolBar("TextEditorToolbar", this);
+        m_toolbar->addAction(actionCollection->action("format_text_bold"));
+        m_toolbar->addAction(actionCollection->action("format_text_italic"));
+        m_toolbar->addAction(actionCollection->action("format_text_underline"));
+        m_toolbar->addAction(actionCollection->action("format_text_strikeout"));
+        m_toolbar->addAction(actionCollection->action("format_text_foreground_color"));
+        m_toolbar->addAction(actionCollection->action("format_text_background_color"));
+        m_toolbar->addSeparator();
+        m_toolbar->addAction(actionCollection->action("format_list_style"));
+        m_toolbar->addAction(actionCollection->action("format_list_indent_more"));
+        m_toolbar->addAction(actionCollection->action("format_list_indent_less"));
+        m_toolbar->addSeparator();
+        m_toolbar->addAction(actionCollection->action("format_font_family"));
+        m_toolbar->addAction(actionCollection->action("format_font_size"));
+        m_toolbar->addSeparator();
+        m_toolbar->addAction(actionCollection->action("format_painter"));
+        m_toolbar->addAction(actionCollection->action("manage_link"));
+        m_toolbar->addAction(actionCollection->action("insert_horizontal_rule"));
 
-    m_toolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    l->addWidget(m_toolbar);
+        m_toolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        l->addWidget(m_toolbar);
+        m_editActions = actionCollection->actions();
 
-    KAction *action = actionCollection->addAction("hide_toolbar");
-    action->setText(i18n("Hide &Toolbar"));
-    action->setCheckable(true);
-    action->setShortcut(QKeySequence(Qt::Key_F6));
-    connect(action, SIGNAL(triggered()), this, SLOT(toggleToolbarVisibility()));
-    connect(this, SIGNAL(toolbarVisibilityToggled(bool)), action, SLOT(setChecked(bool)));
+        // KAction *action = actionCollection->addAction("hide_toolbar");
+        QAction *action = new QAction(this);
+        action->setText(i18n("Hide &Toolbar"));
+        action->setCheckable(true);
+        action->setShortcut(QKeySequence(Qt::Key_F6));
+        connect(action, SIGNAL(triggered()), this, SLOT(toggleToolbarVisibility()));
+        connect(this, SIGNAL(toolbarVisibilityToggled(bool)), action, SLOT(setChecked(bool)));
+        addAction(action);
 
-    m_fullscreenButton = new QToolButton(this);
-    m_fullscreenButton->setArrowType(Qt::UpArrow);
-    connect(m_fullscreenButton, SIGNAL(clicked(bool)), this, SIGNAL(fullscreenToggled(bool)));
-    l->addWidget(m_fullscreenButton);
-    static_cast<QVBoxLayout*>(layout())->insertLayout(0,l);
+        m_fullscreenButton = new QToolButton(this);
+        m_fullscreenButton->setArrowType(Qt::UpArrow);
+        connect(m_fullscreenButton, SIGNAL(clicked(bool)), this, SIGNAL(fullscreenToggled(bool)));
+        l->addWidget(m_fullscreenButton);
+        static_cast<QVBoxLayout*>(layout())->insertLayout(0,l);
+    }
 }
 
+QList<QAction*> EditorWidget::editActions() const
+{
+    return m_editActions;
+}
 
 void EditorWidget::changeEvent(QEvent *event)
 {
@@ -149,7 +155,6 @@ void EditorWidget::changeEvent(QEvent *event)
 
 void EditorWidget::toggleToolbarVisibility()
 {
-    kDebug();
     m_fullscreenButton->setVisible(!m_toolbar->isVisible());
     m_toolbar->setVisible(!m_toolbar->isVisible());
     emit toolbarVisibilityToggled(!m_toolbar->isVisible());

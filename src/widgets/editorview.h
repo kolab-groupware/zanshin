@@ -92,6 +92,8 @@ private slots:
     void onLinkActivated(const QString &link);
     void onRemoveRelationClicked();
 
+    void toggleFullscreenEditor();
+
 private:
     QObject *m_model;
 
