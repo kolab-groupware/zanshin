@@ -557,6 +557,10 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
         todo->setRelatedTo(task->property("relatedUid").toString());
     }
 
+    if (task->property("organizer").isValid()) {
+        todo->setOrganizer(task->property("organizer").toString());
+    }
+
     if (task->delegate().isValid()) {
         KCalCore::Attendee::Ptr attendee(new KCalCore::Attendee(task->delegate().name(),
                                                                 task->delegate().email(),

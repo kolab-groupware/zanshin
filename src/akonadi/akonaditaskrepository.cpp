@@ -26,6 +26,8 @@
 
 #include <Akonadi/Item>
 #include <KCalCore/Todo>
+#include <KPIMIdentities/IdentityManager>
+#include <KPIMIdentities/Identity>
 
 #include "akonadicollectionfetchjobinterface.h"
 #include "akonadiitemfetchjobinterface.h"
@@ -327,6 +329,8 @@ KJob *TaskRepository::delegate(Domain::Task::Ptr task, Domain::Task::Delegate de
 
     task->blockSignals(true);
     task->setDelegate(delegate);
+    KPIMIdentities::IdentityManager identityManager;
+    task->setProperty("organizer", identityManager.defaultIdentity().fullEmailAddr());
 
     auto item = m_serializer->createItemFromTask(task);
 
