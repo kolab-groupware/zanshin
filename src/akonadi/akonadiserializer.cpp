@@ -441,7 +441,7 @@ void Serializer::updateTaskFromItem(Domain::Task::Ptr task, Item item)
         const auto attendees = todo->attendees();
         const auto delegate = std::find_if(attendees.begin(), attendees.end(),
                                            [] (const KCalCore::Attendee::Ptr &attendee) {
-                                               return attendee->status() == KCalCore::Attendee::Delegated;
+                                               return attendee->status() == KCalCore::Attendee::Accepted || attendee->status() == KCalCore::Attendee::NeedsAction;
                                            });
         if (delegate != attendees.end()) {
             task->setDelegate(Domain::Task::Delegate((*delegate)->name(), (*delegate)->email()));
@@ -565,7 +565,7 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
         KCalCore::Attendee::Ptr attendee(new KCalCore::Attendee(task->delegate().name(),
                                                                 task->delegate().email(),
                                                                 true,
-                                                                KCalCore::Attendee::Delegated));
+                                                                KCalCore::Attendee::NeedsAction));
         todo->addAttendee(attendee);
     }
 
