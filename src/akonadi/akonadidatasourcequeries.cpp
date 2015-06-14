@@ -36,6 +36,10 @@
 #include "utils/compositejob.h"
 
 #include <QPointer>
+#include <QStringList>
+
+#include <KCalCore/Todo>
+#include <Akonadi/Notes/NoteUtils>
 
 using namespace Akonadi;
 
@@ -392,6 +396,13 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollec
             }
             return false;
         })) {
+            return false;
+        }
+
+        //filter by mimetype because of updates from monitor
+        //TODO the mimetype checking should be implemented in either storage or serializer
+        if ((m_fetchContentTypeFilter & StorageInterface::Tasks && !col.contentMimeTypes().contains(KCalCore::Todo::todoMimeType())) ||
+            (m_fetchContentTypeFilter & StorageInterface::Notes && !col.contentMimeTypes().contains(NoteUtils::noteMimeType()))) {
             return false;
         }
         return true;
