@@ -434,6 +434,13 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisiblePerson
             })) {
                 return false;
             }
+
+            //filter by mimetype because of updates from monitor
+            //TODO the mimetype checking should be implemented in either storage or serializer
+            if ((m_fetchContentTypeFilter & StorageInterface::Tasks && !col.contentMimeTypes().contains(KCalCore::Todo::todoMimeType())) ||
+                (m_fetchContentTypeFilter & StorageInterface::Notes && !col.contentMimeTypes().contains(NoteUtils::noteMimeType()))) {
+                return false;
+            }
             return true;
     });
     source->setCollectionFetcher([this](const std::function<void(bool, const Akonadi::Collection::List&)> &resultHandler) {
