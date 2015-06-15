@@ -192,7 +192,7 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
             return Domain::QueryResult<QObjectPtr>::Ptr();
     };
 
-    auto flags = [this](const QObjectPtr &object) {
+    auto flags = [this](const QObjectPtr &object) -> Qt::ItemFlags {
         const Qt::ItemFlags defaultFlags = Qt::ItemIsSelectable
                                          | Qt::ItemIsEnabled
                                          | Qt::ItemIsEditable
@@ -243,7 +243,7 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
         }
     };
 
-    auto setData = [this](const QObjectPtr &object, const QVariant &value, int role) {
+    auto setData = [this](const QObjectPtr &object, const QVariant &value, int role) -> bool {
         if (role != Qt::EditRole) {
             return false;
         }
@@ -270,7 +270,7 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
         return true;
     };
 
-    auto drop = [this](const QMimeData *mimeData, Qt::DropAction, const QObjectPtr &object) {
+    auto drop = [this](const QMimeData *mimeData, Qt::DropAction, const QObjectPtr &object) -> bool {
         if (!mimeData->hasFormat("application/x-zanshin-object"))
             return false;
 
@@ -305,7 +305,7 @@ QAbstractItemModel *AvailablePagesModel::createPageListModel()
             foreach (const auto &droppedArtifact, droppedArtifacts) {
                 auto job = m_projectRepository->dissociate(droppedArtifact);
                 if (auto task = droppedArtifact.objectCast<Domain::Task>()) {
-                    Utils::JobHandler::install(job, [this, task] {
+                    Utils::JobHandler::install(job, [=] {
                         m_taskRepository->dissociate(task);
                     });
                 }

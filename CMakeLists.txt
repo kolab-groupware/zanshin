@@ -48,7 +48,7 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${KDE4_ENABLE_EXCEPTIONS} -fPIC")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${KDE4_ENABLE_EXCEPTIONS} -fPIC")
 
 option(ZANSHIN_BUILD_COVERAGE "Build Zanshin with gcov support" OFF)
 if(ZANSHIN_BUILD_COVERAGE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -93,5 +93,7 @@ add_subdirectory(3rdparty)
 #add_subdirectory(attic)
 add_subdirectory(attic/src/icons)
 add_subdirectory(src)
-add_subdirectory(tests)
+if(UNIX)
+	add_subdirectory(tests)
+endif()
 

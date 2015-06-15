@@ -91,20 +91,20 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
             CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(),
                                                                            StorageInterface::Recursive,
                                                                            m_fetchContentTypeFilter);
-            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+            Utils::JobHandler::install(job->kjob(), [=] {
                 if (job->kjob()->error() != KJob::NoError)
                     return;
 
-                for (auto collection : job->collections()) {
+                foreach (auto collection, job->collections()) {
                     if (!m_serializer->isSelectedCollection(collection))
                         continue;
 
                     ItemFetchJobInterface *job = m_storage->fetchItems(collection);
-                    Utils::JobHandler::install(job->kjob(), [this, job, add, collection] {
+                    Utils::JobHandler::install(job->kjob(), [=] {
                         if (job->kjob()->error() != KJob::NoError)
                             return;
 
-                        for (auto item : job->items()) {
+                        foreach (auto item, job->items()) {
                             //We have to set the parent to since we rely on attributes being available in isSelectedCollection
                             item.setParentCollection(collection);
                             add(item);
@@ -114,7 +114,7 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
             });
         });
 
-        m_findInbox->setConvertFunction([this] (const Akonadi::Item &item) {
+        m_findInbox->setConvertFunction([this] (const Akonadi::Item &item) -> Domain::Artifact::Ptr {
             if (m_serializer->isTaskItem(item)) {
                 auto task = m_serializer->createTaskFromItem(item);
                 return Domain::Artifact::Ptr(task);
@@ -136,7 +136,7 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
             }
         });
 
-        m_findInbox->setPredicateFunction([this] (const Akonadi::Item &item) {
+        m_findInbox->setPredicateFunction([this] (const Akonadi::Item &item) -> bool {
             const bool excluded = !m_serializer->relatedUidFromItem(item).isEmpty()
                                || (!m_serializer->isTaskItem(item) && !m_serializer->isNoteItem(item))
                                || (m_serializer->isTaskItem(item) && m_serializer->hasContextTags(item))
@@ -146,7 +146,7 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
             return !excluded;
         });
 
-        m_findInbox->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Artifact::Ptr &artifact) {
+        m_findInbox->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Artifact::Ptr &artifact) -> bool {
             return m_serializer->representsItem(artifact, item);
         });
     }

@@ -269,11 +269,11 @@ private:
 
     void callChangeHandlers(const ItemType &item, int index, const ChangeHandlerGetter &handlerGetter)
     {
-        for (auto weakResult : m_results)
+        foreach (auto weakResult, m_results)
         {
             auto result = weakResult.toStrongRef();
             if (!result) continue;
-            for (auto handler : handlerGetter(result))
+            foreach (auto handler, handlerGetter(result))
             {
                 handler(item, index);
             }

@@ -95,7 +95,7 @@ QAbstractItemModel *TagPageModel::createCentralListModel()
             return Domain::QueryResult<Domain::Artifact::Ptr>::Ptr();
     };
 
-    auto flags = [](const Domain::Artifact::Ptr &artifact) {
+    auto flags = [](const Domain::Artifact::Ptr &artifact) -> Qt::ItemFlags {
         const auto defaultFlags = Qt::ItemIsSelectable
                                 | Qt::ItemIsEnabled
                                 | Qt::ItemIsEditable
@@ -124,7 +124,7 @@ QAbstractItemModel *TagPageModel::createCentralListModel()
         }
     };
 
-    auto setData = [this] (const Domain::Artifact::Ptr &artifact, const QVariant &value, int role) {
+    auto setData = [this] (const Domain::Artifact::Ptr &artifact, const QVariant &value, int role) -> bool {
         if (role != Qt::EditRole && role != Qt::CheckStateRole) {
             return false;
         }
@@ -151,7 +151,7 @@ QAbstractItemModel *TagPageModel::createCentralListModel()
         return false;
     };
 
-    auto drop = [this] (const QMimeData *mimeData, Qt::DropAction, const Domain::Artifact::Ptr &artifact) {
+    auto drop = [this] (const QMimeData *mimeData, Qt::DropAction, const Domain::Artifact::Ptr &artifact) -> bool {
         auto parentTask = artifact.objectCast<Domain::Task>();
         if (!parentTask)
             return false;

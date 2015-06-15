@@ -24,6 +24,7 @@
 
 #include "task.h"
 #include <KDebug>
+#include <algorithm>
 
 using namespace Domain;
 

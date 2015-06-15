@@ -87,7 +87,7 @@ QAbstractItemModel *ContextPageModel::createCentralListModel()
             return Domain::QueryResult<Domain::Task::Ptr>::Ptr();
     };
 
-    auto flags = [] (const Domain::Task::Ptr &task) {
+    auto flags = [] (const Domain::Task::Ptr &task) -> Qt::ItemFlags {
         Q_UNUSED(task);
         return Qt::ItemIsSelectable
              | Qt::ItemIsEnabled
@@ -113,7 +113,7 @@ QAbstractItemModel *ContextPageModel::createCentralListModel()
         }
     };
 
-    auto setData = [this] (const Domain::Task::Ptr &task, const QVariant &value, int role) {
+    auto setData = [this] (const Domain::Task::Ptr &task, const QVariant &value, int role) -> bool {
         if (role != Qt::EditRole && role != Qt::CheckStateRole)
             return false;
 
@@ -126,7 +126,7 @@ QAbstractItemModel *ContextPageModel::createCentralListModel()
         return true;
     };
 
-    auto drop = [this] (const QMimeData *mimeData, Qt::DropAction, const Domain::Task::Ptr &parentTask) {
+    auto drop = [this] (const QMimeData *mimeData, Qt::DropAction, const Domain::Task::Ptr &parentTask) -> bool {
         if (!mimeData->hasFormat("application/x-zanshin-object"))
             return false;
 

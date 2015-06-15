@@ -30,6 +30,7 @@
 
 #include <functional>
 #include <algorithm>
+#include <iterator>
 
 namespace Presentation {
 

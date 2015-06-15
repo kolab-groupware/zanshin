@@ -30,14 +30,14 @@ using namespace Presentation;
 
 DataSourceListModel::DataSourceListModel(const Query &query, QObject *parent)
     : QueryTreeModel<Domain::DataSource::Ptr>(
-          [query] (const Domain::DataSource::Ptr &source) {
+          [query] (const Domain::DataSource::Ptr &source) -> Domain::QueryResultInterface<Domain::DataSource::Ptr>::Ptr {
               if (source)
                   return Domain::QueryResultInterface<Domain::DataSource::Ptr>::Ptr();
               else
                   return query();
           },
 
-          [] (const Domain::DataSource::Ptr &) {
+          [] (const Domain::DataSource::Ptr &) -> Qt::ItemFlags {
               return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
           },
 
@@ -45,16 +45,18 @@ DataSourceListModel::DataSourceListModel(const Query &query, QObject *parent)
               switch (role) {
               case Qt::DisplayRole:
                   return source->name();
-              case Qt::DecorationRole:
-                  return QIcon::fromTheme(source->iconName().isEmpty() ? "folder" : source->iconName());
-              case IconNameRole:
+              case Qt::DecorationRole: {
+				  QIcon icon;
+                  return icon.fromTheme(source->iconName().isEmpty() ? "folder" : source->iconName(), QIcon());
+									   }
+			  case QueryTreeModelBase::IconNameRole:
                   return source->iconName().isEmpty() ? "folder" : source->iconName();
               default:
                   return QVariant();
               }
           },
 
-          [] (const Domain::DataSource::Ptr &, const QVariant &, int) {
+          [] (const Domain::DataSource::Ptr &, const QVariant &, int) -> bool {
               return false;
           },
 

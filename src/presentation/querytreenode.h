@@ -107,7 +107,7 @@ private:
         if (!m_children)
             return;
 
-        for (auto child : m_children->data()) {
+        foreach (auto child, m_children->data()) {
             //Protect from endless loop
             Q_ASSERT(child != m_item);
             QueryTreeNodeBase *node = new QueryTreeNode<ItemType>(child, this,

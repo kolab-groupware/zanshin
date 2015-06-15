@@ -71,7 +71,7 @@ void AvailableSourcesModel::listSource(const Domain::DataSource::Ptr &source)
     m_dataSourceRepository->update(source);
     auto runner = new Utils::Runner([this, source](const std::function<void()> &done) {
         auto result = m_dataSourceQueries->findChildrenRecursive(source);
-        result->addPostInsertHandler([this, done](Domain::DataSource::Ptr s, int){
+        result->addPostInsertHandler([=](Domain::DataSource::Ptr s, int){
             s->setSelected(true);
             s->setListStatus(Domain::DataSource::Listed);
             m_dataSourceRepository->update(s);
@@ -92,7 +92,7 @@ void AvailableSourcesModel::unlistSource(const Domain::DataSource::Ptr &source)
     m_dataSourceRepository->update(source);
     auto runner = new Utils::Runner([this, source](const std::function<void()> &done) {
         auto result = m_dataSourceQueries->findChildrenRecursive(source);
-        result->addPostInsertHandler([this, done](Domain::DataSource::Ptr s, int){
+        result->addPostInsertHandler([=](Domain::DataSource::Ptr s, int){
             s->setSelected(false);
             s->setListStatus(Domain::DataSource::Unlisted);
             m_dataSourceRepository->update(s);
@@ -117,14 +117,14 @@ void AvailableSourcesModel::bookmarkSource(const Domain::DataSource::Ptr &source
 
 QAbstractItemModel *AvailableSourcesModel::createSourceListModel()
 {
-    auto query = [this] (const Domain::DataSource::Ptr &source) {
+    auto query = [this] (const Domain::DataSource::Ptr &source) -> Domain::QueryResult<Domain::DataSource::Ptr>::Ptr {
         if (!source)
             return m_dataSourceQueries->findTopLevel();
         else
             return m_dataSourceQueries->findChildren(source);
     };
 
-    auto flags = [] (const Domain::DataSource::Ptr &source) {
+    auto flags = [] (const Domain::DataSource::Ptr &source) -> Qt::ItemFlags {
         const Qt::ItemFlags defaultFlags = Qt::ItemIsEnabled;
         if (source->contentTypes() != Domain::DataSource::NoContent)
             return defaultFlags | Qt::ItemIsUserCheckable | Qt::ItemIsSelectable;
@@ -160,7 +160,7 @@ QAbstractItemModel *AvailableSourcesModel::createSourceListModel()
         }
     };
 
-    auto setData = [this] (const Domain::DataSource::Ptr &source, const QVariant &value, int role) {
+    auto setData = [this] (const Domain::DataSource::Ptr &source, const QVariant &value, int role) -> bool {
         if (role != Qt::CheckStateRole)
             return false;
         if (source->contentTypes() == Domain::DataSource::NoContent)
@@ -171,7 +171,7 @@ QAbstractItemModel *AvailableSourcesModel::createSourceListModel()
         return true;
     };
 
-    auto drop = [] (const QMimeData *mimeData, Qt::DropAction, const Domain::DataSource::Ptr &source) {
+    auto drop = [] (const QMimeData *mimeData, Qt::DropAction, const Domain::DataSource::Ptr &source) -> bool {
         Q_UNUSED(mimeData)
         Q_UNUSED(source)
         return false;
@@ -186,14 +186,14 @@ QAbstractItemModel *AvailableSourcesModel::createSourceListModel()
 
 QAbstractItemModel *AvailableSourcesModel::createSearchListModel()
 {
-    auto query = [this] (const Domain::DataSource::Ptr &source) {
+    auto query = [this] (const Domain::DataSource::Ptr &source) -> Domain::QueryResult<Domain::DataSource::Ptr>::Ptr {
         if (!source)
             return m_dataSourceQueries->findSearchTopLevel();
         else
             return m_dataSourceQueries->findSearchChildren(source);
     };
 
-    auto flags = [] (const Domain::DataSource::Ptr &source) {
+    auto flags = [] (const Domain::DataSource::Ptr &source) -> Qt::ItemFlags {
         Q_UNUSED(source)
         return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
     };
@@ -220,14 +220,14 @@ QAbstractItemModel *AvailableSourcesModel::createSearchListModel()
         }
     };
 
-    auto setData = [this] (const Domain::DataSource::Ptr &source, const QVariant &value, int role) {
+    auto setData = [this] (const Domain::DataSource::Ptr &source, const QVariant &value, int role) -> bool {
         Q_UNUSED(source)
         Q_UNUSED(value)
         Q_UNUSED(role)
         return false;
     };
 
-    auto drop = [] (const QMimeData *mimeData, Qt::DropAction, const Domain::DataSource::Ptr &source) {
+    auto drop = [] (const QMimeData *mimeData, Qt::DropAction, const Domain::DataSource::Ptr &source) -> bool {
         Q_UNUSED(mimeData)
         Q_UNUSED(source)
         return false;

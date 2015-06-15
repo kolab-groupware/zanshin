@@ -87,23 +87,23 @@ ContextQueries::ContextResult::Ptr ContextQueries::findAll() const
 
         m_findAll->setFetchFunction([this] (const ContextQuery::AddFunction &add) {
             TagFetchJobInterface *job = m_storage->fetchTags();
-            Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                for (Akonadi::Tag tag : job->tags())
+            Utils::JobHandler::install(job->kjob(), [=] {
+                foreach (Akonadi::Tag tag, job->tags())
                     add(tag);
             });
         });
 
-        m_findAll->setConvertFunction([this] (const Akonadi::Tag &tag) {
+        m_findAll->setConvertFunction([this] (const Akonadi::Tag &tag) -> Domain::Context::Ptr {
             return m_serializer->createContextFromTag(tag);
         });
 
         m_findAll->setUpdateFunction([this] (const Akonadi::Tag &tag, Domain::Context::Ptr &context) {
             m_serializer->updateContextFromTag(context, tag);
         });
-        m_findAll->setPredicateFunction([this] (const Akonadi::Tag &tag) {
+        m_findAll->setPredicateFunction([this] (const Akonadi::Tag &tag) -> bool {
             return tag.type() == Akonadi::Serializer::contextTagType();
         });
-        m_findAll->setRepresentsFunction([this] (const Akonadi::Tag &tag, const Domain::Context::Ptr &context) {
+        m_findAll->setRepresentsFunction([this] (const Akonadi::Tag &tag, const Domain::Context::Ptr &context) -> bool {
             return m_serializer->isContextTag(context, tag);
         });
     }
@@ -125,25 +125,25 @@ ContextQueries::TaskResult::Ptr ContextQueries::findTopLevelTasks(Domain::Contex
 
         query->setFetchFunction([this, tag] (const TaskQuery::AddFunction &add) {
             ItemFetchJobInterface *job = m_storage->fetchTagItems(tag);
-            Utils::JobHandler::install(job->kjob(), [this, job, add] {
+            Utils::JobHandler::install(job->kjob(), [=] {
                 if (job->kjob()->error() != KJob::NoError)
                     return;
 
-                for (auto item : job->items())
+                foreach (auto item, job->items())
                     add(item);
             });
 
         });
-        query->setConvertFunction([this] (const Akonadi::Item &item) {
+        query->setConvertFunction([this] (const Akonadi::Item &item) -> Domain::Task::Ptr {
             return m_serializer->createTaskFromItem(item);
         });
         query->setUpdateFunction([this] (const Akonadi::Item &item, Domain::Task::Ptr &task) {
             m_serializer->updateTaskFromItem(task, item);
         });
-        query->setPredicateFunction([this, context] (const Akonadi::Item &item) {
+        query->setPredicateFunction([this, context] (const Akonadi::Item &item) -> bool {
             return m_serializer->isContextChild(context, item);
         });
-        query->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Task::Ptr &task) {
+        query->setRepresentsFunction([this] (const Akonadi::Item &item, const Domain::Task::Ptr &task) -> bool {
             return m_serializer->representsItem(task, item);
         });
     }

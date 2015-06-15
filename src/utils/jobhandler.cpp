@@ -43,11 +43,11 @@ private slots:
     {
         Q_ASSERT(m_handlers.contains(job) || m_handlersWithJob.contains(job));
 
-        for (auto handler : m_handlers.take(job)) {
+        foreach (auto handler, m_handlers.take(job)) {
             handler();
         }
 
-        for (auto handler : m_handlersWithJob.take(job)) {
+        foreach (auto handler, m_handlersWithJob.take(job)) {
             handler(job);
         }
     }
