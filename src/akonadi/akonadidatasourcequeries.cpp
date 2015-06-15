@@ -636,7 +636,8 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildrenRecursiv
     auto query = Domain::QueryResultProvider<Domain::DataSource::Ptr>::Ptr::create();
     Akonadi::Collection col = m_serializer->createCollectionFromDataSource(source);
 
-    auto job = m_storage->fetchCollections(col, StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::NoFilter);
+    //We have to ignore the content type, because the mimetypes are not yet available
+    auto job = m_storage->fetchCollections(col, StorageInterface::Recursive, 0, StorageInterface::NoFilter);
     Utils::JobHandler::install(job->kjob(), [this, job, query] {
         for (auto collection : job->collections()) {
             auto source =  m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
