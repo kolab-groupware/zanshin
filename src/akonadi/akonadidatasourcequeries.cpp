@@ -606,8 +606,8 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTopLevel() const
 {
 
     Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>::Ptr mergedResultProvider(new Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>());
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getVisibleCollectionTree()));
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getVisiblePersonTree()));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getVisibleCollectionTree(), false));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getVisiblePersonTree(), true));
     return DataSourceQueries::DataSourceResult::create(mergedResultProvider);
 }
 
@@ -615,13 +615,13 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildren(Domain:
 {
     QSharedPointer<TreeQuery> treeQuery;
     //The person tree and the rest are separate, so we need to multiplex that here
-    //FIXME: this doesn't work because after the first child isPerson returns false
-    if (source && source->isPerson()) {
+    const bool isPersonTree = source->property("isInPersonTree").toBool();
+    if (source && isPersonTree) {
         treeQuery = getVisiblePersonTree();
     } else {
         treeQuery = getVisibleCollectionTree();
     }
-    return findSearchChildrenQuery(source, treeQuery);
+    return findSearchChildrenQuery(source, treeQuery, isPersonTree);
 }
 
 DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findChildrenRecursive(Domain::DataSource::Ptr source) const
@@ -656,17 +656,19 @@ void DataSourceQueries::setSearchTerm(QString term)
     getSearchPersonCollectionTree()->reset(findSearchPersonCollections());
 }
 
-DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery) const
+DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery, bool isPersonTree) const
 {
-    return treeQuery->findChildren(source, [this, treeQuery](DataSourceQuery::Ptr query, const Akonadi::Collection &root){
+    return treeQuery->findChildren(source, [this, treeQuery, isPersonTree](DataSourceQuery::Ptr query, const Akonadi::Collection &root){
         query->setFetchFunction([treeQuery, root] (const DataSourceQuery::AddFunction &add) {
             //We don't need the add function because we use the usual delivery method via the onAdded slot used for updates
             Q_UNUSED(add);
             treeQuery->findChildren(root);
         });
 
-        query->setConvertFunction([this] (const Akonadi::Collection &collection) {
-            return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
+        query->setConvertFunction([this, isPersonTree] (const Akonadi::Collection &collection) {
+            auto source = m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
+            source->setProperty("isInPersonTree", isPersonTree);
+            return source;
         });
 
         query->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
@@ -687,8 +689,8 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchTopLevel()
 {
     Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>::Ptr mergedResultProvider(new Domain::MergedQueryResultProvider<Domain::DataSource::Ptr>());
     //FIXME pass in function to fetch children for persons and rest? => see below for motivation in findSearchChildren
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getSearchCollectionTree()));
-    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getSearchPersonCollectionTree()));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getSearchCollectionTree(), false));
+    mergedResultProvider->addQueryResult(findSearchChildrenQuery(Domain::DataSource::Ptr(), getSearchPersonCollectionTree(), true));
     return DataSourceQueries::DataSourceResult::create(mergedResultProvider);
 }
 
@@ -697,13 +699,13 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildren(D
     //FIXME findSearchChildren should be separate for regular collections and persons
     QSharedPointer<TreeQuery> treeQuery;
     //The person tree and the rest are separate, so we need to multiplex that here
-    //FIXME: this doesn't work because after the first child isPerson returns false
-    if (source && source->isPerson()) {
+    const bool isPersonTree = source->property("isInPersonTree").toBool();
+    if (source && isPersonTree) {
         treeQuery = getSearchPersonCollectionTree();
     } else {
         treeQuery = getSearchCollectionTree();
     }
-    return findSearchChildrenQuery(source, treeQuery);
+    return findSearchChildrenQuery(source, treeQuery, isPersonTree);
 }
 
 void DataSourceQueries::onCollectionAdded(const Collection &collection)

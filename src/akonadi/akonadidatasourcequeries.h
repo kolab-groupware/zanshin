@@ -77,7 +77,7 @@ private slots:
 private:
     void init();
     DataSourceQuery::Ptr createDataSourceQuery();
-    DataSourceResult::Ptr findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery) const;
+    DataSourceResult::Ptr findSearchChildrenQuery(Domain::DataSource::Ptr source, const QSharedPointer<TreeQuery> &treeQuery, bool isPersonTree) const;
     QSharedPointer<AkonadiCollectionTreeSource> findVisibleCollections() const;
     QSharedPointer<AkonadiCollectionTreeSource> findVisiblePersonCollections() const;
     QSharedPointer<AkonadiCollectionTreeSource> findSearchCollections() const;
