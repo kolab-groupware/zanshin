@@ -71,7 +71,12 @@ void PersonSearchJob::start()
         mCollectionSearchDone = true;
     }
 
-    mLdapSearch.startSearch(QLatin1String("*") + mSearchString);
+    //The ldap search get's stuck with an empty search string
+    if (!mSearchString.isEmpty()) {
+        mLdapSearch.startSearch(QLatin1String("*") + mSearchString);
+    } else {
+        mLdapSearchDone = true;
+    }
 
     if (!collections.isEmpty()) {
         Akonadi::CollectionFetchJob *fetchJob = new Akonadi::CollectionFetchJob(collections, Akonadi::CollectionFetchJob::Base, this);
@@ -83,6 +88,10 @@ void PersonSearchJob::start()
 
     //The IMAP resource should add a "Person" attribute to the collections in the person namespace,
     //the ldap query can then be used to update the name (entitydisplayattribute) for the person.
+
+    if (mLdapSearchDone && mCollectionSearchDone) {
+        emitResult();
+    }
 }
 
 void PersonSearchJob::onLDAPSearchData(const QList< KLDAP::LdapResultObject > &list)
