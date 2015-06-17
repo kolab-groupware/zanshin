@@ -209,7 +209,9 @@ void AkonadiCollectionTreeSource::onRemoved(const Collection &col)
 
 void AkonadiCollectionTreeSource::onChanged(const Collection &col)
 {
-    if (!isWantedCollection(col)) {
+    const bool isWanted = isWantedCollection(col);
+    const bool hasChildren = !m_collections[col.id()].isEmpty();
+    if (!isWanted && !hasChildren) {
         onRemoved(col);
     } else {
         Collection::List &collections = m_collections[id(col.parentCollection())];
@@ -218,7 +220,7 @@ void AkonadiCollectionTreeSource::onChanged(const Collection &col)
             collections.removeAll(col);
             collections.append(col);
             emit changed(col, id(col.parentCollection()));
-        } else {
+        } else if (isWanted) {
             onAdded(col);
         }
     }
