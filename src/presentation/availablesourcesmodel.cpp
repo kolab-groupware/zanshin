@@ -108,11 +108,25 @@ void AvailableSourcesModel::unlistSource(const Domain::DataSource::Ptr &source)
 void AvailableSourcesModel::bookmarkSource(const Domain::DataSource::Ptr &source)
 {
     Q_ASSERT(source);
-    if (source->listStatus() == Domain::DataSource::Bookmarked)
-        source->setListStatus(Domain::DataSource::Listed);
-    else
-        source->setListStatus(Domain::DataSource::Bookmarked);
+    const auto newStatus = source->listStatus() == Domain::DataSource::Bookmarked ? Domain::DataSource::Listed : Domain::DataSource::Bookmarked;
+    source->setListStatus(newStatus);
     m_dataSourceRepository->update(source);
+
+    //For persons we want actions to be recursive
+    if (source->isPerson()) {
+        auto runner = new Utils::Runner([this, source, newStatus](const std::function<void()> &done) {
+            auto result = m_dataSourceQueries->findChildrenRecursive(source);
+            result->addPostInsertHandler([this, newStatus](Domain::DataSource::Ptr s, int){
+                s->setListStatus(newStatus);
+                m_dataSourceRepository->update(s);
+            });
+            //We have to keep the result alive
+            result->addDoneHandler([done, result](Domain::DataSource::Ptr, int){
+                done();
+            });
+        });
+        runner->start();
+    }
 }
 
 QAbstractItemModel *AvailableSourcesModel::createSourceListModel()
