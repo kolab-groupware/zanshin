@@ -49,7 +49,7 @@ namespace Internal {
         typedef std::function<Iface*()> FactoryType;
 
         Provider()
-            : m_factory(0)
+            : m_factory(nullptr)
         {
         }
 
@@ -72,7 +72,7 @@ namespace Internal {
 
         Iface *operator()() const
         {
-            Q_ASSERT(m_factory != 0);
+            Q_ASSERT(m_factory);
             return m_factory();
         }
 
