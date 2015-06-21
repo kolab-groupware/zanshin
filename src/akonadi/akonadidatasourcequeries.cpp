@@ -57,7 +57,7 @@ static void traverseThisAndParents(const Collection &col, const std::function<bo
 static bool matchesParents(const Collection &col, const std::function<bool(const Collection &)> &matcher)
 {
     bool matches = false;
-    traverseThisAndParents(col, [matcher, &matches](const Collection &c) {
+    traverseThisAndParents(col, [matcher, &matches](const Collection &c) -> bool {
         if (matcher(c)) {
             matches = true;
             return false;
@@ -73,7 +73,7 @@ AkonadiCollectionTreeSource::AkonadiCollectionTreeSource(MonitorInterface *monit
     m_populated(false),
     m_populationInProgress(false)
 {
-    isToplevel = [](const Akonadi::Collection &col) {
+    isToplevel = [](const Akonadi::Collection &col) -> bool {
         if (col == Akonadi::Collection::root()) {
             return true;
         }
@@ -135,7 +135,7 @@ void AkonadiCollectionTreeSource::populate(const std::function<void()> &callback
                 if (!isWantedCollection(collection)) {
                     continue;
                 }
-                traverseThisAndParents(collection, [this](const Collection &col) {
+                traverseThisAndParents(collection, [=](const Collection &col) -> bool {
                     Collection::List &collections = m_collections[id(col.parentCollection())];
                     if (!collections.contains(col)) {
                         collections.append(col);
@@ -170,7 +170,7 @@ void AkonadiCollectionTreeSource::onAdded(const Collection &col)
     }
 
     //Insert collection and missing parents
-    traverseThisAndParents(col, [this](const Collection &col) {
+    traverseThisAndParents(col, [this](const Collection &col) -> bool {
 
         Collection::List &collections = m_collections[id(col.parentCollection())];
         if (!collections.contains(col)) {
@@ -195,7 +195,7 @@ void AkonadiCollectionTreeSource::onRemoved(const Collection &col)
         emit removed(col, id(col.parentCollection()));
 
         //Check for parents to remove
-        traverseThisAndParents(col.parentCollection(), [this](const Collection &col) {
+        traverseThisAndParents(col.parentCollection(), [this](const Collection &col) -> bool {
             Collection::List &collections = m_collections[id(col)];
             if (!isWantedCollection(col) && collections.isEmpty()) {
                 m_collections[id(col.parentCollection())].removeAll(col);
@@ -384,11 +384,11 @@ QSharedPointer<TreeQuery> DataSourceQueries::getSearchPersonCollectionTree() con
 QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollections() const
 {
     auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
-    source->setFilter([this](const Collection &col) {
+    source->setFilter([this](const Collection &col) -> bool {
         if (!col.shouldList(Collection::ListDisplay) && !col.referenced()) {
             return false;
         }
-        if(matchesParents(col, [this](const Collection &col) {
+        if(matchesParents(col, [this](const Collection &col) -> bool {
             if (col.name() == "Other Users") {
                 return true;
             }
@@ -427,7 +427,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisibleCollec
 QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findVisiblePersonCollections() const
 {
     auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
-    source->setFilter([this](const Collection &col) {
+    source->setFilter([this](const Collection &col) -> bool {
             if (!col.shouldList(Collection::ListDisplay) && !col.referenced()) {
                 return false;
             }
@@ -476,7 +476,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchCollect
 {
     auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
     source->setFilter([this](const Collection &col) {
-        if(matchesParents(col, [this](const Collection &col) {
+        if(matchesParents(col, [=](const Collection &col) -> bool {
             if (m_serializer->isPersonCollection(col)) {
                 return true;
             }
@@ -515,7 +515,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchCollect
 QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchPersonCollections() const
 {
     auto source = QSharedPointer<AkonadiCollectionTreeSource>(new AkonadiCollectionTreeSource(m_monitor));
-    source->setFilter([this](const Collection &col) {
+    source->setFilter([this](const Collection &col) -> bool {
         if(!matchesParents(col, [this](const Collection &col) {
             return m_serializer->isPersonCollection(col);
         })) {
@@ -571,22 +571,22 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findTasks() const
         m_findTasks->setFetchFunction([this] (const DataSourceQuery::AddFunction &add) {
             CollectionFetchJobInterface *job = m_storage->fetchCollections(Akonadi::Collection::root(), StorageInterface::Recursive, StorageInterface::Tasks);
             Utils::JobHandler::install(job->kjob(), [this, job, add] {
-                for (auto collection : job->collections()) {
+                foreach (auto collection, job->collections()) {
                     add(collection);
                 }
             });
         });
 
-        m_findTasks->setConvertFunction([this] (const Akonadi::Collection &collection) {
+        m_findTasks->setConvertFunction([this] (const Akonadi::Collection &collection) -> Domain::DataSource::Ptr {
             return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
         });
         m_findTasks->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
             m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::FullPath);
         });
-        m_findTasks->setPredicateFunction([this] (const Akonadi::Collection &collection) {
+        m_findTasks->setPredicateFunction([this] (const Akonadi::Collection &collection) -> bool {
             return m_serializer->isTaskCollection(collection);
         });
-        m_findTasks->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+        m_findTasks->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) -> bool {
             return m_serializer->representsCollection(source, collection);
         });
     }
@@ -610,16 +610,16 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findNotes() const
             });
         });
 
-        m_findNotes->setConvertFunction([this] (const Akonadi::Collection &collection) {
+        m_findNotes->setConvertFunction([this] (const Akonadi::Collection &collection) -> Domain::DataSource::Ptr {
             return m_serializer->createDataSourceFromCollection(collection, SerializerInterface::FullPath);
         });
         m_findNotes->setUpdateFunction([this] (const Akonadi::Collection &collection, Domain::DataSource::Ptr &source) {
             m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::FullPath);
         });
-        m_findNotes->setPredicateFunction([this] (const Akonadi::Collection &collection) {
+        m_findNotes->setPredicateFunction([this] (const Akonadi::Collection &collection) -> bool {
             return m_serializer->isNoteCollection(collection);
         });
-        m_findNotes->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+        m_findNotes->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) -> bool {
             return m_serializer->representsCollection(source, collection);
         });
     }
@@ -691,7 +691,7 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQu
             treeQuery->findChildren(root);
         });
 
-        query->setConvertFunction([this, isPersonTree] (const Akonadi::Collection &collection) {
+        query->setConvertFunction([this, isPersonTree] (const Akonadi::Collection &collection) -> Domain::DataSource::Ptr {
             auto source = m_serializer->createDataSourceFromCollection(collection, SerializerInterface::BaseName);
             source->setProperty("isInPersonTree", isPersonTree);
             return source;
@@ -701,11 +701,11 @@ DataSourceQueries::DataSourceResult::Ptr DataSourceQueries::findSearchChildrenQu
             m_serializer->updateDataSourceFromCollection(source, collection, SerializerInterface::BaseName);
         });
 
-        query->setPredicateFunction([this, root] (const Akonadi::Collection &) {
+        query->setPredicateFunction([this, root] (const Akonadi::Collection &) -> bool {
             return true;
         });
 
-        query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) {
+        query->setRepresentsFunction([this] (const Akonadi::Collection &collection, const Domain::DataSource::Ptr &source) -> bool {
             return m_serializer->representsCollection(source, collection);
         });
     });
