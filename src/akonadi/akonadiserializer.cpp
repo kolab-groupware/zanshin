@@ -39,6 +39,7 @@
 #include <QBitArray>
 
 #include <iterator>
+#include <numeric>
 
 using namespace Akonadi;
 
