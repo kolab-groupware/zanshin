@@ -69,6 +69,7 @@ include_directories (
     3rdparty/kdepim/pimcommon/
 )
 
+add_definitions(-DKDEPIM_STATIC_LIBS)
 set(KDEPIM_STATIC_LIBS
   zanshinkdepimstatic
   zanshinpimcommonstatic
