@@ -38,6 +38,8 @@
 
 #include <QBitArray>
 
+#include <iterator>
+
 using namespace Akonadi;
 
 Serializer::Serializer()
