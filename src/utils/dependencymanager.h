@@ -29,10 +29,7 @@
 #include <QMap>
 
 #include <utility>
-
-#ifdef Q_COMPILER_LAMBDA
 #include <functional>
-#endif
 
 namespace Utils {
 
@@ -49,11 +46,7 @@ namespace Internal {
     class Provider
     {
     public:
-#ifdef Q_COMPILER_LAMBDA
         typedef std::function<Iface*()> FactoryType;
-#else
-        typedef Iface *(*FactoryType)();
-#endif
 
         Provider()
             : m_factory(0)
