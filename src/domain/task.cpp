@@ -54,12 +54,12 @@ Task::~Task()
 Task &Task::operator=(const Task &other)
 {
     Task copy(other);
-    std::swap<QDateTime>(m_startDate, copy.m_startDate);
-    std::swap<QDateTime>(m_dueDate, copy.m_dueDate);
-    std::swap<Domain::Task::Delegate>(m_delegate, copy.m_delegate);
-    std::swap<Recurrence::Ptr>(m_recurrence, copy.m_recurrence);
-    std::swap<int>(m_progress, copy.m_progress);
-    std::swap<Domain::Task::Status>(m_status, copy.m_status);
+    std::swap(m_startDate, copy.m_startDate);
+    std::swap(m_dueDate, copy.m_dueDate);
+    std::swap(m_delegate, copy.m_delegate);
+    std::swap(m_recurrence, copy.m_recurrence);
+    std::swap(m_progress, copy.m_progress);
+    std::swap(m_status, copy.m_status);
     setText(other.text());
     setTitle(other.title());
     return *this;
@@ -187,8 +187,8 @@ Task::Delegate::Delegate(const Task::Delegate &other)
 Task::Delegate &Task::Delegate::operator=(const Task::Delegate &other)
 {
     Delegate copy(other);
-    std::swap<QString>(m_name, copy.m_name);
-    std::swap<QString>(m_email, copy.m_email);
+    std::swap(m_name, copy.m_name);
+    std::swap(m_email, copy.m_email);
     return *this;
 }
 
@@ -273,23 +273,23 @@ Recurrence::~Recurrence()
 Recurrence &Recurrence::operator=(const Recurrence &other)
 {
     Recurrence copy(other);
-    std::swap<Domain::Recurrence::Frequency>(m_frequency, copy.m_frequency);
-    std::swap<Domain::Recurrence::Weekday>(m_weekStart, copy.m_weekStart);
-    std::swap<bool>(m_allDay, copy.m_allDay);
-    std::swap<QDateTime>(m_end, copy.m_end);
-    std::swap<int>(m_count, copy.m_count);
-    std::swap<int>(m_interval, copy.m_interval);
-    std::swap<QList<int> >(m_bysecond, copy.m_bysecond);
-    std::swap<QList<int> >(m_byminute, copy.m_byminute);
-    std::swap<QList<int> >(m_byhour, copy.m_byhour);
-    std::swap<QList<Domain::Recurrence::Weekday> >(m_byday, copy.m_byday);
-    std::swap<QList<Domain::Recurrence::WeekPosition> >(m_weekPosition, copy.m_weekPosition);
-    std::swap<QList<int> >(m_bymonthday, copy.m_bymonthday);
-    std::swap<QList<int> >(m_byyearday, copy.m_byyearday);
-    std::swap<QList<int> >(m_byweekno, copy.m_byweekno);
-    std::swap<QList<int> >(m_bymonth, copy.m_bymonth);
-    std::swap<QList<QDateTime> >(m_recurrenceDates, copy.m_recurrenceDates);
-    std::swap<QList<QDateTime> >(m_exceptionDates, copy.m_exceptionDates);
+    std::swap(m_frequency, copy.m_frequency);
+    std::swap(m_weekStart, copy.m_weekStart);
+    std::swap(m_allDay, copy.m_allDay);
+    std::swap(m_end, copy.m_end);
+    std::swap(m_count, copy.m_count);
+    std::swap(m_interval, copy.m_interval);
+    std::swap(m_bysecond, copy.m_bysecond);
+    std::swap(m_byminute, copy.m_byminute);
+    std::swap(m_byhour, copy.m_byhour);
+    std::swap(m_byday, copy.m_byday);
+    std::swap(m_weekPosition, copy.m_weekPosition);
+    std::swap(m_bymonthday, copy.m_bymonthday);
+    std::swap(m_byyearday, copy.m_byyearday);
+    std::swap(m_byweekno, copy.m_byweekno);
+    std::swap(m_bymonth, copy.m_bymonth);
+    std::swap(m_recurrenceDates, copy.m_recurrenceDates);
+    std::swap(m_exceptionDates, copy.m_exceptionDates);
     return *this;
 }
 
