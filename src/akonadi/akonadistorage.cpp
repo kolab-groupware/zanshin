@@ -86,7 +86,7 @@ public:
 
         if (!allowedMimeTypes.isEmpty()) {
             collections.erase(std::remove_if(collections.begin(), collections.end(),
-                                            [allowedMimeTypes] (const Collection &collection) {
+                                            [allowedMimeTypes] (const Collection &collection) -> bool {
                                                 auto mimeTypes = collection.contentMimeTypes().toSet();
                                                 return mimeTypes.intersect(allowedMimeTypes).isEmpty();
                                             }),
@@ -96,7 +96,7 @@ public:
         // Replace the dummy parents in the ancestor chain with proper ones
         // full of juicy data
         std::function<Collection(const Collection&)> reconstructAncestors =
-        [collectionsMap, &reconstructAncestors, this] (const Collection &collection) {
+        [collectionsMap, &reconstructAncestors, this] (const Collection &collection) -> Akonadi::Collection {
             Q_ASSERT(collection.isValid());
 
             if (collection == m_collection)
