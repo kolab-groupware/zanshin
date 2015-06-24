@@ -112,7 +112,8 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
             standardActions << Akonadi::StandardActionManager::CreateCollection
                             << Akonadi::StandardActionManager::DeleteCollections
                             << Akonadi::StandardActionManager::SynchronizeCollections
-                            << Akonadi::StandardActionManager::CollectionProperties;
+                            << Akonadi::StandardActionManager::CollectionProperties
+                            << Akonadi::StandardActionManager::SynchronizeCollectionTree;
 
             Q_FOREACH(Akonadi::StandardActionManager::Type standardAction, standardActions) {
                 mActionManager->createAction(standardAction);
@@ -135,6 +136,7 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
 
         auto item = new QStandardItem();
         item->setData(QVariant::fromValue(collection), Akonadi::EntityTreeModel::CollectionRole);
+        item->setData(QVariant::fromValue(collection.parentCollection()), Akonadi::EntityTreeModel::ParentCollectionRole);
         itemModel->setItem(0, 0, item);
 
         mActionManager->setCollectionSelectionModel(selectionModel);
