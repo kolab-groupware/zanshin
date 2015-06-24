@@ -37,6 +37,14 @@ public:
     DataSourceRepository();
     virtual ~DataSourceRepository();
 
+    enum ApplicationMode {
+        TasksOnly,
+        NotesOnly,
+        TasksAndNotes
+    };
+
+    virtual void setApplicationMode(ApplicationMode) = 0;
+
     virtual KJob *update(DataSource::Ptr source) = 0;
     virtual void configure(QMenu*, Domain::DataSource::Ptr) = 0;
 };

@@ -69,6 +69,15 @@ DataSourceRepository::~DataSourceRepository()
     }
 }
 
+void DataSourceRepository::setApplicationMode(DataSourceRepository::ApplicationMode mode)
+{
+    if (mode == TasksOnly) {
+        m_defaultContentTypes = (QStringList() << Akonadi::Collection::mimeType() << KCalCore::Todo::todoMimeType());
+    } else if (mode == NotesOnly) {
+        m_defaultContentTypes = (QStringList() << Akonadi::Collection::mimeType() << Akonadi::NoteUtils::noteMimeType());
+    }
+}
+
 KJob *DataSourceRepository::update(Domain::DataSource::Ptr source)
 {
     auto collection = m_serializer->createCollectionFromDataSource(source);
@@ -151,6 +160,8 @@ void DataSourceRepository::configure(QMenu *menu , Domain::DataSource::Ptr selec
                                             tr("@title:window", "Properties of Note Folder %1"));
             mActionManager->action(Akonadi::StandardActionManager::CreateCollection )->setProperty("ContentMimeTypes",
                                         QStringList() << Akonadi::Collection::mimeType() << Akonadi::NoteUtils::noteMimeType());
+        } else {
+            mActionManager->action(Akonadi::StandardActionManager::CreateCollection )->setProperty("ContentMimeTypes", m_defaultContentTypes);
         }
 
         menu->addActions(actionCollection->actions());

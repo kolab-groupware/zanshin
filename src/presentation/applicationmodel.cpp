@@ -74,6 +74,7 @@ ApplicationModel::ApplicationModel(QObject *parent, ApplicationMode mode)
     m_sourceQueries->setApplicationMode(m_mode == NotesOnly ? Domain::DataSourceQueries::NotesOnly : Domain::DataSourceQueries::TasksOnly);
     m_artifactQueries->setApplicationMode(m_mode == NotesOnly ? Domain::ArtifactQueries::NotesOnly : Domain::ArtifactQueries::TasksOnly);
     m_tagQueries->setApplicationMode(m_mode == NotesOnly ? Domain::TagQueries::NotesOnly : Domain::TagQueries::TasksOnly);
+    m_sourceRepository->setApplicationMode(m_mode == NotesOnly ? Domain::DataSourceRepository::NotesOnly : Domain::DataSourceRepository::TasksOnly);
 }
 
 ApplicationModel::ApplicationModel(Domain::ArtifactQueries *artifactQueries,

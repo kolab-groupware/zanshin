@@ -25,6 +25,7 @@
 #define AKONADI_DATASOURCEREPOSITORY_H
 
 #include "domain/datasourcerepository.h"
+#include <QStringList>
 
 namespace Akonadi {
 
@@ -39,6 +40,8 @@ public:
     DataSourceRepository(StorageInterface *storage, SerializerInterface *serializer);
     virtual ~DataSourceRepository();
 
+    void setApplicationMode(ApplicationMode) Q_DECL_OVERRIDE;
+
     KJob *update(Domain::DataSource::Ptr source) Q_DECL_OVERRIDE;
     void configure(QMenu*, Domain::DataSource::Ptr) Q_DECL_OVERRIDE;
 
@@ -46,6 +49,7 @@ private:
     StorageInterface *m_storage;
     SerializerInterface *m_serializer;
     bool m_ownInterfaces;
+    QStringList m_defaultContentTypes;
 };
 
 }
