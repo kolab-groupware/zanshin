@@ -546,7 +546,7 @@ QSharedPointer<AkonadiCollectionTreeSource> DataSourceQueries::findSearchPersonC
             //Fetch children for each person
             auto compositeJob = new Utils::CompositeJob;
             for (const auto &col : job->collections()) {
-                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::NoFilter);
+                auto fetchJob = m_storage->fetchCollections(col, StorageInterface::Recursive, m_fetchContentTypeFilter, StorageInterface::Display);
                 compositeJob->install(fetchJob->kjob(), [fetchJob, resultHandler, result] {
                     result->append(fetchJob->collections());
                 });
