@@ -116,6 +116,7 @@ PageView::PageView(QWidget *parent, ApplicationMode mode)
     removeItemAction->setShortcut(Qt::Key_Delete);
     removeItemAction->setText(tr("Delete"));
     removeItemAction->setIcon(QIcon::fromTheme("list-remove"));
+    removeItemAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     connect(removeItemAction, SIGNAL(triggered()), this, SLOT(onRemoveItemRequested()));
     addAction(removeItemAction);
 
