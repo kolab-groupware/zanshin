@@ -113,6 +113,7 @@ PageView::PageView(QWidget *parent, ApplicationMode mode)
     setLayout(layout);
 
     QAction *removeItemAction = new QAction(this);
+    removeItemAction->setObjectName("removeAction");
     removeItemAction->setShortcut(Qt::Key_Delete);
     removeItemAction->setText(tr("Delete"));
     removeItemAction->setIcon(QIcon::fromTheme("list-remove"));
@@ -130,8 +131,15 @@ QObject *PageView::model() const
 
 void PageView::configurePopupMenu(QMenu *menu, const Domain::Artifact::Ptr &artifact)
 {
-    Q_UNUSED(artifact);
-    menu->addActions(actions());
+    for (auto action : actions()) {
+        if (action->objectName() == "removeAction") {
+            if (artifact) {
+                menu->addAction(action);
+            }
+        } else {
+            menu->addAction(action);
+        }
+    }
 }
 
 void PageView::setModel(QObject *model)

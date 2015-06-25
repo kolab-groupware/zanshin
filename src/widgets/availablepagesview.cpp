@@ -105,6 +105,7 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
     addAction->setIcon(QIcon::fromTheme("list-add"));
     connect(addAction, SIGNAL(triggered()), this, SLOT(onAddTriggered()));
     m_actionBar->addAction(addAction);
+    this->addAction(addAction);
 
     QAction *removeAction = new QAction(this);
     removeAction->setObjectName("removeAction");
@@ -133,8 +134,15 @@ AvailablePagesView::AvailablePagesView(QWidget *parent)
 
 void AvailablePagesView::configurePopupMenu(QMenu *menu, const QObjectPtr &object)
 {
-    Q_UNUSED(object);
-    menu->addActions(actions());
+    for (auto action : actions()) {
+        if (action->objectName() == "removeAction") {
+            if (object && object.objectCast<Domain::Tag>()) {
+                menu->addAction(action);
+            }
+        } else {
+            menu->addAction(action);
+        }
+    }
 }
 
 QObject *AvailablePagesView::model() const
