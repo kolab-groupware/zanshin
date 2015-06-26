@@ -164,6 +164,11 @@ void PageView::setModel(QObject *model)
 
     connect(m_centralView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)),
             this, SLOT(onCurrentChanged(QModelIndex)));
+
+    QObject::connect(m_centralView->model(), SIGNAL(modelReset()), m_centralView, SLOT(expandAll()));
+    QObject::connect(m_centralView->model(), SIGNAL(layoutChanged()), m_centralView, SLOT(expandAll()));
+    QObject::connect(m_centralView->model(), SIGNAL(rowsInserted(QModelIndex,int,int)),m_centralView, SLOT(expandAll()));
+    m_centralView->expandAll();
 }
 
 MessageBoxInterface::Ptr PageView::messageBoxInterface() const
