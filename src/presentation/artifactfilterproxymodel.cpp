@@ -91,6 +91,8 @@ static QDateTime validDt(const QDateTime &date = QDateTime())
 static int statusPriority(Domain::Task::Status status)
 {
     switch (status) {
+        case Domain::Task::Status::FullComplete:
+            return 0;
         case Domain::Task::Status::Complete:
             return 0;
         case Domain::Task::Status::None:
