@@ -94,6 +94,9 @@
      </layout>
     </widget>
    </item>
+   <item>
+    <widget class="QComboBox" name="filterCombo"/>
+   </item>
   </layout>
  </widget>
  <resources/>

@@ -53,6 +53,7 @@ public:
 private slots:
     void onTextChanged(const QString &text);
     void onSortTypeChanged(int index);
+    void onFilterTypeChanged(int index);
     void onAscendingClicked();
     void onDescendingClicked();
 
