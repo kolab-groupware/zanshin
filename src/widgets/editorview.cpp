@@ -400,7 +400,7 @@ void EditorView::onRemoveRelationClicked()
 
 void EditorView::onLinkActivated(const QString &link)
 {
-    new KRun(link, this);
+    KRun::run("kmail --view %u", KUrl::List() << KUrl(link), 0);
 }
 
 void EditorView::onTextEditChanged()
