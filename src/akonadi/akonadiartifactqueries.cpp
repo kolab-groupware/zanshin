@@ -137,11 +137,15 @@ ArtifactQueries::ArtifactResult::Ptr ArtifactQueries::findInboxTopLevel() const
         });
 
         m_findInbox->setPredicateFunction([this] (const Akonadi::Item &item) {
+            const bool isTask = m_serializer->isTaskItem(item);
+            const bool isNote = m_serializer->isNoteItem(item);
             const bool excluded = !m_serializer->relatedUidFromItem(item).isEmpty()
                                || (!m_serializer->isTaskItem(item) && !m_serializer->isNoteItem(item))
                                || (m_serializer->isTaskItem(item) && m_serializer->hasContextTags(item))
                                || m_serializer->hasAkonadiTags(item)
-                               || !m_serializer->isSelectedCollection(item.parentCollection());
+                               || !m_serializer->isSelectedCollection(item.parentCollection())
+                               || (m_fetchContentTypeFilter & StorageInterface::Tasks) && !isTask
+                               || (m_fetchContentTypeFilter & StorageInterface::Notes) && !isNote;
 
             return !excluded;
         });
