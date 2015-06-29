@@ -41,10 +41,19 @@ public:
         StatusSort
     };
 
+    enum FilterType {
+        ShowAll = 0,
+        ShowUndone,
+        ShowDone
+    };
+
     explicit ArtifactFilterProxyModel(QObject *parent = 0);
 
     SortType sortType() const;
     void setSortType(SortType type);
+
+    FilterType filterType() const;
+    void setFilterType(FilterType type);
 
     void setSortOrder(Qt::SortOrder order);
 
@@ -54,6 +63,7 @@ protected:
 
 private:
     SortType m_sortType;
+    FilterType m_filterType;
 };
 
 }

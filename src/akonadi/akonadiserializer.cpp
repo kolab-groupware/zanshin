@@ -547,6 +547,10 @@ Akonadi::Item Serializer::createItemFromTask(Domain::Task::Ptr task)
     todo->setDtDue(KDateTime(task->dueDate()));
     todo->setPercentComplete(task->progress());
     todo->setStatus(toKCalStatus(task->status()));
+    if (task->status() != Domain::Task::Complete || task->status() != Domain::Task::FullComplete) {
+        //Because the serializer doesn't serialize the status as it should but instead serializes the isComplete status
+        todo->setCompleted(false);
+    }
     if (task->recurrence()) {
         todo->setDtRecurrence(KDateTime(task->startDate()));
         updateKCalRecurrence(task->recurrence(), todo->recurrence());

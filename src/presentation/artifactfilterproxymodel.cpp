@@ -35,7 +35,8 @@ using namespace Presentation;
 
 ArtifactFilterProxyModel::ArtifactFilterProxyModel(QObject *parent)
     : QSortFilterProxyModel(parent),
-      m_sortType(TitleSort)
+      m_sortType(TitleSort),
+      m_filterType(ShowUndone)
 {
     setDynamicSortFilter(true);
     setSortCaseSensitivity(Qt::CaseInsensitive);
@@ -53,6 +54,17 @@ void ArtifactFilterProxyModel::setSortType(ArtifactFilterProxyModel::SortType ty
     invalidate();
 }
 
+ArtifactFilterProxyModel::FilterType ArtifactFilterProxyModel::filterType() const
+{
+    return m_filterType;
+}
+
+void ArtifactFilterProxyModel::setFilterType(ArtifactFilterProxyModel::FilterType type)
+{
+    m_filterType = type;
+    invalidate();
+}
+
 void ArtifactFilterProxyModel::setSortOrder(Qt::SortOrder order)
 {
     sort(0, order);
@@ -65,9 +77,26 @@ bool ArtifactFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex
     if (artifact) {
         QRegExp regexp = filterRegExp();
         regexp.setCaseSensitivity(Qt::CaseInsensitive);
+        const bool matchesTextFilter = artifact->title().contains(regexp) || artifact->text().contains(regexp);
 
-        if (artifact->title().contains(regexp)
-         || artifact->text().contains(regexp)) {
+        bool matchesPropertyFilter = false;
+        if (const auto task = artifact.objectCast<Domain::Task>()) {
+            switch (m_filterType) {
+                case ShowAll:
+                    matchesPropertyFilter = true;
+                    break;
+                case ShowUndone:
+                    matchesPropertyFilter = !task->isDone();
+                    break;
+                case ShowDone:
+                    matchesPropertyFilter = task->isDone();
+                    break;
+            }
+        } else {
+            matchesPropertyFilter = true;
+        }
+
+        if (matchesTextFilter && matchesPropertyFilter) {
             return true;
         }
     }
@@ -77,7 +106,7 @@ bool ArtifactFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex
             return true;
     }
 
-    return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+    return false;
 }
 
 static QDateTime validDt(const QDateTime &date = QDateTime())
@@ -91,6 +120,8 @@ static QDateTime validDt(const QDateTime &date = QDateTime())
 static int statusPriority(Domain::Task::Status status)
 {
     switch (status) {
+        case Domain::Task::Status::FullComplete:
+            return 0;
         case Domain::Task::Status::Complete:
             return 0;
         case Domain::Task::Status::None:

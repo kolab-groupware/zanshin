@@ -47,6 +47,10 @@ FilterWidget::FilterWidget(QWidget *parent)
     ui->sortTypeCombo->addItem(tr("Sort by progress"), Presentation::ArtifactFilterProxyModel::ProgressSort);
     ui->sortTypeCombo->addItem(tr("Sort by status"), Presentation::ArtifactFilterProxyModel::StatusSort);
 
+    ui->filterCombo->addItem(tr("Show Undone"), Presentation::ArtifactFilterProxyModel::ShowUndone);
+    ui->filterCombo->addItem(tr("Show All"), Presentation::ArtifactFilterProxyModel::ShowAll);
+    ui->filterCombo->addItem(tr("Show Done"), Presentation::ArtifactFilterProxyModel::ShowDone);
+
     connect(ui->filterEdit, SIGNAL(textChanged(QString)),
             this, SLOT(onTextChanged(QString)));
     connect(ui->sortTypeCombo, SIGNAL(currentIndexChanged(int)),
@@ -55,6 +59,8 @@ FilterWidget::FilterWidget(QWidget *parent)
             this, SLOT(onAscendingClicked()));
     connect(ui->descendingButton, SIGNAL(clicked()),
             this, SLOT(onDescendingClicked()));
+    connect(ui->filterCombo, SIGNAL(currentIndexChanged(int)),
+            this, SLOT(onFilterTypeChanged(int)));
 }
 
 FilterWidget::~FilterWidget()
@@ -76,6 +82,12 @@ void FilterWidget::onSortTypeChanged(int index)
 {
     const int data = ui->sortTypeCombo->itemData(index).toInt();
     m_model->setSortType(Presentation::ArtifactFilterProxyModel::SortType(data));
+}
+
+void FilterWidget::onFilterTypeChanged(int index)
+{
+    const int data = ui->filterCombo->itemData(index).toInt();
+    m_model->setFilterType(Presentation::ArtifactFilterProxyModel::FilterType(data));
 }
 
 void FilterWidget::onAscendingClicked()

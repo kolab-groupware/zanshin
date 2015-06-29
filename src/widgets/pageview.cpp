@@ -113,9 +113,11 @@ PageView::PageView(QWidget *parent, ApplicationMode mode)
     setLayout(layout);
 
     QAction *removeItemAction = new QAction(this);
+    removeItemAction->setObjectName("removeAction");
     removeItemAction->setShortcut(Qt::Key_Delete);
     removeItemAction->setText(tr("Delete"));
     removeItemAction->setIcon(QIcon::fromTheme("list-remove"));
+    removeItemAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     connect(removeItemAction, SIGNAL(triggered()), this, SLOT(onRemoveItemRequested()));
     addAction(removeItemAction);
 
@@ -129,8 +131,15 @@ QObject *PageView::model() const
 
 void PageView::configurePopupMenu(QMenu *menu, const Domain::Artifact::Ptr &artifact)
 {
-    Q_UNUSED(artifact);
-    menu->addActions(actions());
+    for (auto action : actions()) {
+        if (action->objectName() == "removeAction") {
+            if (artifact) {
+                menu->addAction(action);
+            }
+        } else {
+            menu->addAction(action);
+        }
+    }
 }
 
 void PageView::setModel(QObject *model)
@@ -155,6 +164,11 @@ void PageView::setModel(QObject *model)
 
     connect(m_centralView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)),
             this, SLOT(onCurrentChanged(QModelIndex)));
+
+    QObject::connect(m_centralView->model(), SIGNAL(modelReset()), m_centralView, SLOT(expandAll()));
+    QObject::connect(m_centralView->model(), SIGNAL(layoutChanged()), m_centralView, SLOT(expandAll()));
+    QObject::connect(m_centralView->model(), SIGNAL(rowsInserted(QModelIndex,int,int)),m_centralView, SLOT(expandAll()));
+    m_centralView->expandAll();
 }
 
 MessageBoxInterface::Ptr PageView::messageBoxInterface() const
